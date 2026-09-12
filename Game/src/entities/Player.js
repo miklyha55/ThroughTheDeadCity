@@ -49,6 +49,10 @@ export class Player {
     this.gun = this.root.getObjectByName('Shotgun') ?? null;
     this.gunOnBack = this.root.getObjectByName('Shotgun_Back') ?? null;
     this._barrel = new THREE.Vector3();
+    this._muzzle = new THREE.Vector3();
+    this._hitPoint = new THREE.Vector3();
+    this.effects = null; // росчерк и вспышка; ставится снаружи
+    this.blood = null;   // брызги от попаданий
 
     this._holdGun(false); // пока не стреляет, ружьё висит за спиной
 
@@ -322,6 +326,21 @@ export class Player {
     const dz = zombie.position.z - this.root.position.z;
     if (Math.hypot(dx, dz) > CFG.fireRange) return;
 
+    // росчерк тянем от дула к груди зомби, а не к его ногам
+    this._hitPoint.copy(zombie.position).setY(zombie.position.y + CFG.hitHeight);
+    const muzzle = this._muzzlePoint();
+
+    this.effects?.fire(muzzle, this._hitPoint);
+    this.blood?.splash(this._hitPoint, muzzle); // капли летят дальше по ходу пули
+
     zombie.takeDamage(CFG.shotDamage);
+  }
+
+  /** Точка дула в мировых координатах: конец ствола оружия в руке. */
+  _muzzlePoint() {
+    if (!this.gun) return this._muzzle.copy(this.root.position).setY(this.root.position.y + CFG.hitHeight);
+
+    this.gun.updateWorldMatrix(true, false);
+    return this._muzzle.set(CFG.muzzleOffset, 0, 0).applyMatrix4(this.gun.matrixWorld);
   }
 }

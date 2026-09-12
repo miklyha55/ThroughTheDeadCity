@@ -8,6 +8,8 @@ import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
+import { GunEffects } from './fx/GunEffects.js';
+import { Blood } from './fx/Blood.js';
 import { CONFIG } from './config.js';
 
 const engine = new Engine(document.getElementById('app'));
@@ -21,7 +23,12 @@ let [gltf, prefabs, zombies] = await Promise.all([
   ZombieLibrary.load(CONFIG.zombies.sources),
 ]);
 
+const gunEffects = new GunEffects(engine.scene);
+const blood = new Blood(engine.scene);
+
 let player = new Player(gltf);
+player.effects = gunEffects;
+player.blood = blood;
 engine.scene.add(player.root);
 
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
@@ -45,6 +52,8 @@ engine.add({
     }
     here.debris.update(dt, player.position, CONFIG.player.radius, player.velocity);
     here.update(dt, player); // зомби: заметить, дойти, ударить
+    gunEffects.update(dt);
+    blood.update(dt);
     camera.update(dt);
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },
@@ -114,6 +123,8 @@ if (import.meta.env.DEV) {
 
       player.root.removeFromParent();
       player = new Player(freshPlayer);
+      player.effects = gunEffects;
+      player.blood = blood;
       player.placeAt(spot, yaw);
       engine.scene.add(player.root);
 
