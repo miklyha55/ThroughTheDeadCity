@@ -23,7 +23,6 @@ export class Player {
     this.silhouette = addSilhouette(this.root, {
       color: ROOT.silhouette.playerColor,
       opacity: ROOT.silhouette.opacity,
-      stencilRef: 1,
     });
 
     this.mixer = new THREE.AnimationMixer(this.root);
@@ -60,7 +59,6 @@ export class Player {
     }
 
     this.lives = CFG.lives;
-    this.invulnerable = 0; // пока идёт, удары не засчитываются
 
     // Ствол: он закреплён на кости руки и развёрнут относительно корпуса, поэтому
     // целиться поворотом корпуса «в лоб» нельзя — оружие будет смотреть мимо.
@@ -70,7 +68,8 @@ export class Player {
     this._muzzle = new THREE.Vector3();
     this._hitPoint = new THREE.Vector3();
     this.effects = null; // росчерк и вспышка; ставится снаружи
-    this.blood = null;   // брызги от попаданий
+    this.blood = null;     // зелёные брызги: его попадания по зомби
+    this.ownBlood = null;  // красные: попадания по нему самому
 
     this._holdGun(false); // пока не стреляет, ружьё висит за спиной
 
@@ -117,16 +116,22 @@ export class Player {
   /**
    * Удар от зомби.
    *
-   * После попадания персонаж ненадолго неуязвим: иначе трое подошедших зомби
-   * снимут все жизни в один кадр, и умирать он будет мгновенно и непонятно.
+   * @param {number} amount — сколько жизней снимает
+   * @param {THREE.Vector3} [from] — откуда пришёл удар: в эту сторону брызги
+   *
+   * Доведённый до конца замах проходит всегда. Чем бы персонаж ни был занят —
+   * стоял, побежал, начал стрелять, ещё не отошёл от прошлого удара, — всё это
+   * обрывается, и реакция играется заново с первого кадра. Иначе удар, которого
+   * игрок не смог избежать, пропадал впустую и выглядел как промах зомби.
    */
-  takeDamage(amount = 1) {
-    // Пока персонажа шатает от прошлого удара, новый не засчитывается: он уже
-    // и так беспомощен, а иначе двое зомби снимали бы все жизни подряд.
-    if (!this.alive || this.invulnerable > 0 || this.reacting > 0) return;
+  takeDamage(amount = 1, from = null) {
+    if (!this.alive) return;
 
     this.lives = Math.max(0, this.lives - amount);
-    this.invulnerable = CFG.invulnerableFor;
+
+    // брызги летят от того, кто ударил, — дальше сквозь персонажа
+    this._hitPoint.copy(this.root.position).setY(this.root.position.y + CFG.hitHeight);
+    this.ownBlood?.splash(this._hitPoint, from ?? this.root.position);
     this.pinned = 0; // замах отработал, дальше держит уже сама реакция
 
     if (!this.alive) {
@@ -140,6 +145,8 @@ export class Player {
     this.velocity.set(0, 0, 0);
     this._holdFire();
 
+    // Клип ставим принудительно: play() не перезапустит тот же самый, и второй
+    // удар подряд не был бы виден — персонаж досматривал бы первую реакцию.
     this.play('ReactionHit', 0.08);
     this.current.reset().play();
     this.current.timeScale = CFG.reactionSpeed;
@@ -184,7 +191,6 @@ export class Player {
    * @param {import('../world/Location.js').Location} [location] — цели и препятствия
    */
   update(dt, move, cameraYaw, location) {
-    if (this.invulnerable > 0) this.invulnerable -= dt;
     if (this.pinned > 0) this.pinned -= dt;
     if (this.reacting > 0) this.reacting -= dt;
 
@@ -269,16 +275,17 @@ export class Player {
   /**
    * Автоприцел и стрельба.
    *
-   * Цель захватывается и удерживается, пока она жива, в пределах дальности и на
-   * линии огня, — прицел не скачет между зомби каждый кадр. Выстрелы идут один за
-   * другим без пауз: как только клип доиграл, персонаж стреляет снова, пока есть
-   * по кому. Стойка включается, только когда целей не осталось.
+   * Цель ищется заново каждый кадр — всегда ближайший живой зомби на линии огня.
+   * Так прицел перехватывает того, кто подошёл ближе, прямо посреди стрельбы, и не
+   * ждёт, пока игрок отпустит стик. Выстрелы идут один за другим: как только клип
+   * доиграл, персонаж стреляет снова, пока есть по кому. Стойка включается,
+   * только когда целей не осталось.
    *
    * @returns {boolean} есть ли цель — то есть занят ли персонаж стрельбой
    */
   _aimAndFire(dt, location) {
-    // прежняя цель в приоритете; новую ищем, только если эта больше не годится
-    if (!this._targetUsable(this.target, location)) this.target = this._pickTarget(location);
+    // прицел пересматривается каждый кадр: ближе подошёл — по нему и стреляем
+    this.target = this._pickTarget(location);
 
     if (!this.target) {
       this.shotPending = 0;
@@ -372,21 +379,9 @@ export class Player {
   }
 
   /**
-   * Годится ли цель: жива, в пределах дальности и пуля до неё долетит.
-   * Куда персонаж смотрит — неважно: он сам довернётся к тому, кого взял на прицел.
+   * Ближайший живой зомби в радиусе огня, до которого долетит пуля.
+   * Куда персонаж смотрит — неважно: он сам довернётся к тому, кого выбрал.
    */
-  _targetUsable(zombie, location) {
-    if (!zombie || !zombie.alive) return false;
-
-    const from = this.root.position;
-    const dx = zombie.position.x - from.x;
-    const dz = zombie.position.z - from.z;
-    if (Math.hypot(dx, dz) > CFG.fireRange) return false;
-
-    return !location.obstacles.blocksLine(from.x, from.z, zombie.position.x, zombie.position.z);
-  }
-
-  /** Ближайший зомби, до которого долетит пуля. */
   _pickTarget(location) {
     const from = this.root.position;
     let best = null;

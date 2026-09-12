@@ -16,16 +16,23 @@ const _scale = new THREE.Vector3();
  * сцене рисуется за один вызов, сколько бы её ни летело.
  */
 export class Blood {
-  constructor(scene) {
+  /**
+   * @param {THREE.Scene} scene
+   * @param {number} [color] — цвет капель: у зомби и персонажа он разный
+   * @param {number} [poolSize] — сколько капель держать наготове
+   */
+  constructor(scene, color = CFG.color, poolSize = CFG.poolSize) {
+    this.poolSize = poolSize;
+
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshStandardMaterial({
-      color: CFG.color,
+      color,
       roughness: 0.45,
       metalness: 0,
-      emissive: new THREE.Color(CFG.color).multiplyScalar(CFG.glow),
+      emissive: new THREE.Color(color).multiplyScalar(CFG.glow),
     });
 
-    this.mesh = new THREE.InstancedMesh(geometry, material, CFG.poolSize);
+    this.mesh = new THREE.InstancedMesh(geometry, material, poolSize);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = false;
@@ -34,7 +41,7 @@ export class Blood {
 
     // все капли начинают спрятанными: нулевой размер не видно
     this.drops = [];
-    for (let i = 0; i < CFG.poolSize; i++) {
+    for (let i = 0; i < poolSize; i++) {
       this.drops.push({
         position: new THREE.Vector3(),
         velocity: new THREE.Vector3(),
@@ -50,7 +57,7 @@ export class Blood {
   _hide() {
     _scale.setScalar(0);
     _matrix.compose(_position.set(0, -1000, 0), _quaternion.identity(), _scale);
-    for (let i = 0; i < CFG.poolSize; i++) this.mesh.setMatrixAt(i, _matrix);
+    for (let i = 0; i < this.poolSize; i++) this.mesh.setMatrixAt(i, _matrix);
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
@@ -68,7 +75,7 @@ export class Blood {
 
     for (let i = 0; i < count; i++) {
       const drop = this.drops[this._next];
-      this._next = (this._next + 1) % CFG.poolSize;
+      this._next = (this._next + 1) % this.poolSize;
 
       drop.position.copy(at);
       // немного вразнобой вокруг раны, иначе капли выходят одной струёй

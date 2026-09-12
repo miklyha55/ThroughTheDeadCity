@@ -25,10 +25,12 @@ let [gltf, prefabs, zombies] = await Promise.all([
 
 const gunEffects = new GunEffects(engine.scene);
 const blood = new Blood(engine.scene);
+const playerBlood = new Blood(engine.scene, CONFIG.blood.playerColor, CONFIG.blood.playerPool);
 
 let player = new Player(gltf);
 player.effects = gunEffects;
 player.blood = blood;
+player.ownBlood = playerBlood;
 engine.scene.add(player.root);
 
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
@@ -53,6 +55,7 @@ engine.add({
     here.update(dt, player); // зомби: заметить, дойти, ударить
     gunEffects.update(dt);
     blood.update(dt);
+    playerBlood.update(dt);
     camera.update(dt);
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },
@@ -124,6 +127,7 @@ if (import.meta.env.DEV) {
       player = new Player(freshPlayer);
       player.effects = gunEffects;
       player.blood = blood;
+      player.ownBlood = playerBlood;
       player.placeAt(spot, yaw);
       engine.scene.add(player.root);
 

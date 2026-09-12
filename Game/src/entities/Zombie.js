@@ -17,6 +17,9 @@ const STATE = {
   DEAD: 'dead',     // убит, доигрывает падение и уходит под землю
 };
 
+// Ближе этого запаса до дистанции удара шагать уже некуда — зомби ждёт стоя.
+const CHASE_STEP_MIN = 0.02;
+
 const _toPlayer = new THREE.Vector3();
 const _push = new THREE.Vector3();
 const _step = new THREE.Vector3();
@@ -45,7 +48,6 @@ export class Zombie {
     this.silhouette = addSilhouette(model, {
       color: CONFIG.silhouette.zombieColor,
       opacity: CONFIG.silhouette.opacity,
-      stencilRef: 2,
     });
 
     this.mixer = new THREE.AnimationMixer(model);
@@ -63,7 +65,8 @@ export class Zombie {
     }
     // клип играется быстрее, значит и замах длится меньше реального времени
     this.attackLength = (this.actions.get('Headbutt')?.getClip().duration ?? 1) / CFG.attackSpeed;
-    this.hurtLength = this.actions.get('ReactionHit')?.getClip().duration ?? 1;
+    // сколько длится рывок: столько же, сколько играет сам клип
+    this.hurtLength = (this.actions.get('ReactionHit')?.getClip().duration ?? 1) / CFG.hurtSpeed;
     this.deathLength = this.actions.get('Death')?.getClip().duration ?? 1;
 
     this.health = CFG.health;
@@ -120,7 +123,8 @@ export class Zombie {
       this.root.rotation.y = this.yaw;
     }
 
-    this._enter(STATE.HURT);
+    // restart: попадание дёргает зомби заново, даже если он уже в этом состоянии
+    this._enter(STATE.HURT, true);
     return false;
   }
 
@@ -186,8 +190,13 @@ export class Zombie {
 
   // ─── переходы ───────────────────────────────────────────────────────────────
 
-  _enter(state) {
-    if (state === this.state) return;
+  /**
+   * Переход в состояние. Со `restart` можно войти в то же самое заново —
+   * это нужно попаданиям: каждая пуля должна заново дёргать зомби, даже если
+   * он ещё не отошёл от предыдущей.
+   */
+  _enter(state, restart = false) {
+    if (state === this.state && !restart) return;
     this.state = state;
 
     switch (state) {
@@ -204,6 +213,7 @@ export class Zombie {
         break;
 
       case STATE.CHASE:
+        this.chaseMoving = true;
         this.play('Run', 0.25);
         // темп клипа под шаг: зомби бредёт, а не бежит
         this.current.timeScale = CFG.speed / CFG.runClipSpeed;
@@ -219,10 +229,11 @@ export class Zombie {
 
       case STATE.HURT:
         this.hurtTime = 0;
-        this.play('ReactionHit', 0.1);
+        // Клип ставим принудительно: play() сам по себе не перезапустит тот же,
+        // и вторая пуля подряд не была бы видна.
+        this.play('ReactionHit', CFG.hurtFade);
         this.current.reset().play();
-        // клип длинный, а нужен только рывок — играем его быстрее
-        this.current.timeScale = this.hurtLength / CFG.staggerFor;
+        this.current.timeScale = CFG.hurtSpeed;
         break;
 
       case STATE.DEAD:
@@ -271,7 +282,7 @@ export class Zombie {
     this._turnTo(Math.atan2(_toPoint.x, _toPoint.z), dt);
 
     _push.copy(_toPoint).multiplyScalar(CFG.patrolSpeed * dt);
-    this._separate(_push, crowd);
+    this._separate(_push, crowd, dt);
 
     // Куда шагаем — там должно быть свободно. Проверять только саму точку мало:
     // по дороге к ней может стоять стена, и зомби упирается в неё носом.
@@ -374,8 +385,11 @@ export class Zombie {
       this._enter(STATE.PATROL);
       return;
     }
-    // после удара зомби переводит дух — идёт, но не бьёт
-    if (distance <= CFG.attackRadius && this.recovery <= 0) {
+    // Бить можно, только когда персонаж свободен: пока он схвачен чужим замахом
+    // или доигрывает реакцию на удар, второй зомби ждёт своей очереди. Иначе он
+    // машет вхолостую — урон в это время всё равно не проходит.
+    // После собственного удара зомби ещё и переводит дух.
+    if (distance <= CFG.attackRadius && this.recovery <= 0 && !player.helpless) {
       this._enter(STATE.ATTACK);
       return;
     }
@@ -399,17 +413,42 @@ export class Zombie {
     // Подойдя на дистанцию удара, зомби останавливается: дальше он бьёт, а не
     // толкается. Иначе после замаха он продолжал бы напирать и возить персонажа
     // по площадке, даже когда тот беспомощен.
-    const room = distance - CFG.attackRadius;
-    if (room <= 0) return;
+    const room = Math.max(0, distance - CFG.attackRadius);
 
-    // В погоне друг друга не расталкивают: толпа должна идти на цель, а не
-    // разбираться между собой. Иначе задние тормозят передних и строй вязнет.
+    // Дошёл и ждёт — значит стоит и дышит, а не перебирает ногами на месте.
+    this._chaseMotion(room > CHASE_STEP_MIN);
+
     _push.copy(_step).multiplyScalar(Math.min(CFG.speed * dt, room));
+
+    // Разбираться между собой толпа продолжает и в погоне. Без этого передние
+    // слипаются в одну фигуру у персонажа, а как только погоня кончится и
+    // расталкивание включится снова — их растащит рывком из общей точки.
+    this._separate(_push, crowd, dt);
+    if (_push.lengthSq() < 1e-10) return; // стоит вплотную и никем не зажат
+
     position.add(_push);
 
     // в модели и за забор зомби не лезут — те же правила, что и для персонажа
     location.obstacles.resolve(position, CFG.radius);
     location.clampPosition(position);
+  }
+
+  /**
+   * Клип погони: бежит или стоит. Зомби, подошедший вплотную и ждущий своей
+   * очереди на удар, должен стоять в стойке — бег на месте выдаёт анимацию,
+   * оторванную от того, что персонаж видит.
+   */
+  _chaseMotion(moving) {
+    if (moving === this.chaseMoving) return;
+    this.chaseMoving = moving;
+
+    if (moving) {
+      this.play('Run', 0.2);
+      this.current.timeScale = CFG.speed / CFG.runClipSpeed;
+    } else {
+      this.play('Idle', 0.2);
+      this.current.timeScale = this.idleSpeed ?? 1;
+    }
   }
 
   /** Бьёт, пока персонаж рядом. Урон приходится на середину замаха. */
@@ -428,7 +467,7 @@ export class Zombie {
     if (!this.hitDone && this.attackTime >= this.attackLength * CFG.hitAt) {
       this.hitDone = true;
       // бьём, только если цель всё ещё в досягаемости — иначе удар в воздух
-      if (distance <= CFG.attackRadius + CFG.reach) player.takeDamage(CFG.damage);
+      if (distance <= CFG.attackRadius + CFG.reach) player.takeDamage(CFG.damage, this.root.position);
       this.recovery = CFG.recoverFor; // дальше он переводит дух
     }
 
@@ -443,7 +482,7 @@ export class Zombie {
   /** Сбит с шага: на миг замирает, потом снова идёт. */
   _hurt(dt, distance, player) {
     this.hurtTime += dt;
-    if (this.hurtTime < CFG.staggerFor) return;
+    if (this.hurtTime < this.hurtLength) return;
 
     if (player.alive && (this.alerted || distance <= CFG.loseRadius)) this._enter(STATE.CHASE);
     else this._enter(STATE.PATROL);
@@ -483,10 +522,14 @@ export class Zombie {
   /**
    * Отталкивает от соседей. Без этого толпа сходится в одну точку и лезет
    * друг сквозь друга — идут-то все в одно место.
+   *
+   * Расхождение задано скоростью и умножается на кадр: при полном перекрытии
+   * соседи расходятся плавно, а не отскакивают друг от друга рывком.
    */
-  _separate(step, crowd) {
+  _separate(step, crowd, dt) {
     if (!crowd) return;
     const position = this.root.position;
+    const limit = CFG.separationSpeed * dt;
 
     for (const other of crowd) {
       if (other === this || other.state === STATE.DEAD) continue;
@@ -497,8 +540,8 @@ export class Zombie {
       if (gap >= CFG.separation || gap < 1e-4) continue;
 
       const force = (CFG.separation - gap) / CFG.separation;
-      step.x += (dx / gap) * force * CFG.separationForce;
-      step.z += (dz / gap) * force * CFG.separationForce;
+      step.x += (dx / gap) * force * limit;
+      step.z += (dz / gap) * force * limit;
     }
   }
 }
