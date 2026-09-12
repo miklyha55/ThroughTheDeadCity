@@ -154,7 +154,6 @@ export class Player {
 
   _die() {
     this.velocity.set(0, 0, 0);
-    this.silhouette.setVisible(false); // мёртвому подсветка не нужна
     this.play('Death', 0.15);
     this.current.reset().play();
     this.current.timeScale = 1;
@@ -166,7 +165,6 @@ export class Player {
     this.yaw = yaw;
     this.root.rotation.y = yaw;
     this.velocity.set(0, 0, 0);
-    this.silhouette.setVisible(this.alive);
     if (this.alive) this.play('Idle', 0);
   }
 

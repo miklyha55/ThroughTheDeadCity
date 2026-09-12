@@ -25,8 +25,20 @@ import * as THREE from 'three';
  * буфер глубины раньше масок (1), иначе маска пометит и те места, где фигуру
  * на самом деле закрывает дом, и силуэт там не появится.
  */
+// Порядок в непрозрачном проходе: окружение (0) → трафарет (1) → сами фигуры (2).
+// Трафарет идёт ДО фигур, и это принципиально: в буфере глубины к этому моменту
+// стоит только окружение, поэтому метку получает вся площадь фигуры целиком —
+// в том числе те её куски, которые заслонены её же рукой или оружием. Ставь мы
+// метку после фигур, куски, закрытые собственной геометрией, до трафарета бы не
+// добрались, и силуэт проступал бы прямо по модели.
 const MASK_ORDER = 1;
-const GHOST_ORDER = 2;
+const BODY_ORDER = 2;
+const GHOST_ORDER = 3;
+
+// Всё, что ниже этой высоты, силуэтом не рисуется. Пол — такая же геометрия, и
+// части фигуры, ушедшие под него (стопы, тонущий труп), считались бы «за
+// преградой»: силуэт проступал бы прямо на земле.
+const FLOOR = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.02);
 
 // Общая на всех метка «здесь стоит живая фигура»: своя у каждого означала бы,
 // что маска зомби не защищает силуэт персонажа, и он светил бы сквозь зомби.
@@ -58,6 +70,7 @@ export function addSilhouette(root, { color, opacity = 1 } = {}) {
     stencilFail: THREE.KeepStencilOp,
     stencilZFail: THREE.KeepStencilOp,
     stencilZPass: THREE.KeepStencilOp,
+    clippingPlanes: [FLOOR],
   });
 
   const originals = [];
@@ -73,6 +86,14 @@ export function addSilhouette(root, { color, opacity = 1 } = {}) {
 
     copy.name = `${label}:${mesh.name}`;
     copy.renderOrder = order;
+
+    // Двойник живёт ровно столько же, сколько оригинал: спрятанное оружие не
+    // должно ни метить трафарет, ни светиться силуэтом второго ствола.
+    Object.defineProperty(copy, 'visible', {
+      get: () => mesh.visible,
+      set: () => {},
+      configurable: true,
+    });
     copy.castShadow = false;
     copy.receiveShadow = false;
     copy.frustumCulled = false;
@@ -94,18 +115,13 @@ export function addSilhouette(root, { color, opacity = 1 } = {}) {
   const masks = originals.map((mesh) => twin(mesh, maskMaterial, MASK_ORDER, 'silhouetteMask'));
   const ghosts = originals.map((mesh) => twin(mesh, material, GHOST_ORDER, 'silhouette'));
 
+  // сама фигура ложится в глубину уже после трафарета
+  for (const mesh of originals) mesh.renderOrder = BODY_ORDER;
+
   return {
     material,
     maskMaterial,
     masks,
     ghosts,
-    /**
-     * Показать или спрятать сам силуэт. Маска остаётся включённой всегда: она
-     * ничего не рисует, но продолжает закрывать фигуру от чужих силуэтов —
-     * иначе сквозь труп зомби просвечивал бы контур персонажа.
-     */
-    setVisible(visible) {
-      for (const mesh of ghosts) mesh.visible = visible;
-    },
   };
 }

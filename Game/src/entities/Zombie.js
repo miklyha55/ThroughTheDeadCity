@@ -80,7 +80,6 @@ export class Zombie {
     this.waitTime = 0;
     this.stuckTime = 0;    // сколько он топчется на месте, никуда не продвигаясь
     this.alerted = false;  // поднят по тревоге выстрелом — пойдёт на цель без обзора
-    this.blindTime = 0;    // сколько он уже не видит персонажа в погоне
     this.chaseMoving = true;
     this.state = STATE.PATROL;
     this.current = null;
@@ -194,6 +193,22 @@ export class Zombie {
     );
   }
 
+  /**
+   * Держит ли зомби персонажа в секторе взгляда прямо сейчас — то самое пятно,
+   * которое рисуется на земле: угол обзора, дальность и всё, что загораживает.
+   *
+   * `_toPlayer` здесь только читается: в погоне из него строится сам шаг.
+   */
+  _inSight(player, distance, location) {
+    if (distance > CFG.loseRadius) return false;
+    if (this._hidden(player, location)) return false;
+
+    const forward =
+      (Math.sin(this.yaw) * _toPlayer.x + Math.cos(this.yaw) * _toPlayer.z) / (distance || 1);
+
+    return forward >= Math.cos((CFG.senseAngle * Math.PI) / 360);
+  }
+
   /** Расстояние до персонажа по земле: высота не в счёт. */
   _distanceTo(player) {
     _toPlayer.subVectors(player.position, this.root.position).setY(0);
@@ -226,7 +241,6 @@ export class Zombie {
 
       case STATE.CHASE:
         this.chaseMoving = true;
-        this.blindTime = 0;
         this.play('Run', 0.25);
         // темп клипа под шаг: зомби бредёт, а не бежит
         this.current.timeScale = CFG.speed / CFG.runClipSpeed;
@@ -251,9 +265,6 @@ export class Zombie {
 
       case STATE.DEAD:
         this.deadTime = 0;
-        // Силуэт нужен, только чтобы не потерять живую цель за домом. Труп искать
-        // незачем, а уходя под землю он светился бы сквозь пол.
-        this.silhouette.setVisible(false);
         this.play('Death', 0.15);
         this.current.reset().play();
         this.current.timeScale = 1;
@@ -391,13 +402,11 @@ export class Zombie {
   _chase(dt, distance, player, location, crowd) {
     this.recovery = Math.max(0, this.recovery - dt);
 
-    // Скрылся за домом или машиной — зомби ещё немного идёт по памяти, а потом
-    // бросает погоню: стоять под стеной, за которой никого не видно, незачем.
-    this.blindTime = this._hidden(player, location) ? this.blindTime + dt : 0;
-
-    if (!player.alive || distance > CFG.loseRadius || this.blindTime >= CFG.loseSightFor) {
+    // Ушёл из сектора взгляда — за дом, за машину или просто вбок, за край
+    // обзора — и зомби тут же бросает погоню: гнаться за тем, кого не видит,
+    // он не умеет.
+    if (!player.alive || !this._inSight(player, distance, location)) {
       this.alerted = false;
-      this.blindTime = 0;
       this.home.copy(this.root.position); // потерял цель — бродит уже здесь
       this._pickWaypoint(location);
       this._enter(STATE.PATROL);
