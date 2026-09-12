@@ -11,6 +11,7 @@ import { Joystick } from './ui/Joystick.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
 import { HealthBars } from './fx/HealthBars.js';
+import { Explosions } from './fx/Explosions.js';
 import { CONFIG } from './config.js';
 
 const engine = new Engine(document.getElementById('app'));
@@ -28,6 +29,7 @@ const gunEffects = new GunEffects(engine.scene);
 const blood = new Blood(engine.scene);
 const playerBlood = new Blood(engine.scene, CONFIG.blood.playerColor, CONFIG.blood.playerPool);
 const healthBars = new HealthBars(engine.scene);
+const explosions = new Explosions(engine.scene);
 
 let player = new Player(gltf);
 player.effects = gunEffects;
@@ -58,6 +60,7 @@ engine.add({
     gunEffects.update(dt);
     blood.update(dt);
     playerBlood.update(dt);
+    explosions.update(dt);
     camera.update(dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
@@ -96,7 +99,17 @@ if (params.get('debug') === 'input') {
     },
   });
 }
+/** Что сцена делает со взрывом: вспышка на месте и толчок камере. */
+function wireBlasts(location) {
+  location.onBlast = (at) => {
+    explosions.burst(at);
+    camera.shake(CONFIG.explosion.shake, CONFIG.explosion.shakeFor);
+  };
+}
+wireBlasts(locations.current);
+
 locations.onChange = (location) => {
+  wireBlasts(location);
   showLocationName(location);
   updateDebugView();
 };

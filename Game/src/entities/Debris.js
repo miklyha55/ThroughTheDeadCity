@@ -35,7 +35,7 @@ export class Debris {
    * @param {{boxMin: THREE.Vector3, boxMax: THREE.Vector3, volume: number}} body
    * @param {number} floorY
    */
-  add(object, body, floorY) {
+  add(object, body, floorY, explosive = false) {
     const size = _tmp.copy(body.boxMax).sub(body.boxMin);
     const mass = Math.max(CFG.minMass, body.volume * CFG.density);
 
@@ -57,6 +57,7 @@ export class Debris {
       angular: new THREE.Vector3(),
       idle: 0,
       asleep: true,
+      explosive, // бочка: пуля её прошивает — и она детонирует
     });
   }
 
@@ -134,6 +135,63 @@ export class Debris {
 
     position.x = moverPosition.x + dx * touch;
     position.z = moverPosition.z + dz * touch;
+  }
+
+  /**
+   * Взрывоопасные предметы на пути пули, по порядку от дула.
+   * @param {THREE.Vector3} from — откуда летит
+   * @param {number} dirX @param {number} dirZ — куда, единичный вектор по земле
+   * @param {number} range — докуда
+   */
+  explosivesAlong(from, dirX, dirZ, range) {
+    const found = [];
+
+    for (const item of this.items) {
+      if (!item.explosive) continue;
+
+      const position = item.object.position;
+      const ox = position.x - from.x;
+      const oz = position.z - from.z;
+
+      const along = ox * dirX + oz * dirZ;
+      if (along <= 0 || along > range) continue;
+      if (Math.abs(ox * dirZ - oz * dirX) > item.radius) continue;
+
+      found.push({ item, along });
+    }
+
+    return found.sort((a, b) => a.along - b.along).map((f) => f.item);
+  }
+
+  /** Раскидывает предметы вокруг точки взрыва: чем ближе, тем сильнее. */
+  blast(at, radius, power, lift) {
+    for (const item of this.items) {
+      const position = item.object.position;
+      const dx = position.x - at.x;
+      const dy = position.y - at.y;
+      const dz = position.z - at.z;
+
+      const distance = Math.hypot(dx, dy, dz);
+      if (distance > radius || distance < 1e-4) continue;
+
+      const share = 1 - distance / radius;
+      _impulse.set(dx / distance, dy / distance + lift, dz / distance)
+        .multiplyScalar(power * share * item.mass);
+
+      // в край, а не в центр: предмет не только летит, но и кувыркается
+      _point.set(-dx / distance * item.radius, 0, -dz / distance * item.radius);
+      this._applyImpulse(item, _impulse, _point);
+
+      item.asleep = false;
+      item.idle = 0;
+    }
+  }
+
+  /** Убирает предмет из физики и со сцены — например, взорвавшуюся бочку. */
+  remove(item) {
+    const index = this.items.indexOf(item);
+    if (index >= 0) this.items.splice(index, 1);
+    item.object.removeFromParent();
   }
 
   /** Импульс в точке r (относительно центра масс) — меняет и скорость, и вращение. */

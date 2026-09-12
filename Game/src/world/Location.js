@@ -28,6 +28,7 @@ export class Location {
     this.prefabs = prefabs;
     this.zombieLibrary = zombieLibrary;
     this.blood = blood; // общая на сцену: зомби брызжут ею, когда их сносит предметом
+    this.onBlast = null; // сцена подхватывает взрыв: вспышка, свет, тряска камеры
     this.zombies = [];
     this._movers = [];  // кто может задеть разбросанные предметы
     this.statics = []; // неподвижные пропы: их геометрия сливается в общие меши
@@ -453,7 +454,36 @@ export class Location {
       boxMin: body.boxMin.clone().multiply(scale),
       boxMax: body.boxMax.clone().multiply(scale),
       volume: body.volume * scale.x * scale.y * scale.z,
-    }, GROUND_Y);
+    }, GROUND_Y, CONFIG.explosion.props.includes(prefab.name));
+  }
+
+  /**
+   * Детонация бочки.
+   *
+   * В радиусе взрыва не выживает никто — ни зомби, ни персонаж: проверять, кто
+   * там стоял, поздно. Остальной хлам просто разбрасывает, и разлетевшаяся бочка
+   * вполне может снести того, до кого не дотянулся сам взрыв.
+   *
+   * @param {object} item — тело из физики: сама бочка
+   * @param {import('../entities/Player.js').Player} player
+   */
+  explode(item, player) {
+    const CFG = CONFIG.explosion;
+    const at = item.object.position.clone();
+
+    this.debris.remove(item);
+    this.debris.blast(at, CFG.kickRadius, CFG.kick, CFG.lift);
+
+    for (const zombie of this.zombies) {
+      if (!zombie.alive) continue;
+      if (zombie.position.distanceTo(at) <= CFG.radius) zombie.crush();
+    }
+
+    if (player?.alive && player.position.distanceTo(at) <= CFG.radius) {
+      player.takeDamage(player.lives, at);
+    }
+
+    this.onBlast?.(at); // вспышка и тряска — дело сцены, а не локации
   }
 
   /** Дошёл ли персонаж до выхода — то есть пересёк линию забора в створе проёма. */

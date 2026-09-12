@@ -455,6 +455,10 @@ export class Player {
       const dirX = Math.sin(angle);
       const dirZ = Math.cos(angle);
 
+      // бочка на пути детонирует — и дальше пуля летит уже по пустому месту
+      const barrels = location?.debris.explosivesAlong(muzzle, dirX, dirZ, CFG.fireRange) ?? [];
+      for (const barrel of barrels) location.explode(barrel, this);
+
       const victims = this._pelletHits(location, muzzle, dirX, dirZ);
 
       // росчерк тянем до последнего задетого, а если никого — на всю дальность
@@ -490,7 +494,7 @@ export class Player {
     const hits = [];
 
     for (const other of location.zombies) {
-      if (!other.alive) continue;
+      if (!other.alive) continue; // взрыв мог убрать его прямо этим выстрелом
 
       const ox = other.position.x - muzzle.x;
       const oz = other.position.z - muzzle.z;
