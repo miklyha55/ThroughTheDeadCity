@@ -3,6 +3,7 @@ import { Obstacles } from './Obstacles.js';
 import { Debris } from '../entities/Debris.js';
 import { batchStatic } from './batching.js';
 import { NavGrid } from './NavGrid.js';
+import { createBorderFog } from './BorderFog.js';
 import { CONFIG } from '../config.js';
 
 // Стороны площадки: north — дальняя (−Z), south — ближняя (+Z).
@@ -22,10 +23,11 @@ const GROUND_Y = 0.02; // площадка лежит чуть выше подл
  * с единственным проёмом-выходом, расставленные пропы и точка старта.
  */
 export class Location {
-  constructor(data, prefabs, zombieLibrary) {
+  constructor(data, prefabs, zombieLibrary, blood = null) {
     this.data = data;
     this.prefabs = prefabs;
     this.zombieLibrary = zombieLibrary;
+    this.blood = blood; // общая на сцену: зомби брызжут ею, когда их сносит предметом
     this.zombies = [];
     this._movers = [];  // кто может задеть разбросанные предметы
     this.statics = []; // неподвижные пропы: их геометрия сливается в общие меши
@@ -52,6 +54,7 @@ export class Location {
     this.spawnYaw = (data.spawn.rotation ?? 0) * DEG;
 
     this._buildGround();
+    this.group.add(createBorderFog(w, d)); // за забором мир тонет во мгле
     this._buildFence();
     this._buildProps();
 
@@ -250,6 +253,10 @@ export class Location {
             x = x0 + rand() * (x1 - x0);
             z = z0 + rand() * (z1 - z0);
           }
+          // Вокруг точки старта держим пустое место: иначе персонаж появляется
+          // в кольце зомби и первый удар получает раньше, чем успевает оглядеться.
+          if (Math.hypot(x - this.spawn.x, z - this.spawn.z) < CONFIG.zombies.spawnClear) continue;
+
           free = !this.occupied.hits(x, z, spacing);
         }
         if (!free) continue;
@@ -294,6 +301,7 @@ export class Location {
 
     const { idleLength, speedSpread, spacing } = CONFIG.zombies;
 
+    zombie.blood = this.blood;
     zombie.root.position.set(x, GROUND_Y, z);
     zombie.root.rotation.y = yaw;
     zombie.yaw = yaw;

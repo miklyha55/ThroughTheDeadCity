@@ -12,6 +12,34 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
  */
 
 /**
+ * Возвращает мешу отсечение по кадру.
+ *
+ * У скина оно обычно отключено: сфера геометрии снята с bind-позы, а кости
+ * выводят вершины за её пределы, и фигура пропадает на краю экрана. Но
+ * отключённое отсечение означает, что каждая фигура рисуется всегда — и в кадре,
+ * и за ним. При сотне зомби это сотня напрасных вызовов отрисовки плюс столько же
+ * в проходе теней.
+ *
+ * Поэтому скину задаётся собственная сфера — та же, но с запасом на любую позу.
+ * Три.js умеет считать её по костям, однако делает это один раз и по всем
+ * вершинам сразу, так что дешевле и надёжнее назначить её самим.
+ */
+export function enableCulling(root, slack = 1.7) {
+  root.traverse((mesh) => {
+    if (!mesh.isMesh) return;
+    mesh.frustumCulled = true;
+
+    if (!mesh.isSkinnedMesh) return;
+
+    const geometry = mesh.geometry;
+    if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
+
+    mesh.boundingSphere = geometry.boundingSphere.clone();
+    mesh.boundingSphere.radius *= slack;
+  });
+}
+
+/**
  * Общий кэш материалов на всё приложение: локации, зомби и персонаж делят
  * одни и те же объекты материалов — в этом и смысл сведения.
  */

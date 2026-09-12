@@ -46,7 +46,7 @@ export class LocationManager {
 
     this.current?.dispose();
 
-    const location = new Location(data, this.prefabs, this.zombies);
+    const location = new Location(data, this.prefabs, this.zombies, this.player?.blood);
     this.scene.add(location.group);
     this.current = location;
 

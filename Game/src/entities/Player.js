@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
-import { batchSkinned } from '../world/batching.js';
+import { batchSkinned, enableCulling } from '../world/batching.js';
 import { addSilhouette } from '../fx/Silhouette.js';
 import { CONFIG as ROOT } from '../config.js';
 
 const CFG = CONFIG.player;
+const DEG = Math.PI / 180;
 
 /** Персонаж: модель, миксер анимаций и движение по земле. */
 export class Player {
@@ -15,7 +16,6 @@ export class Player {
       if (o.isMesh) {
         o.castShadow = true;
         o.receiveShadow = true;
-        o.frustumCulled = false; // скиннинг ломает bounding box в bind-позе
       }
     });
 
@@ -24,6 +24,11 @@ export class Player {
       color: ROOT.silhouette.playerColor,
       opacity: ROOT.silhouette.opacity,
     });
+
+    // после двойников: отсечение нужно и им
+    enableCulling(this.root);
+
+    this._addGlow();
 
     this.mixer = new THREE.AnimationMixer(this.root);
     this.actions = new Map();
@@ -168,6 +173,26 @@ export class Player {
     if (this.alive) this.play('Idle', 0);
   }
 
+  /**
+   * Круг света вокруг персонажа.
+   *
+   * Висит на нём самом, поэтому ездит следом без единой строчки в кадре. Теней
+   * не бросает намеренно: источник находится внутри фигуры, и любая тень от него
+   * легла бы от её же ног во все стороны. Вторая карта теней вдобавок стоила бы
+   * кадра — а нужен здесь только свет.
+   */
+  _addGlow() {
+    const GLOW = ROOT.glow;
+
+    const light = new THREE.PointLight(GLOW.color, GLOW.intensity, GLOW.distance, GLOW.decay);
+    light.name = 'playerGlow';
+    light.position.set(0, GLOW.height, 0);
+    light.castShadow = false;
+
+    this.root.add(light);
+    this.glow = light;
+  }
+
   /** Плавно переключает анимацию, если она ещё не играет. */
   play(name, fade = 0.2) {
     const next = this.actions.get(name);
@@ -292,12 +317,12 @@ export class Player {
       return false;
     }
 
-    this._aimGunAt(this.target.position, dt);
+    this._aimGunAt(this.target.position);
 
     // пуля уходит не в первый кадр анимации, а когда персонаж вскинул ружьё
     if (this.shotPending > 0) {
       this.shotPending -= dt;
-      if (this.shotPending <= 0) this._fire();
+      if (this.shotPending <= 0) this._fire(location);
     }
 
     // клип выстрела идёт — не трогаем его, иначе оборвётся на первом кадре
@@ -327,17 +352,23 @@ export class Player {
   }
 
   /**
-   * Доворачивает персонажа так, чтобы на цель смотрел ствол, а не корпус.
+   * Разворачивает персонажа так, чтобы на цель смотрел ствол, а не корпус.
    *
    * Оружие висит на кости правой руки и в каждой позе развёрнуто по-своему:
    * в стойке ствол уходит вбок почти на 54°. Поэтому считаем, куда он смотрит
    * сейчас, и поворачиваем корпус ровно на разницу с направлением на цель.
+   *
+   * Доворот мгновенный, без плавного схождения. Плавный отставал: выстрел уходил
+   * раньше, чем корпус успевал встать, и росчерк шёл к зомби, а дуло в это время
+   * смотрело в сторону. Стрелять персонаж может только стоя, так что резкого
+   * разворота на бегу тут всё равно не увидеть.
    */
-  _aimGunAt(target, dt) {
+  _aimGunAt(target) {
     const from = this.root.position;
     const wanted = Math.atan2(target.x - from.x, target.z - from.z);
 
-    this._turnTo(wanted - this._barrelOffset(), CFG.aimTurnSpeed, dt);
+    this.yaw = wanted - this._barrelOffset();
+    this.root.rotation.y = this.yaw;
   }
 
   /** На сколько ствол развёрнут относительно корпуса прямо сейчас. */
@@ -400,23 +431,82 @@ export class Player {
     return best;
   }
 
-  /** Попадание по цели, если она ещё жива и на месте. */
-  _fire() {
+  /**
+   * Выстрел: веер из нескольких пуль, и каждая прошивает всех, кто на её пути.
+   *
+   * Средняя уходит точно в выбранную цель — по ней персонаж и целился. Боковые
+   * расходятся на `spreadAngle` в стороны. Ни одна не останавливается на первом
+   * попавшемся: пуля летит на всю дальность огня и достаётся каждому, кого
+   * задела. В плотной толпе один выстрел прошивает нескольких сразу.
+   */
+  _fire(location) {
     const zombie = this.target;
     if (!zombie || !zombie.alive) return;
 
-    const dx = zombie.position.x - this.root.position.x;
-    const dz = zombie.position.z - this.root.position.z;
-    if (Math.hypot(dx, dz) > CFG.fireRange) return;
+    const from = this.root.position;
+    if (Math.hypot(zombie.position.x - from.x, zombie.position.z - from.z) > CFG.fireRange) return;
 
-    // росчерк тянем от дула к груди зомби, а не к его ногам
-    this._hitPoint.copy(zombie.position).setY(zombie.position.y + CFG.hitHeight);
     const muzzle = this._muzzlePoint();
+    const base = Math.atan2(zombie.position.x - muzzle.x, zombie.position.z - muzzle.z);
+    const middle = (CFG.pellets - 1) / 2;
 
-    this.effects?.fire(muzzle, this._hitPoint);
-    this.blood?.splash(this._hitPoint, muzzle); // капли летят дальше по ходу пули
+    for (let i = 0; i < CFG.pellets; i++) {
+      const angle = base + (i - middle) * CFG.spreadAngle * DEG;
+      const dirX = Math.sin(angle);
+      const dirZ = Math.cos(angle);
 
-    zombie.takeDamage(CFG.shotDamage, this.root.position);
+      const victims = this._pelletHits(location, muzzle, dirX, dirZ);
+
+      // росчерк тянем до последнего задетого, а если никого — на всю дальность
+      const last = victims[victims.length - 1];
+      if (last) {
+        this._hitPoint.copy(last.position).setY(last.position.y + CFG.hitHeight);
+      } else {
+        this._hitPoint.set(
+          muzzle.x + dirX * CFG.fireRange, muzzle.y, muzzle.z + dirZ * CFG.fireRange
+        );
+      }
+      this.effects?.fire(muzzle, this._hitPoint);
+
+      for (const victim of victims) {
+        this._hitPoint.copy(victim.position).setY(victim.position.y + CFG.hitHeight);
+        this.blood?.splash(this._hitPoint, muzzle); // капли летят дальше по ходу пули
+        victim.takeDamage(CFG.shotDamage, from);
+      }
+    }
+  }
+
+  /**
+   * Все, кого прошивает одна пуля, по порядку от дула.
+   *
+   * Толщина пути — ширина тела: пуля не нитка, и мазать на полметра ей незачем.
+   * Стену она по-прежнему не берёт: до каждого зомби проверяется, свободна ли
+   * линия огня, и закрытые машиной или домом выпадают.
+   */
+  _pelletHits(location, muzzle, dirX, dirZ) {
+    if (!location) return [];
+
+    const from = this.root.position;
+    const hits = [];
+
+    for (const other of location.zombies) {
+      if (!other.alive) continue;
+
+      const ox = other.position.x - muzzle.x;
+      const oz = other.position.z - muzzle.z;
+
+      const along = ox * dirX + oz * dirZ;          // сколько по лучу до него
+      if (along <= 0 || along > CFG.fireRange) continue;
+
+      const aside = Math.abs(ox * dirZ - oz * dirX); // и насколько он в стороне
+      if (aside > ROOT.zombies.bodyRadius) continue;
+
+      if (location.obstacles.blocksLine(from.x, from.z, other.position.x, other.position.z)) continue;
+
+      hits.push({ zombie: other, along });
+    }
+
+    return hits.sort((a, b) => a.along - b.along).map((h) => h.zombie);
   }
 
   /** Точка дула в мировых координатах: конец ствола оружия в руке. */

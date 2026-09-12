@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { addSilhouette } from '../fx/Silhouette.js';
+import { enableCulling } from '../world/batching.js';
 
 const CFG = CONFIG.zombies;
 
@@ -20,6 +21,7 @@ const STATE = {
 // Ближе этого запаса до дистанции удара шагать уже некуда — зомби ждёт стоя.
 const CHASE_STEP_MIN = 0.02;
 
+const _hit = new THREE.Vector3();
 const _toPlayer = new THREE.Vector3();
 const _push = new THREE.Vector3();
 const _step = new THREE.Vector3();
@@ -40,15 +42,17 @@ export class Zombie {
       if (o.isMesh) {
         o.castShadow = true;
         o.receiveShadow = true;
-        o.frustumCulled = false; // скиннинг ломает bounding box в bind-позе
       }
     });
 
-    // своя метка трафарета: иначе фигуры гасили бы силуэты друг друга
     this.silhouette = addSilhouette(model, {
       color: CONFIG.silhouette.zombieColor,
       opacity: CONFIG.silhouette.opacity,
     });
+
+    // Отсечение по кадру — вместе с двойниками силуэта: за краем экрана зомби
+    // не должен стоить ни одного вызова отрисовки, их тут сотни.
+    enableCulling(this.root);
 
     this.mixer = new THREE.AnimationMixer(model);
     this.actions = new Map();
@@ -104,6 +108,26 @@ export class Zombie {
     if (this.state === STATE.CHASE) return CFG.speed;
     if (this.state === STATE.PATROL) return CFG.patrolSpeed;
     return 0; // стоит — только отодвигает предмет, не пинает
+  }
+
+  /**
+   * Смерть от прилетевшего предмета: бочка или ящик, разогнанные персонажем,
+   * валят наповал независимо от того, сколько у зомби оставалось здоровья.
+   * Брызги те же, что и от пули: один и тот же залп зелени.
+   *
+   * @param {THREE.Vector3} [from] — откуда прилетело: туда же летят капли
+   */
+  crush(from = null) {
+    if (this.state === STATE.DEAD) return false;
+
+    this.blood?.splash(
+      _hit.copy(this.root.position).setY(this.root.position.y + CONFIG.player.hitHeight),
+      from ?? this.root.position
+    );
+
+    this.health = 0;
+    this._enter(STATE.DEAD);
+    return true;
   }
 
   /**
@@ -313,7 +337,13 @@ export class Zombie {
     const nextX = position.x + _push.x;
     const nextZ = position.z + _push.z;
 
-    if (!location.nav.isFree(nextX, nextZ)) {
+    // Но если он уже стоит в непроходимой клетке — а в погоне его туда заносит
+    // толпой, — то запрет на шаг запирает его там навсегда: соседние клетки тоже
+    // заняты, идти «можно» только наружу, а проверка этого не разрешает. Поэтому
+    // зажатый идёт куда идёт, а наружу его вытолкнет разбор столкновений.
+    const trapped = !location.nav.isFree(position.x, position.z);
+
+    if (!trapped && !location.nav.isFree(nextX, nextZ)) {
       this.stuckTime += dt;
       if (this.stuckTime > CFG.stuckFor) this._pickWaypoint(location);
       return;
@@ -412,11 +442,9 @@ export class Zombie {
       this._enter(STATE.PATROL);
       return;
     }
-    // Бить можно, только когда персонаж свободен: пока он схвачен чужим замахом
-    // или доигрывает реакцию на удар, второй зомби ждёт своей очереди. Иначе он
-    // машет вхолостую — урон в это время всё равно не проходит.
-    // После собственного удара зомби ещё и переводит дух.
-    if (distance <= CFG.attackRadius && this.recovery <= 0 && !player.helpless) {
+    // Дотянулся — бьёт. Без оглядки на то, чем занят персонаж и били ли его
+    // только что: попал в досягаемость — сам виноват.
+    if (distance <= CFG.attackRadius && this.recovery <= 0) {
       this._enter(STATE.ATTACK);
       return;
     }

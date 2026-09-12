@@ -96,7 +96,6 @@ export function addSilhouette(root, { color, opacity = 1 } = {}) {
     });
     copy.castShadow = false;
     copy.receiveShadow = false;
-    copy.frustumCulled = false;
 
     if (mesh.isSkinnedMesh) {
       // тот же скелет — значит двойник повторяет любую анимацию сам собой

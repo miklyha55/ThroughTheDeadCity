@@ -65,13 +65,17 @@ export class Blood {
    * Брызги из точки попадания.
    * @param {THREE.Vector3} at — куда попали
    * @param {THREE.Vector3} from — откуда прилетело: капли летят дальше по ходу пули
+   * @param {number} [scale] — во сколько раз брызги крупнее обычных: пуля даёт
+   *   единицу, прилетевшая бочка — заметно больше
    */
-  splash(at, from) {
+  splash(at, from, scale = 1) {
     _direction.subVectors(at, from).setY(0);
     if (_direction.lengthSq() < 1e-6) _direction.set(0, 0, 1);
     _direction.normalize();
 
-    const count = CFG.minDrops + Math.floor(Math.random() * (CFG.maxDrops - CFG.minDrops + 1));
+    const count = Math.round(
+      (CFG.minDrops + Math.floor(Math.random() * (CFG.maxDrops - CFG.minDrops + 1))) * scale
+    );
 
     for (let i = 0; i < count; i++) {
       const drop = this.drops[this._next];
@@ -94,7 +98,7 @@ export class Blood {
         ));
 
       drop.spin.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
-      drop.size = CFG.minSize + Math.random() * (CFG.maxSize - CFG.minSize);
+      drop.size = (CFG.minSize + Math.random() * (CFG.maxSize - CFG.minSize)) * scale;
       drop.life = CFG.life * (0.7 + Math.random() * 0.6);
       drop.maxLife = drop.life;
     }

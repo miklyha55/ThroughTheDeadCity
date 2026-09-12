@@ -69,51 +69,6 @@ export class Obstacles {
     return false;
   }
 
-  /**
-   * Как далеко луч уходит, пока не упрётся в контур.
-   *
-   * Нужен для веера взгляда: каждый луч обрезается там, где начинается преграда,
-   * и сектор обзора сам повторяет очертания машин и домов.
-   *
-   * @param {number} x @param {number} z — откуда
-   * @param {number} dx @param {number} dz — куда, единичный вектор
-   * @param {number} maxDist — дальше этого не смотрим
-   * @returns {number} расстояние до ближайшей преграды или `maxDist`
-   */
-  castRay(x, z, dx, dz, maxDist) {
-    let best = maxDist;
-
-    for (const item of this.items) {
-      // грубый отсев: контур целиком лежит в круге вокруг своего центра,
-      // и если луч проходит мимо этого круга, рёбра перебирать незачем
-      const along = (item.cx - x) * dx + (item.cz - z) * dz;
-      if (along < -item.reach || along > best + item.reach) continue;
-
-      const t = Math.max(0, Math.min(best, along));
-      if (Math.hypot(item.cx - (x + dx * t), item.cz - (z + dz * t)) > item.reach) continue;
-
-      const { points } = item;
-      const count = points.length / 2;
-
-      for (let i = 0; i < count; i++) {
-        const ax = points[i * 2];
-        const az = points[i * 2 + 1];
-        const j = (i + 1) % count;
-        const ex = points[j * 2] - ax;
-        const ez = points[j * 2 + 1] - az;
-
-        const denom = dx * ez - dz * ex;
-        if (Math.abs(denom) < 1e-9) continue; // луч вдоль ребра
-
-        const hit = ((ax - x) * ez - (az - z) * ex) / denom;   // сколько по лучу
-        const edge = ((ax - x) * dz - (az - z) * dx) / denom;  // где по ребру
-
-        if (hit >= 0 && hit < best && edge >= 0 && edge <= 1) best = hit;
-      }
-    }
-    return best;
-  }
-
   /** Задевает ли круг хоть один контур — нужно, чтобы не ставить пропы внутрь других моделей. */
   hits(x, z, radius) {
     for (const item of this.items) {

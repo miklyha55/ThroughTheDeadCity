@@ -69,6 +69,7 @@ export class Debris {
     for (const item of this.items) {
       for (const mover of movers) {
         if (!mover) continue;
+        this._crush(item, mover);
         this._kick(item, mover.position, mover.radius, mover.speed);
       }
       if (item.asleep) continue;
@@ -80,6 +81,27 @@ export class Debris {
       this._checkSleep(item, dt);
     }
     this._separate();
+  }
+
+  /**
+   * Разогнанный предмет насмерть сбивает того, в кого прилетел.
+   *
+   * Проверяется до пинка: важна та скорость, с которой предмет подлетел, а не
+   * та, что он получит от касания. Спящий предмет безопасен по определению, а
+   * лёгкую мелочь не засчитываем совсем — жестянка, как её ни разгони, никого
+   * не убьёт. Кто именно попался, физика не знает: достаточно, что он умеет
+   * `crush`, — персонаж такого метода не имеет и потому цел.
+   */
+  _crush(item, mover) {
+    if (item.asleep || typeof mover.crush !== 'function') return;
+    if (item.mass < CFG.lethalMass || item.velocity.length() < CFG.lethalSpeed) return;
+
+    const position = item.object.position;
+    const dx = position.x - mover.position.x;
+    const dz = position.z - mover.position.z;
+    if (Math.hypot(dx, dz) > item.radius + mover.radius) return;
+
+    mover.crush(position);
   }
 
   /** Пинок прилетает в бок предмета, а не в центр — потому он ещё и закручивается. */
