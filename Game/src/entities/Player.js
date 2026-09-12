@@ -71,6 +71,11 @@ export class Player {
 
   get alive() { return this.lives > 0; }
 
+  /** Чем он задевает предметы — то же, что и у зомби, чтобы обходить их одним списком. */
+  get radius() { return CFG.radius; }
+
+  get speed() { return this.velocity.length(); }
+
   /**
    * Удар от зомби.
    *

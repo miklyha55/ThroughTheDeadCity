@@ -60,11 +60,17 @@ export class Debris {
     });
   }
 
-  update(dt, playerPosition, playerRadius, playerVelocity) {
-    const playerSpeed = Math.hypot(playerVelocity.x, playerVelocity.z);
-
+  /**
+   * @param {number} dt
+   * @param {Array<{position: THREE.Vector3, radius: number, speed: number}>} movers —
+   *   все, кто может задеть предмет: персонаж и зомби
+   */
+  update(dt, movers) {
     for (const item of this.items) {
-      this._kick(item, playerPosition, playerRadius, playerSpeed);
+      for (const mover of movers) {
+        if (!mover) continue;
+        this._kick(item, mover.position, mover.radius, mover.speed);
+      }
       if (item.asleep) continue;
 
       this._integrate(item, dt);
@@ -77,12 +83,12 @@ export class Debris {
   }
 
   /** Пинок прилетает в бок предмета, а не в центр — потому он ещё и закручивается. */
-  _kick(item, playerPosition, playerRadius, playerSpeed) {
+  _kick(item, moverPosition, moverRadius, moverSpeed) {
     const position = item.object.position;
-    let dx = position.x - playerPosition.x;
-    let dz = position.z - playerPosition.z;
+    let dx = position.x - moverPosition.x;
+    let dz = position.z - moverPosition.z;
     const distance = Math.hypot(dx, dz);
-    const touch = item.radius + playerRadius;
+    const touch = item.radius + moverRadius;
     if (distance > touch) return;
 
     if (distance > 1e-4) {
@@ -93,7 +99,7 @@ export class Debris {
       dz = 0;
     }
 
-    const share = CFG.minKickShare + (1 - CFG.minKickShare) * Math.min(1, playerSpeed / CONFIG.player.runSpeed);
+    const share = CFG.minKickShare + (1 - CFG.minKickShare) * Math.min(1, moverSpeed / CONFIG.player.runSpeed);
     const power = CFG.kick * share * item.mass;
 
     // точка приложения — на уровне ноги, сбоку предмета
@@ -104,8 +110,8 @@ export class Debris {
     item.asleep = false;
     item.idle = 0;
 
-    position.x = playerPosition.x + dx * touch;
-    position.z = playerPosition.z + dz * touch;
+    position.x = moverPosition.x + dx * touch;
+    position.z = moverPosition.z + dz * touch;
   }
 
   /** Импульс в точке r (относительно центра масс) — меняет и скорость, и вращение. */

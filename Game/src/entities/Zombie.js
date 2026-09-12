@@ -8,8 +8,9 @@ const CFG = CONFIG.zombies;
  * двигает зомби, само ставит свою анимацию при входе и само решает, когда уйти.
  */
 const STATE = {
-  IDLE: 'idle',     // стоит на месте, пока никого не заметил
-  CHASE: 'chase',   // бредёт к персонажу
+  PATROL: 'patrol', // бродит от точки к точке, пока никого не видит
+  IDLE: 'idle',     // остановился на месте, осматривается
+  CHASE: 'chase',   // заметил персонажа и идёт к нему
   ATTACK: 'attack', // бьёт, пока тот рядом
   HURT: 'hurt',     // получил пулю и на миг сбит с шага
   DEAD: 'dead',     // убит, доигрывает падение и уходит под землю
@@ -18,6 +19,7 @@ const STATE = {
 const _toPlayer = new THREE.Vector3();
 const _push = new THREE.Vector3();
 const _step = new THREE.Vector3();
+const _toPoint = new THREE.Vector3();
 
 /**
  * Зомби: замечает персонажа в радиусе, медленно идёт к нему и бьёт вблизи.
@@ -51,7 +53,8 @@ export class Zombie {
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
     }
-    this.attackLength = this.actions.get('Headbutt')?.getClip().duration ?? 1;
+    // клип играется быстрее, значит и замах длится меньше реального времени
+    this.attackLength = (this.actions.get('Headbutt')?.getClip().duration ?? 1) / CFG.attackSpeed;
     this.hurtLength = this.actions.get('ReactionHit')?.getClip().duration ?? 1;
     this.deathLength = this.actions.get('Death')?.getClip().duration ?? 1;
 
@@ -61,7 +64,10 @@ export class Zombie {
     this.removed = false; // локация уберёт такого из списка
 
     this.yaw = 0;
-    this.state = STATE.IDLE;
+    this.home = new THREE.Vector3();   // вокруг неё бродит, пока не увидит персонажа
+    this.waypoint = new THREE.Vector3();
+    this.waitTime = 0;
+    this.state = STATE.PATROL;
     this.current = null;
     this.attackTime = 0;
     this.hitDone = false;
@@ -72,6 +78,15 @@ export class Zombie {
   get position() { return this.root.position; }
 
   get alive() { return this.state !== STATE.DEAD; }
+
+  /** Чем он задевает предметы: телом такого радиуса и с такой скоростью. */
+  get radius() { return CFG.bodyRadius; }
+
+  get speed() {
+    if (this.state === STATE.CHASE) return CFG.speed;
+    if (this.state === STATE.PATROL) return CFG.patrolSpeed;
+    return 0; // стоит — только отодвигает предмет, не пинает
+  }
 
   /**
    * Попадание. Первое сбивает с шага, последнее валит замертво.
@@ -124,8 +139,11 @@ export class Zombie {
     const distance = this._distanceTo(player);
 
     switch (this.state) {
+      case STATE.PATROL:
+        this._patrol(dt, distance, player, location, crowd);
+        break;
       case STATE.IDLE:
-        this._idle(distance, player);
+        this._idle(dt, distance, player, location);
         break;
       case STATE.CHASE:
         this._chase(dt, distance, player, location, crowd);
@@ -153,7 +171,14 @@ export class Zombie {
     this.state = state;
 
     switch (state) {
+      case STATE.PATROL:
+        this.play('Run', 0.3);
+        // бредёт заметно медленнее, чем гонится: темп клипа под шаг
+        this.current.timeScale = CFG.patrolSpeed / CFG.runClipSpeed;
+        break;
+
       case STATE.IDLE:
+        this.waitTime = CFG.waitMin + Math.random() * (CFG.waitMax - CFG.waitMin);
         this.play('Idle', 0.3);
         this.current.timeScale = this.idleSpeed ?? 1;
         break;
@@ -167,9 +192,9 @@ export class Zombie {
       case STATE.ATTACK:
         this.attackTime = 0;
         this.hitDone = false;
-        this.play('Headbutt', 0.15);
+        this.play('Headbutt', 0.12);
         this.current.reset().play();
-        this.current.timeScale = 1;
+        this.current.timeScale = CFG.attackSpeed;
         break;
 
       case STATE.HURT:
@@ -191,15 +216,89 @@ export class Zombie {
 
   // ─── состояния ──────────────────────────────────────────────────────────────
 
-  /** Стоит, пока персонаж не подойдёт на расстояние senseRadius. */
-  _idle(distance, player) {
-    if (player.alive && distance <= CFG.senseRadius) this._enter(STATE.CHASE);
+  /** Стоит на месте. Постояв — идёт к новой точке. */
+  _idle(dt, distance, player, location) {
+    if (this._sees(player, distance, location)) {
+      this._enter(STATE.CHASE);
+      return;
+    }
+
+    this.waitTime -= dt;
+    if (this.waitTime <= 0) this._pickWaypoint(location), this._enter(STATE.PATROL);
+  }
+
+  /** Бродит от точки к точке вокруг своего места. */
+  _patrol(dt, distance, player, location, crowd) {
+    if (this._sees(player, distance, location)) {
+      this._enter(STATE.CHASE);
+      return;
+    }
+
+    _toPoint.subVectors(this.waypoint, this.root.position).setY(0);
+    const left = _toPoint.length();
+
+    if (left < CFG.waypointReached) {
+      this._enter(STATE.IDLE); // пришёл — постоит и выберет новую точку
+      return;
+    }
+
+    _toPoint.divideScalar(left);
+    this._turnTo(Math.atan2(_toPoint.x, _toPoint.z), dt);
+
+    _push.copy(_toPoint).multiplyScalar(CFG.patrolSpeed * dt);
+    this._separate(_push, crowd);
+
+    const position = this.root.position;
+    position.add(_push);
+    location.obstacles.resolve(position, CFG.radius);
+    location.clampPosition(position);
+  }
+
+  /**
+   * Видит ли персонажа.
+   *
+   * Не радиусом, а взглядом: цель должна попасть в конус перед зомби. Со спины
+   * к нему можно подойти незамеченным — но только до alertRadius, вплотную он
+   * почует в любом случае. За стеной не видит вовсе.
+   */
+  _sees(player, distance, location) {
+    if (!player.alive || distance > CFG.senseRadius) return false;
+
+    if (location.obstacles.blocksLine(
+      this.root.position.x, this.root.position.z, player.position.x, player.position.z
+    )) return false;
+
+    if (distance <= CFG.alertRadius) return true; // так близко, что слышит
+
+    // угол между взглядом и направлением на цель
+    _toPlayer.divideScalar(distance || 1);
+    const forward = Math.sin(this.yaw) * _toPlayer.x + Math.cos(this.yaw) * _toPlayer.z;
+    return forward >= Math.cos((CFG.senseAngle * Math.PI) / 360);
+  }
+
+  /** Новая точка для прогулки — рядом с домом и по проходимому месту. */
+  _pickWaypoint(location) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = CFG.patrolRadius * (0.35 + Math.random() * 0.65);
+
+      const x = this.home.x + Math.cos(angle) * radius;
+      const z = this.home.z + Math.sin(angle) * radius;
+
+      if (location.nav.isFree(x, z)) {
+        this.waypoint.set(x, this.root.position.y, z);
+        return;
+      }
+    }
+    this.waypoint.copy(this.home); // не нашли свободного — возвращаемся к себе
   }
 
   /** Медленно идёт к персонажу, обходя препятствия и расталкивая соседей. */
   _chase(dt, distance, player, location, crowd) {
     if (!player.alive || distance > CFG.loseRadius) {
-      this._enter(STATE.IDLE);
+      this.home.copy(this.root.position); // потерял цель — бродит уже здесь
+      this._pickWaypoint(location);
+      this._enter(STATE.PATROL);
       return;
     }
     if (distance <= CFG.attackRadius) {
@@ -262,7 +361,7 @@ export class Zombie {
     this.hurtTime += dt;
     if (this.hurtTime < CFG.staggerFor) return;
 
-    this._enter(player.alive && distance <= CFG.loseRadius ? STATE.CHASE : STATE.IDLE);
+    this._enter(player.alive && distance <= CFG.loseRadius ? STATE.CHASE : STATE.PATROL);
   }
 
   /**

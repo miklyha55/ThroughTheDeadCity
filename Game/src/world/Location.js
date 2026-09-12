@@ -27,6 +27,7 @@ export class Location {
     this.prefabs = prefabs;
     this.zombieLibrary = zombieLibrary;
     this.zombies = [];
+    this._movers = [];  // кто может задеть разбросанные предметы
     this.statics = []; // неподвижные пропы: их геометрия сливается в общие меши
     this.group = new THREE.Group();
     this.group.name = `location:${data.id}`;
@@ -225,14 +226,27 @@ export class Location {
       const kinds = horde.kinds ?? this.zombieLibrary.list();
       const spacing = horde.spacing ?? CONFIG.zombies.spacing;
 
+      // Равномерно — значит по клеткам сетки, а не россыпью: случайные точки
+      // сбиваются в кучи и оставляют пустые углы.
+      const cells = horde.even === false ? null : this._gridFor(horde.count, x0, z0, x1, z1);
+
       for (let i = 0; i < horde.count; i++) {
+        const cell = cells?.[i];
+
         // ищем место, где зомби не влезет в дом, машину и в соседа
         let x = 0;
         let z = 0;
         let free = false;
+
         for (let attempt = 0; attempt < 24 && !free; attempt++) {
-          x = x0 + rand() * (x1 - x0);
-          z = z0 + rand() * (z1 - z0);
+          if (cell) {
+            // внутри своей клетки, со сдвигом — чтобы строй не выглядел решёткой
+            x = cell.x + (rand() - 0.5) * cell.w;
+            z = cell.z + (rand() - 0.5) * cell.d;
+          } else {
+            x = x0 + rand() * (x1 - x0);
+            z = z0 + rand() * (z1 - z0);
+          }
           free = !this.occupied.hits(x, z, spacing);
         }
         if (!free) continue;
@@ -241,6 +255,33 @@ export class Location {
         this._addZombie(kind, x, z, rand() * Math.PI * 2, rand());
       }
     }
+  }
+
+  /** Делит область на клетки по числу зомби — по клетке на каждого. */
+  _gridFor(count, x0, z0, x1, z1) {
+    const width = Math.abs(x1 - x0);
+    const depth = Math.abs(z1 - z0);
+
+    // пропорции клеток близки к квадратным, поэтому покрытие ровное
+    const cols = Math.max(1, Math.round(Math.sqrt((count * width) / depth)));
+    const rows = Math.max(1, Math.ceil(count / cols));
+
+    const cellW = width / cols;
+    const cellD = depth / rows;
+    const cells = [];
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (cells.length >= count) break;
+        cells.push({
+          x: Math.min(x0, x1) + cellW * (c + 0.5),
+          z: Math.min(z0, z1) + cellD * (r + 0.5),
+          w: cellW * 0.8,
+          d: cellD * 0.8,
+        });
+      }
+    }
+    return cells;
   }
 
   /** Один зомби на своём месте, со сдвинутой фазой дыхания. */
@@ -252,6 +293,9 @@ export class Location {
 
     zombie.root.position.set(x, GROUND_Y, z);
     zombie.root.rotation.y = yaw;
+    zombie.yaw = yaw;
+    zombie.home.set(x, GROUND_Y, z);   // вокруг этого места он и будет бродить
+    zombie.waypoint.copy(zombie.home);
     // фаза и темп у каждого свои, иначе толпа дышит как один механизм
     zombie.desync(phase * idleLength, 1 - speedSpread / 2 + phase * speedSpread);
 
@@ -296,9 +340,46 @@ export class Location {
 
     for (const zombie of this.zombies) zombie.update(dt, player, this, this.zombies);
 
+    this._blockPlayer(player);
+
+    // предметы разлетаются и от зомби: толпа проходит — ящики расходятся
+    this._movers.length = 0;
+    this._movers.push(player);
+    for (const zombie of this.zombies) {
+      if (zombie.alive) this._movers.push(zombie);
+    }
+    this.debris.update(dt, this._movers);
+
     // ушедшие под землю больше не нужны
     if (this.zombies.some((z) => z.removed)) {
       this.zombies = this.zombies.filter((z) => !z.removed);
+    }
+  }
+
+  /**
+   * Зомби не пускают персонажа сквозь себя.
+   *
+   * Без этого толпу можно просто пробежать насквозь — она перестаёт быть
+   * преградой, и стрелять становится незачем. Теперь сквозь строй не пройти,
+   * пока его не проредишь.
+   */
+  _blockPlayer(player) {
+    if (!player.alive) return;
+
+    const gap = CONFIG.zombies.bodyRadius + CONFIG.player.radius;
+    const position = player.position;
+
+    for (const zombie of this.zombies) {
+      if (!zombie.alive) continue; // через труп можно перешагнуть
+
+      const dx = position.x - zombie.position.x;
+      const dz = position.z - zombie.position.z;
+      const distance = Math.hypot(dx, dz);
+      if (distance >= gap || distance < 1e-4) continue;
+
+      const push = (gap - distance) / distance;
+      position.x += dx * push;
+      position.z += dz * push;
     }
   }
 
