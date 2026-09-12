@@ -1,0 +1,195 @@
+{
+  "id": "gas_station",
+  "name": "Заправка на 40-м шоссе",
+  "next": "farm",
+  "size": [
+    40,
+    36
+  ],
+  "ground": {
+    "color": "#63625f"
+  },
+  "fence": {
+    "prop": "Fence_ChainLink",
+    "exit": {
+      "side": "east",
+      "offset": -2,
+      "width": 8
+    }
+  },
+  "spawn": {
+    "position": [
+      -15,
+      0
+    ],
+    "rotation": 90
+  },
+  "props": [
+    {
+      "prop": "Bld_GasStation",
+      "at": [
+        4,
+        -9
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Bld_Diner",
+      "at": [
+        -9,
+        10
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_AutoShop",
+      "at": [
+        -11,
+        -10
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        12,
+        6
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Road_Damaged",
+      "at": [
+        12,
+        14
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Road_Crater",
+      "at": [
+        4,
+        6
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Car_VanRust",
+      "at": [
+        -2,
+        2
+      ],
+      "rotation": 75
+    },
+    {
+      "prop": "Car_SchoolBusFort",
+      "at": [
+        8,
+        15
+      ],
+      "rotation": 12
+    },
+    {
+      "prop": "Car_MuscleRaider",
+      "at": [
+        -6,
+        -2
+      ],
+      "rotation": 200
+    },
+    {
+      "prop": "Heavy_SemiTruck",
+      "at": [
+        14,
+        -12
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        15,
+        2
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        15,
+        -2.2
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Prop_FireBarrel",
+      "at": [
+        0,
+        12
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Prop_Sandbags",
+      "at": [
+        10,
+        -2
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        6,
+        2
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Prop_Sign",
+      "at": [
+        17,
+        -7
+      ],
+      "rotation": -90
+    },
+    {
+      "prop": "Tree_Dead",
+      "at": [
+        -16,
+        15
+      ],
+      "rotation": 0
+    },
+    {
+      "prop": "Cactus_Saguaro",
+      "at": [
+        16,
+        12
+      ],
+      "rotation": 0
+    }
+  ],
+  "scatter": [
+    {
+      "seed": 3,
+      "props": [
+        "Prop_Rubble",
+        "Prop_Tires",
+        "Prop_Barrel",
+        "Grass_Clump"
+      ],
+      "count": 30,
+      "area": [
+        -18,
+        -16,
+        18,
+        16
+      ],
+      "scale": [
+        0.7,
+        1.3
+      ]
+    }
+  ]
+}
