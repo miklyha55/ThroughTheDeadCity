@@ -8,7 +8,12 @@ export class Engine {
     this.updatables = [];
     this.timer = new THREE.Timer();
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    // stencil нужен силуэтам: по нему они отсекают саму фигуру
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance',
+      stencil: true,
+    });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;

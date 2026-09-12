@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { batchSkinned } from '../world/batching.js';
+import { addSilhouette } from '../fx/Silhouette.js';
+import { CONFIG as ROOT } from '../config.js';
 
 const CFG = CONFIG.player;
 
@@ -15,6 +17,13 @@ export class Player {
         o.receiveShadow = true;
         o.frustumCulled = false; // скиннинг ломает bounding box в bind-позе
       }
+    });
+
+    // силуэт проступает, когда персонаж уходит за дом
+    this.silhouette = addSilhouette(this.root, {
+      color: ROOT.silhouette.playerColor,
+      opacity: ROOT.silhouette.opacity,
+      stencilRef: 1,
     });
 
     this.mixer = new THREE.AnimationMixer(this.root);
@@ -94,6 +103,7 @@ export class Player {
 
   _die() {
     this.velocity.set(0, 0, 0);
+    this.silhouette.setVisible(false); // мёртвому подсветка не нужна
     this.play('Death', 0.15);
     this.current.reset().play();
     this.current.timeScale = 1;
@@ -105,6 +115,7 @@ export class Player {
     this.yaw = yaw;
     this.root.rotation.y = yaw;
     this.velocity.set(0, 0, 0);
+    this.silhouette.setVisible(this.alive);
     if (this.alive) this.play('Idle', 0);
   }
 
@@ -338,7 +349,7 @@ export class Player {
     this.effects?.fire(muzzle, this._hitPoint);
     this.blood?.splash(this._hitPoint, muzzle); // капли летят дальше по ходу пули
 
-    zombie.takeDamage(CFG.shotDamage);
+    zombie.takeDamage(CFG.shotDamage, this.root.position);
   }
 
   /** Точка дула в мировых координатах: конец ствола оружия в руке. */

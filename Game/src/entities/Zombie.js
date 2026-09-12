@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { addSilhouette } from '../fx/Silhouette.js';
 
 const CFG = CONFIG.zombies;
 
@@ -40,6 +41,13 @@ export class Zombie {
       }
     });
 
+    // своя метка трафарета: иначе фигуры гасили бы силуэты друг друга
+    this.silhouette = addSilhouette(model, {
+      color: CONFIG.silhouette.zombieColor,
+      opacity: CONFIG.silhouette.opacity,
+      stencilRef: 2,
+    });
+
     this.mixer = new THREE.AnimationMixer(model);
     this.actions = new Map();
     for (const clip of clips) {
@@ -67,6 +75,7 @@ export class Zombie {
     this.home = new THREE.Vector3();   // вокруг неё бродит, пока не увидит персонажа
     this.waypoint = new THREE.Vector3();
     this.waitTime = 0;
+    this.alerted = false;  // поднят по тревоге выстрелом — пойдёт на цель без обзора
     this.state = STATE.PATROL;
     this.current = null;
     this.attackTime = 0;
@@ -92,16 +101,25 @@ export class Zombie {
    * Попадание. Первое сбивает с шага, последнее валит замертво.
    * @returns {boolean} убит ли этим выстрелом
    */
-  takeDamage(amount = 1) {
+  takeDamage(amount = 1, from = null) {
     if (this.state === STATE.DEAD) return false;
 
     this.health -= amount;
-    if (this.health > 0) {
-      this._enter(STATE.HURT);
-      return false;
+    if (this.health <= 0) {
+      this._enter(STATE.DEAD);
+      return true;
     }
-    this._enter(STATE.DEAD);
-    return true;
+
+    // Выстрел поднимает тревогу, даже если стреляли в спину: зомби разворачивается
+    // к источнику и после рывка пойдёт туда, а не продолжит прогулку.
+    if (from) {
+      this.alerted = true;
+      this.yaw = Math.atan2(from.x - this.root.position.x, from.z - this.root.position.z);
+      this.root.rotation.y = this.yaw;
+    }
+
+    this._enter(STATE.HURT);
+    return false;
   }
 
   play(name, fade = 0.25) {
@@ -207,6 +225,9 @@ export class Zombie {
 
       case STATE.DEAD:
         this.deadTime = 0;
+        // Силуэт нужен, только чтобы не потерять живую цель за домом. Труп искать
+        // незачем, а уходя под землю он светился бы сквозь пол.
+        this.silhouette.setVisible(false);
         this.play('Death', 0.15);
         this.current.reset().play();
         this.current.timeScale = 1;
@@ -262,7 +283,12 @@ export class Zombie {
    * почует в любом случае. За стеной не видит вовсе.
    */
   _sees(player, distance, location) {
-    if (!player.alive || distance > CFG.senseRadius) return false;
+    if (!player.alive) return false;
+
+    // подняли выстрелом — идёт на цель, пока та в пределах интереса
+    if (this.alerted) return distance <= CFG.loseRadius;
+
+    if (distance > CFG.senseRadius) return false;
 
     if (location.obstacles.blocksLine(
       this.root.position.x, this.root.position.z, player.position.x, player.position.z
@@ -296,6 +322,7 @@ export class Zombie {
   /** Медленно идёт к персонажу, обходя препятствия и расталкивая соседей. */
   _chase(dt, distance, player, location, crowd) {
     if (!player.alive || distance > CFG.loseRadius) {
+      this.alerted = false;
       this.home.copy(this.root.position); // потерял цель — бродит уже здесь
       this._pickWaypoint(location);
       this._enter(STATE.PATROL);
@@ -322,8 +349,9 @@ export class Zombie {
     // поворот в ту сторону, куда шагаем
     this._turnTo(Math.atan2(_step.x, _step.z), dt);
 
+    // В погоне друг друга не расталкивают: толпа должна идти на цель, а не
+    // разбираться между собой. Иначе задние тормозят передних и строй вязнет.
     _push.copy(_step).multiplyScalar(CFG.speed * dt);
-    this._separate(_push, crowd);
     position.add(_push);
 
     // в модели и за забор зомби не лезут — те же правила, что и для персонажа
@@ -361,7 +389,8 @@ export class Zombie {
     this.hurtTime += dt;
     if (this.hurtTime < CFG.staggerFor) return;
 
-    this._enter(player.alive && distance <= CFG.loseRadius ? STATE.CHASE : STATE.PATROL);
+    if (player.alive && (this.alerted || distance <= CFG.loseRadius)) this._enter(STATE.CHASE);
+    else this._enter(STATE.PATROL);
   }
 
   /**
