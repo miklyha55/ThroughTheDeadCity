@@ -81,6 +81,7 @@ export class Zombie {
     this.current = null;
     this.attackTime = 0;
     this.hitDone = false;
+    this.recovery = 0; // пауза после удара: даёт персонажу шанс убежать
 
     this.play('Idle', 0);
   }
@@ -364,6 +365,8 @@ export class Zombie {
 
   /** Медленно идёт к персонажу, обходя препятствия и расталкивая соседей. */
   _chase(dt, distance, player, location, crowd) {
+    this.recovery = Math.max(0, this.recovery - dt);
+
     if (!player.alive || distance > CFG.loseRadius) {
       this.alerted = false;
       this.home.copy(this.root.position); // потерял цель — бродит уже здесь
@@ -371,7 +374,8 @@ export class Zombie {
       this._enter(STATE.PATROL);
       return;
     }
-    if (distance <= CFG.attackRadius) {
+    // после удара зомби переводит дух — идёт, но не бьёт
+    if (distance <= CFG.attackRadius && this.recovery <= 0) {
       this._enter(STATE.ATTACK);
       return;
     }
@@ -392,9 +396,15 @@ export class Zombie {
     // поворот в ту сторону, куда шагаем
     this._turnTo(Math.atan2(_step.x, _step.z), dt);
 
+    // Подойдя на дистанцию удара, зомби останавливается: дальше он бьёт, а не
+    // толкается. Иначе после замаха он продолжал бы напирать и возить персонажа
+    // по площадке, даже когда тот беспомощен.
+    const room = distance - CFG.attackRadius;
+    if (room <= 0) return;
+
     // В погоне друг друга не расталкивают: толпа должна идти на цель, а не
     // разбираться между собой. Иначе задние тормозят передних и строй вязнет.
-    _push.copy(_step).multiplyScalar(CFG.speed * dt);
+    _push.copy(_step).multiplyScalar(Math.min(CFG.speed * dt, room));
     position.add(_push);
 
     // в модели и за забор зомби не лезут — те же правила, что и для персонажа
@@ -406,25 +416,28 @@ export class Zombie {
   _attack(dt, distance, player) {
     this.attackTime += dt;
 
-    // доворачиваемся к цели: персонаж может обходить сбоку
+    // Во время замаха зомби стоит на месте: только доворачивается к цели.
+    // Персонаж может обходить сбоку, но толкать его зомби не должен.
     this._turnTo(Math.atan2(_toPlayer.x, _toPlayer.z), dt);
+
+    // Замах начался — персонаж схвачен и вырваться не может до самого удара.
+    if (!this.hitDone) {
+      player.pin(this.attackLength * CFG.hitAt - this.attackTime + CFG.pinGrace);
+    }
 
     if (!this.hitDone && this.attackTime >= this.attackLength * CFG.hitAt) {
       this.hitDone = true;
       // бьём, только если цель всё ещё в досягаемости — иначе удар в воздух
       if (distance <= CFG.attackRadius + CFG.reach) player.takeDamage(CFG.damage);
+      this.recovery = CFG.recoverFor; // дальше он переводит дух
     }
 
     if (this.attackTime < this.attackLength) return;
 
-    // замах закончился: бьём снова, догоняем или теряем интерес
+    // Замах закончился. Повторять сразу нельзя: персонажу нужна доля секунды,
+    // чтобы отскочить, иначе его забивают насмерть без единого шанса.
     if (!player.alive) this._enter(STATE.IDLE);
-    else if (distance > CFG.attackRadius) this._enter(STATE.CHASE);
-    else {
-      this.attackTime = 0;
-      this.hitDone = false;
-      this.current.reset().play();
-    }
+    else this._enter(STATE.CHASE);
   }
 
   /** Сбит с шага: на миг замирает, потом снова идёт. */

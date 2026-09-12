@@ -39,6 +39,15 @@ export class Player {
       death.clampWhenFinished = true;
     }
 
+    const reaction = this.actions.get('ReactionHit');
+    this.reactionLength = CFG.reactionFor;
+    if (reaction) {
+      reaction.setLoop(THREE.LoopOnce, 1);
+      reaction.clampWhenFinished = true;
+      // клип длинный, а нужен короткий рывок — играем его быстрее
+      this.reactionLength = reaction.getClip().duration / CFG.reactionSpeed;
+    }
+
     this.velocity = new THREE.Vector3();
     this.yaw = 0;
     this.current = null;
@@ -68,6 +77,9 @@ export class Player {
     this.target = null;    // зомби на прицеле, держится до его смерти
     this.shotPending = 0;  // сколько осталось до момента выстрела в клипе
     this.shootPlaying = 0; // сколько ещё идёт клип выстрела
+    this.reloading = 0;    // пауза между выстрелами: в неё зомби и подходят
+    this.pinned = 0;       // зомби замахнулся: управление отобрано до удара
+    this.reacting = 0;     // доигрывается реакция на попадание
 
     this.play('Idle', 0);
 
@@ -79,6 +91,23 @@ export class Player {
   get position() { return this.root.position; }
 
   get alive() { return this.lives > 0; }
+
+  /**
+   * Управление отобрано: зомби замахнулся, либо персонажа ещё шатает от удара.
+   * И то и другое — время, когда он не бежит, не стреляет и не может уйти.
+   */
+  get helpless() { return this.pinned > 0 || this.reacting > 0; }
+
+  /**
+   * Зомби начал замах — персонаж замирает, пока его не ударят.
+   * Время задаёт сам зомби: столько осталось до попадания в его анимации.
+   */
+  pin(seconds) {
+    if (!this.alive) return;
+    this.pinned = Math.max(this.pinned, seconds);
+    this.velocity.set(0, 0, 0);
+    this._holdFire(); // выстрела не будет, пока не ударят
+  }
 
   /** Чем он задевает предметы — то же, что и у зомби, чтобы обходить их одним списком. */
   get radius() { return CFG.radius; }
@@ -92,13 +121,28 @@ export class Player {
    * снимут все жизни в один кадр, и умирать он будет мгновенно и непонятно.
    */
   takeDamage(amount = 1) {
-    if (!this.alive || this.invulnerable > 0) return;
+    // Пока персонажа шатает от прошлого удара, новый не засчитывается: он уже
+    // и так беспомощен, а иначе двое зомби снимали бы все жизни подряд.
+    if (!this.alive || this.invulnerable > 0 || this.reacting > 0) return;
 
     this.lives = Math.max(0, this.lives - amount);
     this.invulnerable = CFG.invulnerableFor;
+    this.pinned = 0; // замах отработал, дальше держит уже сама реакция
 
-    if (this.alive) this.play('ReactionHit', 0.1);
-    else this._die();
+    if (!this.alive) {
+      this._die();
+      return;
+    }
+
+    // Реакцию персонаж доигрывает целиком: пока его шатает, он не бежит
+    // и не стреляет — только потом решает, что делать дальше.
+    this.reacting = this.reactionLength;
+    this.velocity.set(0, 0, 0);
+    this._holdFire();
+
+    this.play('ReactionHit', 0.08);
+    this.current.reset().play();
+    this.current.timeScale = CFG.reactionSpeed;
   }
 
   _die() {
@@ -141,6 +185,8 @@ export class Player {
    */
   update(dt, move, cameraYaw, location) {
     if (this.invulnerable > 0) this.invulnerable -= dt;
+    if (this.pinned > 0) this.pinned -= dt;
+    if (this.reacting > 0) this.reacting -= dt;
 
     // мёртвый не управляется: доигрывает падение и остаётся лежать
     if (!this.alive) {
@@ -162,6 +208,9 @@ export class Player {
 
     if (this._desired.lengthSq() > 0) this._desired.normalize().multiplyScalar(CFG.runSpeed);
 
+    // В замахе и под ударом персонаж не управляется: вырваться нельзя.
+    if (this.helpless) this._desired.set(0, 0, 0);
+
     // ни разгона, ни выбега — скорость появляется и пропадает мгновенно
     this.velocity.copy(this._desired);
 
@@ -174,17 +223,22 @@ export class Player {
       this._turnTo(target, CFG.turnSpeed, dt);
     }
 
-    // Стрелять можно только стоя: чтобы выстрелить, надо остановиться.
-    const shooting = speed === 0 && location ? this._aimAndFire(dt, location) : this._holdFire();
+    // Стрелять можно только стоя. Проверяем сам ввод, а не скорость: на кадре
+    // отпускания стика скорость ещё старая, и выстрел терялся бы до следующего.
+    const standing = this._desired.lengthSq() === 0;
+    const canShoot = standing && location && !this.helpless;
+    const shooting = canShoot ? this._aimAndFire(dt, location) : this._holdFire();
 
     // ружьё либо в руках, либо за спиной — одновременно видно только одно
     this._holdGun(shooting);
 
-    // пока играет реакция на удар, бег и стойку не включаем — иначе её не видно
-    const reacting = this.current === this.actions.get('ReactionHit')
-      && this.invulnerable > CFG.invulnerableFor - CFG.reactionFor;
-
-    if (!reacting && !shooting) {
+    if (this.reacting > 0) {
+      // доигрывает попадание: анимацию не трогаем, иначе оборвётся на первом кадре
+    } else if (this.pinned > 0) {
+      // в замахе персонаж только стоит
+      this.play('Idle', CFG.stopFade);
+      this.current.timeScale = 1;
+    } else if (!shooting) {
       if (speed > 0) {
         this.play('Run', 0.15);
         // темп клипа под скорость бега, чтобы стопы не скользили
@@ -229,6 +283,7 @@ export class Player {
     if (!this.target) {
       this.shotPending = 0;
       this.shootPlaying = 0;
+      this.reloading = 0; // целей нет — перезарядка ни к чему, следующая встреча начнётся с выстрела
       return false;
     }
 
@@ -246,13 +301,23 @@ export class Player {
       return true;
     }
 
-    // клип доиграл, а цель ещё есть — стреляем снова, без паузы и без стойки
+    // Пауза между выстрелами: персонаж перезаряжается и стоит открытым.
+    // Именно в это окно зомби успевают подойти вплотную и ударить.
+    if (this.reloading > 0) {
+      this.reloading -= dt;
+      this.play('Idle', CFG.stopFade);
+      this.current.timeScale = 1;
+      return true;
+    }
+
+    // цель есть и перезарядка кончилась — стреляем
     this.play('Shoot', 0.08);
     this.current.reset().play();
     this.current.timeScale = CFG.shootSpeed;
 
     this.shotPending = CFG.shotDelay;
     this.shootPlaying = this.shootLength / CFG.shootSpeed;
+    this.reloading = CFG.reloadFor; // пауза отсчитывается после клипа, а не вместе с ним
     return true;
   }
 
@@ -291,14 +356,25 @@ export class Player {
   }
 
   /** Сбрасывает прицел, когда персонаж побежал. */
+  /**
+   * Сбрасывает всё, что связано со стрельбой: прицел, недоигранный клип и паузу.
+   *
+   * Важно гасить и `shootPlaying`: иначе после бега остаётся хвост прошлого
+   * выстрела, и персонаж, остановившись, сначала «доигрывает» его вхолостую —
+   * со стороны выглядит, будто он просто стоит и не стреляет.
+   */
   _holdFire() {
     this.target = null;
     this.shotPending = 0;
     this.shootPlaying = 0;
+    this.reloading = 0;
     return false;
   }
 
-  /** Годится ли цель: жива, в пределах дальности и пуля до неё долетит. */
+  /**
+   * Годится ли цель: жива, в пределах дальности и пуля до неё долетит.
+   * Куда персонаж смотрит — неважно: он сам довернётся к тому, кого взял на прицел.
+   */
   _targetUsable(zombie, location) {
     if (!zombie || !zombie.alive) return false;
 
@@ -319,9 +395,7 @@ export class Player {
     for (const zombie of location.zombies) {
       if (!zombie.alive) continue;
 
-      const dx = zombie.position.x - from.x;
-      const dz = zombie.position.z - from.z;
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.hypot(zombie.position.x - from.x, zombie.position.z - from.z);
       if (distance >= bestDistance) continue;
 
       // сквозь дом или машину не стреляем

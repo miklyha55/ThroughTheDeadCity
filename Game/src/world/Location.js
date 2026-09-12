@@ -377,9 +377,11 @@ export class Location {
       const distance = Math.hypot(dx, dz);
       if (distance >= gap || distance < 1e-4) continue;
 
+      // Расходится зомби, а не персонаж: иначе толпа возит игрока по площадке,
+      // и он теряет контроль над собственным положением.
       const push = (gap - distance) / distance;
-      position.x += dx * push;
-      position.z += dz * push;
+      zombie.position.x -= dx * push;
+      zombie.position.z -= dz * push;
     }
   }
 
