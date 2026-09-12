@@ -75,6 +75,7 @@ export class Zombie {
     this.home = new THREE.Vector3();   // вокруг неё бродит, пока не увидит персонажа
     this.waypoint = new THREE.Vector3();
     this.waitTime = 0;
+    this.stuckTime = 0;    // сколько он топчется на месте, никуда не продвигаясь
     this.alerted = false;  // поднят по тревоге выстрелом — пойдёт на цель без обзора
     this.state = STATE.PATROL;
     this.current = null;
@@ -248,14 +249,16 @@ export class Zombie {
     if (this.waitTime <= 0) this._pickWaypoint(location), this._enter(STATE.PATROL);
   }
 
-  /** Бродит от точки к точке вокруг своего места. */
+  /** Бродит от точки к точке вокруг своего места, обходя препятствия. */
   _patrol(dt, distance, player, location, crowd) {
     if (this._sees(player, distance, location)) {
       this._enter(STATE.CHASE);
       return;
     }
 
-    _toPoint.subVectors(this.waypoint, this.root.position).setY(0);
+    const position = this.root.position;
+
+    _toPoint.subVectors(this.waypoint, position).setY(0);
     const left = _toPoint.length();
 
     if (left < CFG.waypointReached) {
@@ -269,10 +272,29 @@ export class Zombie {
     _push.copy(_toPoint).multiplyScalar(CFG.patrolSpeed * dt);
     this._separate(_push, crowd);
 
-    const position = this.root.position;
-    position.add(_push);
+    // Куда шагаем — там должно быть свободно. Проверять только саму точку мало:
+    // по дороге к ней может стоять стена, и зомби упирается в неё носом.
+    const nextX = position.x + _push.x;
+    const nextZ = position.z + _push.z;
+
+    if (!location.nav.isFree(nextX, nextZ)) {
+      this.stuckTime += dt;
+      if (this.stuckTime > CFG.stuckFor) this._pickWaypoint(location);
+      return;
+    }
+
+    position.set(nextX, position.y, nextZ);
     location.obstacles.resolve(position, CFG.radius);
     location.clampPosition(position);
+
+    // Продвинулись ли мы на самом деле: выталкивание могло вернуть назад.
+    const moved = Math.hypot(position.x - nextX + _push.x, position.z - nextZ + _push.z);
+    if (moved < CFG.patrolSpeed * dt * 0.3) {
+      this.stuckTime += dt;
+      if (this.stuckTime > CFG.stuckFor) this._pickWaypoint(location);
+    } else {
+      this.stuckTime = 0;
+    }
   }
 
   /**
@@ -302,21 +324,42 @@ export class Zombie {
     return forward >= Math.cos((CFG.senseAngle * Math.PI) / 360);
   }
 
-  /** Новая точка для прогулки — рядом с домом и по проходимому месту. */
+  /**
+   * Новая точка для прогулки: рядом с домом, на свободном месте и с проходимой
+   * дорогой туда. Проверять одну только точку мало — до неё ещё надо дойти.
+   */
   _pickWaypoint(location) {
-    for (let attempt = 0; attempt < 8; attempt++) {
+    this.stuckTime = 0;
+    const from = this.root.position;
+
+    for (let attempt = 0; attempt < 12; attempt++) {
       const angle = Math.random() * Math.PI * 2;
       const radius = CFG.patrolRadius * (0.35 + Math.random() * 0.65);
 
       const x = this.home.x + Math.cos(angle) * radius;
       const z = this.home.z + Math.sin(angle) * radius;
 
-      if (location.nav.isFree(x, z)) {
-        this.waypoint.set(x, this.root.position.y, z);
-        return;
-      }
+      if (!location.nav.isFree(x, z)) continue;
+      if (!location.nav.hasLineOfSight(from.x, from.z, x, z)) continue;
+
+      this.waypoint.set(x, from.y, z);
+      return;
     }
-    this.waypoint.copy(this.home); // не нашли свободного — возвращаемся к себе
+
+    // Свободной дороги вокруг нет — значит зомби зажат. Ищем любое свободное
+    // место поблизости, лишь бы выбраться, а «дом» переносим туда же.
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const x = from.x + Math.cos(angle) * CFG.unstuckStep;
+      const z = from.z + Math.sin(angle) * CFG.unstuckStep;
+
+      if (!location.nav.isFree(x, z)) continue;
+
+      this.waypoint.set(x, from.y, z);
+      this.home.set(x, from.y, z);
+      return;
+    }
+    this.waypoint.copy(from); // совсем некуда — постоит на месте
   }
 
   /** Медленно идёт к персонажу, обходя препятствия и расталкивая соседей. */
