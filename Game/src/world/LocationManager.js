@@ -5,13 +5,19 @@ import { Location } from './Location.js';
  * новая строится и персонаж ставится в её точку старта.
  */
 export class LocationManager {
-  constructor(scene, props, player) {
+  constructor(scene, prefabs, player) {
     this.scene = scene;
-    this.props = props;
+    this.prefabs = prefabs;
     this.player = player;
     this.current = null;
     this.loading = false;
     this.onChange = null; // вызывается после смены локации — обновить HUD и прочее
+  }
+
+  /** Подменяет библиотеку префабов и пересобирает текущую локацию на свежих моделях. */
+  async useLibrary(prefabs) {
+    this.prefabs = prefabs;
+    if (this.current) await this.load(this.current.data.id);
   }
 
   /** Следующая локация по цепочке, куда ведёт выход текущей. */
@@ -39,7 +45,7 @@ export class LocationManager {
 
     this.current?.dispose();
 
-    const location = new Location(data, this.props);
+    const location = new Location(data, this.prefabs);
     this.scene.add(location.group);
     this.current = location;
 

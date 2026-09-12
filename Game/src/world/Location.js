@@ -20,9 +20,9 @@ const GROUND_Y = 0.02; // площадка лежит чуть выше подл
  * с единственным проёмом-выходом, расставленные пропы и точка старта.
  */
 export class Location {
-  constructor(data, props) {
+  constructor(data, prefabs) {
     this.data = data;
-    this.props = props;
+    this.prefabs = prefabs;
     this.group = new THREE.Group();
     this.group.name = `location:${data.id}`;
     this.obstacles = new Obstacles();
@@ -66,7 +66,7 @@ export class Location {
     if (!fence) return;
 
     const segName = fence.prop;
-    const segSize = this.props.size(segName);
+    const segSize = this.prefabs.size(segName);
     if (!segSize) return;
 
     const segLength = segSize.x;
@@ -91,16 +91,14 @@ export class Location {
         const at = -length / 2 + step * (i + 0.5);
         if (gap && at - step / 2 < gap.to && at + step / 2 > gap.from) continue;
 
-        const section = this.props.create(segName);
+        const section = this.prefabs.create(segName);
         if (!section) return;
         section.scale.x = step / segLength; // подгон под шаг, чтобы не было щелей на стыках
         section.rotation.y = cfg.rotationY;
         if (cfg.along === 'x') section.position.set(at, 0, cfg.sign * offset);
         else section.position.set(cfg.sign * offset, 0, at);
         this.group.add(section);
-        const shapes = this.props.collisionShapes(segName);
-        this.obstacles.add(section, shapes);
-        this.occupied.add(section, shapes);
+        this._place(segName, section);
       }
 
       if (gap) this._buildExit(side, cfg, gap, offset);
@@ -135,15 +133,13 @@ export class Location {
 
   _buildProps() {
     for (const entry of this.data.props ?? []) {
-      const obj = this.props.create(entry.prop);
+      const obj = this.prefabs.create(entry.prop);
       if (!obj) continue;
       obj.position.set(entry.at[0], entry.y ?? 0, entry.at[1]);
       obj.rotation.y = (entry.rotation ?? 0) * DEG;
       if (entry.scale) obj.scale.setScalar(entry.scale);
       this.group.add(obj);
-      this._addObstacle(entry.prop, obj);
-      this._addDebris(entry.prop, obj);
-      this.occupied.add(obj, this.props.collisionShapes(entry.prop));
+      this._place(entry.prop, obj);
     }
 
     // разбросанная мелочь: трава, кусты, мусор — задаётся не поштучно, а зоной
@@ -174,7 +170,7 @@ export class Location {
         const layers = stack ? stack.layers[0] + Math.floor(rand() * (stack.layers[1] - stack.layers[0] + 1)) : 1;
 
         for (let layer = 0; layer < layers; layer++) {
-          const obj = this.props.create(name);
+          const obj = this.prefabs.create(name);
           if (!obj) continue;
 
           const jitter = stack ? (rand() - 0.5) * stack.jitter * 2 : 0;
@@ -191,33 +187,40 @@ export class Location {
 
           obj.scale.setScalar(minScale + rand() * (maxScale - minScale));
           this.group.add(obj);
-          this._addObstacle(name, obj);
-          this._addDebris(name, obj);
-          if (layer === 0) this.occupied.add(obj, this.props.collisionShapes(name));
+          this._place(name, obj, layer === 0);
         }
       }
     }
   }
 
   /**
-   * Мелочь, которую можно распинать: её физика считается каждый кадр.
-   *
-   * Проп заворачивается в контейнер, центр которого — середина высоты предмета.
-   * Модели приходят из Blender с началом координат в основании, и вращать их вокруг
-   * этой точки нельзя: при наклоне предмет уходит нижним краем под землю.
+   * Регистрирует поставленный объект: препятствие, занятое место, физическое тело.
+   * Чем объект является, решает его префаб, а не имя модели, — поэтому одна и та же
+   * вещь ведёт себя одинаково на любой локации.
    */
-  _addDebris(name, object) {
-    if (!CONFIG.debris.prefixes.some((prefix) => name.startsWith(prefix))) return;
-    const body = this.props.body(name);
+  _place(name, object, markOccupied = true) {
+    const prefab = this.prefabs.get(name);
+    if (!prefab) return;
+
+    if (prefab.solid) this.obstacles.add(object, prefab.shapes);
+    if (markOccupied) this.occupied.add(object, prefab.shapes);
+    if (prefab.dynamic) this._makeDynamic(prefab, object);
+  }
+
+  /**
+   * Отдаёт объект физике. Модели приходят из Blender с началом координат в основании,
+   * поэтому вещь переносится в контейнер с началом в центре масс: вращаться она должна
+   * вокруг него, иначе при наклоне уходит нижним краем под землю.
+   */
+  _makeDynamic(prefab, object) {
+    const body = prefab.body;
     if (!body) return;
 
     const scale = object.scale;
     const com = body.com.clone().multiply(scale);
 
-    // контейнер ставим ровно в центр масс: физика вращает тело вокруг него,
-    // а не вокруг начала координат модели, которое у Blender лежит в основании
     const pivot = new THREE.Group();
-    pivot.name = `debris:${name}`;
+    pivot.name = `debris:${prefab.name}`;
     pivot.position.copy(object.position).add(com);
     pivot.quaternion.setFromEuler(object.rotation);
 
@@ -231,20 +234,6 @@ export class Location {
       boxMax: body.boxMax.clone().multiply(scale),
       volume: body.volume * scale.x * scale.y * scale.z,
     }, GROUND_Y);
-  }
-
-  /** Препятствием становится всё, кроме проходимых категорий и того, что ниже пояса. */
-  _addObstacle(name, object) {
-    const { passablePrefixes, passableHeight, alwaysBlocking } = CONFIG.locations;
-
-    if (!alwaysBlocking.some((prefix) => name.startsWith(prefix))) {
-      if (passablePrefixes.some((prefix) => name.startsWith(prefix))) return;
-
-      const size = this.props.size(name);
-      if (size && size.y * object.scale.y < passableHeight) return;
-    }
-
-    this.obstacles.add(object, this.props.collisionShapes(name));
   }
 
   /** Дошёл ли персонаж до выхода — то есть пересёк линию забора в створе проёма. */

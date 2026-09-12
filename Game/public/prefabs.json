@@ -1,0 +1,33 @@
+{
+  "_": "Роли моделей из Env.blend. Правило ищется от частного к общему: overrides → groups (самый длинный подходящий префикс) → defaults. Сами модели не правятся — только то, как игра с ними обращается.",
+
+  "defaults": {
+    "solid": true,
+    "dynamic": false,
+    "shadows": true,
+    "minSolidHeight": 0
+  },
+
+  "groups": {
+    "Bld_":    { "solid": true },
+    "Rock_":   { "solid": true },
+    "Heavy_":  { "solid": true },
+    "Car_":    { "solid": true },
+    "Fence_":  { "solid": true },
+    "Tree_":   { "solid": true },
+    "Cactus_": { "solid": true },
+
+    "Bush_":   { "solid": true, "minSolidHeight": 1.5 },
+
+    "Crop_":   { "solid": false },
+    "Grass_":  { "solid": false },
+    "Road_":   { "solid": false, "shadows": false },
+
+    "Prop_":   { "solid": false, "dynamic": true }
+  },
+
+  "overrides": {
+    "Bush_Tumbleweed": { "solid": false },
+    "Prop_Sign": { "solid": true, "dynamic": false }
+  }
+}

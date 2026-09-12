@@ -11,6 +11,7 @@
       /* --- экранный джойстик --- */
       .joystick__zone {
         position: fixed;
+        inset: 0;
         z-index: 20;
         touch-action: none;
       }
@@ -27,10 +28,14 @@
           inset 0 -3px 8px rgba(255,255,255,0.12),
           0 2px 10px rgba(0,0,0,0.25);
         backdrop-filter: blur(2px);
-        transition: opacity 160ms ease;
-        opacity: 0.72;
+        transition: opacity 140ms ease;
+        opacity: 0;
+        visibility: hidden;
       }
-      .joystick.is-active { opacity: 1; }
+      .joystick.is-active {
+        opacity: 1;
+        visibility: visible;
+      }
       .joystick__knob {
         position: absolute;
         left: 50%;
@@ -45,6 +50,40 @@
           inset 0 4px 8px rgba(255,255,255,0.75);
         will-change: transform;
       }
+
+      /* --- панель разработчика --- */
+      .devpanel {
+        position: fixed;
+        right: 14px;
+        top: 12px;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .devpanel__button {
+        font: inherit;
+        padding: 7px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.35);
+        background: rgba(20,26,32,0.72);
+        color: #e8eef4;
+        cursor: pointer;
+        backdrop-filter: blur(3px);
+      }
+      .devpanel__button:hover { background: rgba(30,38,46,0.85); }
+      .devpanel__button:disabled { opacity: 0.55; cursor: progress; }
+      .devpanel__status {
+        max-width: 320px;
+        text-align: right;
+        color: #9fb4c7;
+        text-shadow: 0 1px 2px #000;
+      }
+      .devpanel__status[data-kind="ok"] { color: #8fd6a0; }
+      .devpanel__status[data-kind="fail"] { color: #e59a9a; }
+      .devpanel__status[data-kind="busy"] { color: #e8d08f; }
 
       #hud {
         position: fixed; left: 12px; top: 10px;
