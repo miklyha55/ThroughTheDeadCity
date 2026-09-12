@@ -99,7 +99,11 @@ export function batchSkinned(root, cache = materialCache) {
 
   root.traverse((o) => {
     if (!o.isMesh) return;
-    const key = groupKey(o.material, o.isSkinnedMesh);
+
+    // Ключ включает родителя: меши на разных узлах сливать нельзя. Дробовик в руке
+    // и дробовик за спиной висят на разных костях, и слитые в один меш они оказались
+    // бы в одной точке — второй просто исчез бы из виду.
+    const key = `${o.parent?.uuid ?? 'root'}|${groupKey(o.material, o.isSkinnedMesh)}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(o);
     if (o.isSkinnedMesh) skinned.push(o);

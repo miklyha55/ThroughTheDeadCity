@@ -36,8 +36,16 @@ export class FollowCamera {
   update(dt) {
     this._desiredFocus.copy(this.target.position).setY(this.target.position.y + CFG.lookAtHeight);
 
-    const k = 1 - Math.exp(-CFG.damping * dt);
-    this._focus.lerp(this._desiredFocus, k);
+    // Линейно: камера идёт к цели с постоянной скоростью и останавливается,
+    // как только пришла. Затухание оставляло бы за персонажем шлейф — кажется,
+    // будто он продолжает бежать после того, как встал.
+    this._focus.sub(this._desiredFocus);
+    const away = this._focus.length();
+
+    if (away <= CFG.followSpeed * dt) this._focus.set(0, 0, 0);
+    else this._focus.multiplyScalar(1 - (CFG.followSpeed * dt) / away);
+
+    this._focus.add(this._desiredFocus);
 
     this.camera.position.copy(this._focus).add(this._offset);
     this.camera.lookAt(this._focus);

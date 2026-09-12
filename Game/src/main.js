@@ -35,7 +35,7 @@ const camera = new FollowCamera(engine.camera, player);
 engine.add({
   update(dt) {
     input.update();
-    player.update(dt, input.move, camera.moveYaw);
+    player.update(dt, input.move, camera.moveYaw, locations.current);
     const here = locations.current;
     if (here.reachedExit(player.position)) {
       locations.advance(); // вышел через проём — следующая локация
@@ -44,7 +44,7 @@ engine.add({
       here.clampPosition(player.position); // и за забор тоже
     }
     here.debris.update(dt, player.position, CONFIG.player.radius, player.velocity);
-    here.update(dt); // анимации зомби
+    here.update(dt, player); // зомби: заметить, дойти, ударить
     camera.update(dt);
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },
@@ -62,6 +62,25 @@ async function updateDebugView() {
 function showLocationName(location) {
   hud.hidden = false;
   hud.textContent = location.data.name;
+}
+
+// ?debug=input — видно, что приходит со стика и куда едет персонаж
+if (params.get('debug') === 'input') {
+  const readout = document.createElement('div');
+  readout.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:40;'
+    + 'font:12px/1.5 ui-monospace,Menlo,monospace;color:#8fd6a0;text-shadow:0 1px 2px #000;'
+    + 'pointer-events:none;white-space:pre';
+  document.body.appendChild(readout);
+
+  engine.add({
+    update() {
+      const p = player.position;
+      readout.textContent =
+        `стик: ${joystick.active ? 'зажат' : 'отпущен'}  ввод ${input.move.x.toFixed(2)},${input.move.y.toFixed(2)}\n`
+        + `скорость ${player.velocity.length().toFixed(2)} м/с\n`
+        + `позиция ${p.x.toFixed(2)}, ${p.z.toFixed(2)}`;
+    },
+  });
 }
 locations.onChange = (location) => {
   showLocationName(location);

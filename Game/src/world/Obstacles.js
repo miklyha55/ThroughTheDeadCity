@@ -4,6 +4,9 @@
  * отдельно от жердей. Персонаж — круг; при пересечении его выталкивает наружу
  * по кратчайшему пути, поэтому вдоль стены он скользит, а не залипает.
  */
+// На сколько метров за кадр выталкивание может сдвинуть тело.
+const MAX_PUSH = 0.35;
+
 export class Obstacles {
   constructor() {
     this.items = [];
@@ -50,6 +53,22 @@ export class Obstacles {
     }
   }
 
+  /**
+   * Свободна ли линия между двумя точками — например, для выстрела.
+   * Радиус пули почти нулевой, поэтому в щель между машиной и стеной она пройдёт,
+   * а сквозь дом — нет.
+   */
+  blocksLine(x1, z1, x2, z2, step = 0.25) {
+    const length = Math.hypot(x2 - x1, z2 - z1);
+    const steps = Math.max(1, Math.ceil(length / step));
+
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      if (this.hits(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t, 0.05)) return true;
+    }
+    return false;
+  }
+
   /** Задевает ли круг хоть один контур — нужно, чтобы не ставить пропы внутрь других моделей. */
   hits(x, z, radius) {
     for (const item of this.items) {
@@ -88,6 +107,12 @@ export class Obstacles {
    * @param {number} radius — радиус персонажа
    */
   resolve(position, radius) {
+    // Суммарное выталкивание за кадр ограничено: рядом со сложной моделью
+    // контуров много, и каждый толкает по-своему. Без предела персонажа
+    // «возит» между ними — со стороны это выглядит так, будто он сам бежит.
+    const startX = position.x;
+    const startZ = position.z;
+
     for (const item of this.items) {
       const span = item.reach + radius;
       if (Math.abs(position.x - item.cx) > span || Math.abs(position.z - item.cz) > span) continue;
@@ -154,6 +179,16 @@ export class Obstacles {
         position.x += dx * push;
         position.z += dz * push;
       }
+    }
+
+    const movedX = position.x - startX;
+    const movedZ = position.z - startZ;
+    const moved = Math.hypot(movedX, movedZ);
+
+    if (moved > MAX_PUSH) {
+      const k = MAX_PUSH / moved;
+      position.x = startX + movedX * k;
+      position.z = startZ + movedZ * k;
     }
   }
 }

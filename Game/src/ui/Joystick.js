@@ -32,8 +32,18 @@ export class Joystick {
 
     this.zone.addEventListener('pointerdown', this._onDown);
     addEventListener('pointermove', this._onMove, { passive: false });
+
+    // Отпускание ловим всеми способами сразу. Для касаний браузер сам захватывает
+    // указатель на элементе, и одного pointerup мало: палец может уйти за край
+    // экрана, система может отобрать жест, окно — потерять фокус. Любое из этих
+    // событий означает, что стик отпущен, и персонаж обязан встать.
     addEventListener('pointerup', this._onUp);
     addEventListener('pointercancel', this._onUp);
+    this.zone.addEventListener('lostpointercapture', this._onUp);
+    addEventListener('blur', this._release);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this._release();
+    });
   }
 
   _onDown = (e) => {
@@ -53,12 +63,27 @@ export class Joystick {
 
   _onMove = (e) => {
     if (!this.active || e.pointerId !== this._pointerId) return;
+
+    // Палец подняли, но событие отпускания потерялось: у события больше нет
+    // прижатой кнопки. Считаем это отпусканием, иначе персонаж «поедет» сам.
+    if (e.buttons === 0 && e.pointerType !== 'touch') {
+      this._release();
+      return;
+    }
     this._update(e);
     e.preventDefault();
   };
 
   _onUp = (e) => {
-    if (!this.active || e.pointerId !== this._pointerId) return;
+    if (!this.active) return;
+    // id не совпал — значит отпустили другой палец, наш ещё на экране
+    if (e.pointerId !== undefined && e.pointerId !== this._pointerId) return;
+    this._release();
+  };
+
+  /** Снимает стик: ввод обнуляется в тот же кадр. */
+  _release = () => {
+    if (!this.active) return;
     this.active = false;
     this._pointerId = null;
     this.value.set(0, 0);

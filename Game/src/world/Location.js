@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Obstacles } from './Obstacles.js';
 import { Debris } from '../entities/Debris.js';
 import { batchStatic } from './batching.js';
+import { NavGrid } from './NavGrid.js';
 import { CONFIG } from '../config.js';
 
 // Стороны площадки: north — дальняя (−Z), south — ближняя (+Z).
@@ -39,12 +40,20 @@ export class Location {
     this.width = w;
     this.depth = d;
 
+    // сетка навигации: волну считаем чуть дальше радиуса интереса зомби
+    this.nav = new NavGrid(w, d, CONFIG.nav.cell, CONFIG.zombies.loseRadius + CONFIG.nav.margin);
+    this._navAge = Infinity; // возраст волны: пересчитываем не каждый кадр
+
     this.spawn = new THREE.Vector3(data.spawn.position[0], 0, data.spawn.position[1]);
     this.spawnYaw = (data.spawn.rotation ?? 0) * DEG;
 
     this._buildGround();
     this._buildFence();
     this._buildProps();
+
+    // сетка проходимости снимается с готовых препятствий: локация дальше не меняется
+    this.nav.build(this.obstacles, CONFIG.zombies.radius);
+
     this._buildZombies();
     this._batchStatics();
   }
@@ -273,9 +282,36 @@ export class Location {
     this._batched = batched;
   }
 
-  /** Анимации зомби. Вызывается каждый кадр из игрового цикла. */
-  update(dt) {
-    for (const zombie of this.zombies) zombie.update(dt);
+  /** Зомби: поведение и анимации. Вызывается каждый кадр из игрового цикла. */
+  update(dt, player) {
+    this._navAge += dt;
+
+    // Волна нужна одна на всю толпу, но считать её каждый кадр незачем: за четверть
+    // секунды зомби проходит треть метра, путь устареть не успевает. И пока рядом
+    // никого нет, она не нужна вовсе — все стоят.
+    if (this._navAge >= CONFIG.nav.interval && this._someoneNear(player)) {
+      this._navAge = 0;
+      this.nav.update(player.position);
+    }
+
+    for (const zombie of this.zombies) zombie.update(dt, player, this, this.zombies);
+
+    // ушедшие под землю больше не нужны
+    if (this.zombies.some((z) => z.removed)) {
+      this.zombies = this.zombies.filter((z) => !z.removed);
+    }
+  }
+
+  /** Есть ли поблизости зомби, которого стоит вести к персонажу. */
+  _someoneNear(player) {
+    const range = CONFIG.zombies.loseRadius;
+
+    for (const zombie of this.zombies) {
+      const dx = zombie.position.x - player.position.x;
+      const dz = zombie.position.z - player.position.z;
+      if (dx * dx + dz * dz <= range * range) return true;
+    }
+    return false;
   }
 
   /**
