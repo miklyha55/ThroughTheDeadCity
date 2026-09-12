@@ -50,6 +50,38 @@ export class Obstacles {
     }
   }
 
+  /** Задевает ли круг хоть один контур — нужно, чтобы не ставить пропы внутрь других моделей. */
+  hits(x, z, radius) {
+    for (const item of this.items) {
+      const span = item.reach + radius;
+      if (Math.abs(x - item.cx) > span || Math.abs(z - item.cz) > span) continue;
+
+      const { points } = item;
+      const count = points.length / 2;
+      let deepest = -Infinity;
+      let nearest = Infinity;
+
+      for (let i = 0; i < count; i++) {
+        const ax = points[i * 2];
+        const az = points[i * 2 + 1];
+        const j = (i + 1) % count;
+        const ex = points[j * 2] - ax;
+        const ez = points[j * 2 + 1] - az;
+        const lengthSq = ex * ex + ez * ez;
+        if (lengthSq === 0) continue;
+
+        const length = Math.sqrt(lengthSq);
+        deepest = Math.max(deepest, ((x - ax) * ez - (z - az) * ex) / length);
+
+        const t = Math.max(0, Math.min(1, ((x - ax) * ex + (z - az) * ez) / lengthSq));
+        nearest = Math.min(nearest, Math.hypot(x - (ax + ex * t), z - (az + ez * t)));
+      }
+
+      if (deepest < 0 || nearest < radius) return true;
+    }
+    return false;
+  }
+
   /**
    * Выталкивает точку из всех контуров, в которые она попала.
    * @param {THREE.Vector3} position — правится на месте

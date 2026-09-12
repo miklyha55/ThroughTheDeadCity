@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Obstacles } from './Obstacles.js';
+import { Debris } from '../entities/Debris.js';
 import { CONFIG } from '../config.js';
 
 // Стороны площадки: north — дальняя (−Z), south — ближняя (+Z).
@@ -24,6 +25,10 @@ export class Location {
     this.group = new THREE.Group();
     this.group.name = `location:${data.id}`;
     this.obstacles = new Obstacles();
+    // Контуры ВСЕХ моделей, включая проходимые: по ним проверяем, что россыпь
+    // не встанет внутрь дома, машины или другой мелочи.
+    this.occupied = new Obstacles();
+    this.debris = new Debris(this);
 
     const [w, d] = data.size;
     this.width = w;
@@ -92,7 +97,9 @@ export class Location {
         if (cfg.along === 'x') section.position.set(at, 0, cfg.sign * offset);
         else section.position.set(cfg.sign * offset, 0, at);
         this.group.add(section);
-        this.obstacles.add(section, this.props.collisionShapes(segName));
+        const shapes = this.props.collisionShapes(segName);
+        this.obstacles.add(section, shapes);
+        this.occupied.add(section, shapes);
       }
 
       if (gap) this._buildExit(side, cfg, gap, offset);
@@ -134,24 +141,70 @@ export class Location {
       if (entry.scale) obj.scale.setScalar(entry.scale);
       this.group.add(obj);
       this._addObstacle(entry.prop, obj);
+      this._addDebris(entry.prop, obj);
+      this.occupied.add(obj, this.props.collisionShapes(entry.prop));
     }
 
     // разбросанная мелочь: трава, кусты, мусор — задаётся не поштучно, а зоной
     for (const patch of this.data.scatter ?? []) {
       const rand = mulberry32(patch.seed ?? 1);
       const [x0, z0, x1, z1] = patch.area;
+      const [minScale, maxScale] = patch.scale ?? [1, 1];
+
       for (let i = 0; i < patch.count; i++) {
+        // вид выбираем один раз на точку: куча получается из однотипных предметов
         const name = patch.props[Math.floor(rand() * patch.props.length)];
-        const obj = this.props.create(name);
-        if (!obj) continue;
-        obj.position.set(x0 + rand() * (x1 - x0), 0, z0 + rand() * (z1 - z0));
-        obj.rotation.y = rand() * Math.PI * 2;
-        const s = (patch.scale?.[0] ?? 1) + rand() * ((patch.scale?.[1] ?? 1) - (patch.scale?.[0] ?? 1));
-        obj.scale.setScalar(s);
-        this.group.add(obj);
-        this._addObstacle(name, obj);
+        const stack = patch.stack && (!patch.stack.only || patch.stack.only.includes(name))
+          ? patch.stack
+          : null;
+        const clearance = (patch.clearance ?? 0) + (stack ? stack.jitter : 0);
+
+        // ищем свободное место: с первого раза точка может попасть в стену или машину
+        let x = 0;
+        let z = 0;
+        let free = false;
+        for (let attempt = 0; attempt < 16 && !free; attempt++) {
+          x = x0 + rand() * (x1 - x0);
+          z = z0 + rand() * (z1 - z0);
+          free = !this.occupied.hits(x, z, clearance);
+        }
+        if (!free) continue; // места не нашлось — лучше пропустить, чем воткнуть в стену
+
+        const layers = stack ? stack.layers[0] + Math.floor(rand() * (stack.layers[1] - stack.layers[0] + 1)) : 1;
+
+        for (let layer = 0; layer < layers; layer++) {
+          const obj = this.props.create(name);
+          if (!obj) continue;
+
+          const jitter = stack ? (rand() - 0.5) * stack.jitter * 2 : 0;
+          const jitterZ = stack ? (rand() - 0.5) * stack.jitter * 2 : 0;
+          obj.position.set(x + jitter, layer * (stack?.step ?? 0), z + jitterZ);
+          obj.rotation.y = rand() * Math.PI * 2;
+
+          if (stack?.tilt) {
+            // лёгкий завал: верхние лежат неровно, как свалено руками
+            const tilt = (stack.tilt * DEG * layer) / Math.max(1, layers - 1);
+            obj.rotation.x = (rand() - 0.5) * tilt;
+            obj.rotation.z = (rand() - 0.5) * tilt;
+          }
+
+          obj.scale.setScalar(minScale + rand() * (maxScale - minScale));
+          this.group.add(obj);
+          this._addObstacle(name, obj);
+          this._addDebris(name, obj);
+          if (layer === 0) this.occupied.add(obj, this.props.collisionShapes(name));
+        }
       }
     }
+  }
+
+  /** Мелочь, которую можно распинать: её физика считается каждый кадр. */
+  _addDebris(name, object) {
+    if (!CONFIG.debris.prefixes.some((prefix) => name.startsWith(prefix))) return;
+    const size = this.props.size(name);
+    if (!size) return;
+    const radius = (Math.max(size.x, size.z) / 2) * object.scale.x;
+    this.debris.add(object, radius);
   }
 
   /** Препятствием становится всё, кроме проходимых категорий и того, что ниже пояса. */

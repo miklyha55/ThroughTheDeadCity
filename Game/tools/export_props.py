@@ -21,7 +21,7 @@ OUT = os.path.join(os.path.dirname(bpy.data.filepath), 'Game/public/assets/model
 LIFT = 0.003        # на сколько метров приподнимаем слой над подложкой
 PASSES = 4          # поднятый слой может сесть в плоскость соседней детали — разводим за несколько проходов
 SKIP_PREFIXES = ('Food_',)   # хилки живут отдельно от декора локаций
-SKIP_NAMES = ('Floor', 'Prop_Rubble')   # Prop_Rubble выведен из проекта
+SKIP_NAMES = ('Floor', 'Prop_Rubble', 'Prop_Sandbags', 'Prop_FireBarrel')   # выведены из проекта
 SOURCE_SUFFIX = '__source'   # так помечен оригинал, пока его подменяет почищенная копия
 
 

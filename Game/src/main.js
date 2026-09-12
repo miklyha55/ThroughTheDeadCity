@@ -44,6 +44,7 @@ engine.add({
       here.obstacles.resolve(player.position, CONFIG.player.radius); // не пускаем внутрь объектов
       here.clampPosition(player.position); // и за забор тоже
     }
+    here.debris.update(dt, player.position, CONFIG.player.radius, player.velocity);
     camera.update(dt);
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },

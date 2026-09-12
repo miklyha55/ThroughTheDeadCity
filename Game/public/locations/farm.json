@@ -106,14 +106,6 @@
       "rotation": 115
     },
     {
-      "prop": "Prop_FireBarrel",
-      "at": [
-        2,
-        9
-      ],
-      "rotation": 0
-    },
-    {
       "prop": "Prop_Crate",
       "at": [
         3.2,
@@ -144,14 +136,6 @@
         4
       ],
       "rotation": 0
-    },
-    {
-      "prop": "Prop_Sandbags",
-      "at": [
-        -4.5,
-        -8
-      ],
-      "rotation": 90
     },
     {
       "prop": "Prop_Barricade",
@@ -233,8 +217,8 @@
     {
       "seed": 21,
       "props": [
-        "Prop_Tires",
-        "Prop_Cone"
+        "Prop_Cone",
+        "Prop_Tires"
       ],
       "count": 8,
       "area": [
@@ -246,7 +230,20 @@
       "scale": [
         0.8,
         1.2
-      ]
+      ],
+      "stack": {
+        "only": [
+          "Prop_Tires"
+        ],
+        "layers": [
+          2,
+          4
+        ],
+        "step": 0.19,
+        "jitter": 0.13,
+        "tilt": 14
+      },
+      "clearance": 0.55
     }
   ]
 }
