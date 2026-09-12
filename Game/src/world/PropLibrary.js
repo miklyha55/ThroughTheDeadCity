@@ -12,6 +12,7 @@ export class PropLibrary {
     this.templates = new Map();
     this.sizes = new Map();
     this.shapes = new Map();
+    this.bodies = new Map();
 
     const box = new THREE.Box3();
     const size = new THREE.Vector3();
@@ -26,6 +27,7 @@ export class PropLibrary {
       this.templates.set(name, child);
       this.sizes.set(name, size.clone());
       this.shapes.set(name, buildCollisionShapes(child));
+      this.bodies.set(name, measureBody(child));
     }
   }
 
@@ -40,6 +42,9 @@ export class PropLibrary {
 
   /** Контуры столкновений: выпуклые многоугольники в локальных осях пропа. */
   collisionShapes(name) { return this.shapes.get(name) ?? []; }
+
+  /** Масса, центр масс и габариты для физики: { com, boxMin, boxMax, volume }. */
+  body(name) { return this.bodies.get(name); }
 
   /** Имена пропов по префиксу: list('Tree_') → все деревья. */
   list(prefix) {
@@ -189,6 +194,67 @@ function buildCollisionShapes(prop) {
   }
   return shapes;
 }
+
+/**
+ * Массовые свойства пропа: объём и центр масс считаются по тетраэдрам,
+ * построенным на треугольниках оболочки — так центр масс полой бочки выходит
+ * там, где он и должен быть, а не в середине габаритного ящика.
+ *
+ * Для незамкнутых моделей (листва, плоские вещи) знаковый объём вырождается,
+ * и мы отступаем к центру габаритов.
+ */
+function measureBody(prop) {
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const box = new THREE.Box3().makeEmpty();
+
+  let volume = 0;
+  const centroid = new THREE.Vector3();
+
+  prop.updateMatrixWorld(true);
+  prop.traverse((mesh) => {
+    if (!mesh.isMesh) return;
+    const position = mesh.geometry.getAttribute('position');
+    const index = mesh.geometry.getIndex();
+    const count = index ? index.count : position.count;
+    const at = (i, target) =>
+      target.fromBufferAttribute(position, index ? index.getX(i) : i).applyMatrix4(mesh.matrixWorld);
+
+    for (let i = 0; i < count; i += 3) {
+      at(i, a); at(i + 1, b); at(i + 2, c);
+      box.expandByPoint(a).expandByPoint(b).expandByPoint(c);
+
+      // знаковый объём тетраэдра на начале координат
+      const v = a.dot(_cross.crossVectors(b, c)) / 6;
+      volume += v;
+      centroid.x += (a.x + b.x + c.x) * 0.25 * v;
+      centroid.y += (a.y + b.y + c.y) * 0.25 * v;
+      centroid.z += (a.z + b.z + c.z) * 0.25 * v;
+    }
+  });
+
+  const size = box.getSize(new THREE.Vector3());
+  const com = new THREE.Vector3();
+
+  if (Math.abs(volume) > 1e-6) {
+    com.copy(centroid).divideScalar(volume);
+    // центр масс обязан лежать внутри габаритов — иначе оболочка вывернута
+    if (!box.containsPoint(com)) box.getCenter(com);
+  } else {
+    box.getCenter(com);
+  }
+
+  return {
+    com,
+    volume: Math.abs(volume) || size.x * size.y * size.z,
+    boxMin: box.min.clone().sub(com), // габариты относительно центра масс
+    boxMax: box.max.clone().sub(com),
+    size,
+  };
+}
+
+const _cross = new THREE.Vector3();
 
 /** Выпуклая оболочка набора точек, обход против часовой стрелки (алгоритм Эндрю). */
 function convexHull(points) {

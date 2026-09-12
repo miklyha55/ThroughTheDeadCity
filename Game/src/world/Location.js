@@ -13,6 +13,7 @@ const SIDES = {
 };
 
 const DEG = Math.PI / 180;
+const GROUND_Y = 0.02; // площадка лежит чуть выше подложки мира
 
 /**
  * Локация, собранная по JSON-описанию: площадка, глухой забор по периметру
@@ -54,7 +55,7 @@ export class Location {
       new THREE.MeshStandardMaterial({ color: new THREE.Color(g.color ?? '#6b6357'), roughness: 1 })
     );
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0.02; // чуть выше подложки мира, чтобы не мерцало
+    ground.position.y = GROUND_Y; // чуть выше подложки мира, чтобы не мерцало
     ground.receiveShadow = true;
     this.group.add(ground);
     this._ground = ground;
@@ -198,13 +199,38 @@ export class Location {
     }
   }
 
-  /** Мелочь, которую можно распинать: её физика считается каждый кадр. */
+  /**
+   * Мелочь, которую можно распинать: её физика считается каждый кадр.
+   *
+   * Проп заворачивается в контейнер, центр которого — середина высоты предмета.
+   * Модели приходят из Blender с началом координат в основании, и вращать их вокруг
+   * этой точки нельзя: при наклоне предмет уходит нижним краем под землю.
+   */
   _addDebris(name, object) {
     if (!CONFIG.debris.prefixes.some((prefix) => name.startsWith(prefix))) return;
-    const size = this.props.size(name);
-    if (!size) return;
-    const radius = (Math.max(size.x, size.z) / 2) * object.scale.x;
-    this.debris.add(object, radius);
+    const body = this.props.body(name);
+    if (!body) return;
+
+    const scale = object.scale;
+    const com = body.com.clone().multiply(scale);
+
+    // контейнер ставим ровно в центр масс: физика вращает тело вокруг него,
+    // а не вокруг начала координат модели, которое у Blender лежит в основании
+    const pivot = new THREE.Group();
+    pivot.name = `debris:${name}`;
+    pivot.position.copy(object.position).add(com);
+    pivot.quaternion.setFromEuler(object.rotation);
+
+    object.position.copy(com).negate();
+    object.rotation.set(0, 0, 0);
+    pivot.add(object); // three сам заберёт модель из прежнего родителя
+    this.group.add(pivot);
+
+    this.debris.add(pivot, {
+      boxMin: body.boxMin.clone().multiply(scale),
+      boxMax: body.boxMax.clone().multiply(scale),
+      volume: body.volume * scale.x * scale.y * scale.z,
+    }, GROUND_Y);
   }
 
   /** Препятствием становится всё, кроме проходимых категорий и того, что ниже пояса. */
