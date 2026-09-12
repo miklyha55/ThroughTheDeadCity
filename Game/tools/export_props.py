@@ -23,9 +23,31 @@ def exportable(obj):
             and not obj.name.startswith(SKIP_PREFIXES)
             and obj.name not in SKIP_NAMES)
 
+def guard():
+    """Скрипт работает только в фоновом Blender.
+
+    В фоновом режиме файл читается с диска, правки живут в памяти процесса и
+    на диск не попадают. Запуск в открытом окне менял бы сцену пользователя —
+    .blend для нас только на чтение.
+    """
+    if not bpy.app.background:
+        print('!! экспорт отменён: запускайте Blender с флагом -b, .blend не для правки')
+        return False
+    return True
+
 
 def main():
     picked = [o.name for o in bpy.data.objects if exportable(o)]
+
+    # Экспортёр берёт только видимые объекты: спрятанный в Blender глазом или
+    # выключенный для рендера (галочка с камерой) молча не попадает в GLB,
+    # и в игре остаётся прежняя версия модели.
+    for obj in bpy.data.objects:
+        if exportable(obj):
+            obj.hide_set(False)
+            obj.hide_viewport = False
+            obj.hide_render = False
+
     for obj in bpy.data.objects:
         obj.select_set(exportable(obj))
 
@@ -34,7 +56,7 @@ def main():
         filepath=OUT,
         export_format='GLB',
         use_selection=True,
-        export_apply=False,
+        export_apply=True,   # применять модификаторы, иначе правки через них не уедут
         export_yup=True,
         export_animations=False,
         export_skins=False,
@@ -50,4 +72,5 @@ def main():
     print(f'{OUT} — {round(os.path.getsize(OUT) / 1024)} KB')
 
 
-main()
+if guard():
+    main()

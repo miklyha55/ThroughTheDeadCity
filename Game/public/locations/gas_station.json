@@ -187,5 +187,56 @@
       },
       "clearance": 0.55
     }
+  ],
+  "zombies": [
+    {
+      "kind": "zombie2",
+      "at": [
+        -6.0,
+        5.5
+      ],
+      "rotation": 250
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -2.0,
+        -4.0
+      ],
+      "rotation": 90
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        7.5,
+        2.5
+      ],
+      "rotation": 280
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        13.0,
+        -3.0
+      ],
+      "rotation": 200
+    }
+  ],
+  "hordes": [
+    {
+      "seed": 5,
+      "kinds": [
+        "zombie1",
+        "zombie2"
+      ],
+      "count": 11,
+      "area": [
+        -4,
+        -9,
+        15,
+        9
+      ],
+      "spacing": 0.8
+    }
   ]
 }

@@ -6,17 +6,45 @@ const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const BLENDER = process.env.BLENDER_PATH ?? '/Applications/Blender.app/Contents/MacOS/Blender';
 
 /**
- * Пересборка библиотеки пропов по кнопке из игры.
+ * Что пересобирает кнопка «Обновить модели»: каждый .blend проекта своим скриптом.
+ * Порядок неважен, файлы независимы.
+ */
+const EXPORTS = [
+  { blend: 'Env.blend', script: 'tools/export_props.py', what: 'окружение' },
+  { blend: 'Player/Player.blend', script: 'tools/export_player.py', what: 'персонаж' },
+  { blend: 'Zombie1/Zombie.blend', script: 'tools/export_zombie.py', what: 'зомби 1' },
+  { blend: 'Zombie2/Zombie.blend', script: 'tools/export_zombie.py', what: 'зомби 2' },
+];
+
+/** Один прогон Blender без интерфейса. */
+function runBlender(task) {
+  return new Promise((done) => {
+    const blender = spawn(BLENDER, [
+      '-b', resolve(PROJECT_ROOT, task.blend),
+      '--python', resolve(import.meta.dirname, task.script),
+    ]);
+
+    let output = '';
+    blender.stdout.on('data', (chunk) => { output += chunk; });
+    blender.stderr.on('data', (chunk) => { output += chunk; });
+
+    blender.on('error', (error) => done({ ok: false, output: `не удалось запустить Blender: ${error.message}` }));
+    blender.on('close', (code) => done({ ok: code === 0, output }));
+  });
+}
+
+/**
+ * Пересборка всех моделей по кнопке из игры.
  *
- * Запускает Blender без интерфейса на сохранённом Env.blend и прогоняет
- * tools/export_props.py — тот же скрипт, что и вручную. Только для dev-сервера.
+ * Запускает Blender без интерфейса на каждом .blend проекта и прогоняет тот же
+ * скрипт экспорта, что и вручную. Только для dev-сервера.
  */
 function blenderExport() {
   return {
     name: 'blender-export',
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use('/api/rebuild-props', (req, res) => {
+      server.middlewares.use('/api/rebuild-props', async (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405;
           res.end('POST');
@@ -24,37 +52,40 @@ function blenderExport() {
         }
 
         const started = Date.now();
-        const blender = spawn(BLENDER, [
-          '-b', resolve(PROJECT_ROOT, 'Env.blend'),
-          '--python', resolve(import.meta.dirname, 'tools/export_props.py'),
-        ]);
+        const lines = [];
+        let ok = true;
 
-        let output = '';
-        blender.stdout.on('data', (chunk) => { output += chunk; });
-        blender.stderr.on('data', (chunk) => { output += chunk; });
+        // последовательно, а не разом: четыре Blender'а сразу только мешают друг другу
+        for (const task of EXPORTS) {
+          const result = await runBlender(task);
+          ok = ok && result.ok;
 
-        blender.on('error', (error) => {
-          res.statusCode = 500;
-          res.setHeader('content-type', 'application/json');
-          res.end(JSON.stringify({ ok: false, error: `не удалось запустить Blender: ${error.message}` }));
-        });
+          // Из вывода Blender берём строки самого скрипта и всё, что похоже на сбой.
+          // Ошибки ловим отдельно: Blender завершается с кодом 0, даже когда
+          // скрипт не найден или упал, — без этого сбой прошёл бы незамеченным.
+          let reported = false;
+          for (const line of result.output.split('\n')) {
+            if (/\.glb —|моделей:/.test(line)) {
+              lines.push(`${task.what}: ${line.trim()}`);
+              reported = true;
+            } else if (/Error|error:|Traceback|could not be opened/.test(line)) {
+              lines.push(`${task.what}: ${line.trim()}`);
+              ok = false;
+            }
+          }
+          if (!result.ok || !reported) {
+            ok = false;
+            lines.push(`${task.what}: сборка не удалась`);
+          }
+        }
 
-        blender.on('close', (code) => {
-          // из всего вывода Blender нам интересны только строки самого скрипта
-          const lines = output
-            .split('\n')
-            .filter((line) => /поднято|возвращена|удалена|props\.glb|! /.test(line))
-            .map((line) => line.trim());
-
-          res.statusCode = code === 0 ? 200 : 500;
-          res.setHeader('content-type', 'application/json');
-          res.end(JSON.stringify({
-            ok: code === 0,
-            seconds: ((Date.now() - started) / 1000).toFixed(1),
-            lines,
-            output: code === 0 ? undefined : output.slice(-2000),
-          }));
-        });
+        res.statusCode = ok ? 200 : 500;
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({
+          ok,
+          seconds: ((Date.now() - started) / 1000).toFixed(1),
+          lines,
+        }));
       });
     },
   };

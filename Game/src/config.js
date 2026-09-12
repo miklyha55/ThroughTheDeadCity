@@ -35,6 +35,18 @@ export const CONFIG = {
   },
 
 
+  zombies: {
+    // где лежат модели: имя вида → файл
+    sources: {
+      zombie1: '/assets/models/zombie1.glb',
+      zombie2: '/assets/models/zombie2.glb',
+    },
+    spacing: 0.55,      // сколько места занимает зомби: в этот радиус никто не встанет
+    height: 1.85,       // рост, для отметки занятого места
+    idleLength: 6.1,    // длина клипа Idle, с — по ней разводится фаза дыхания
+    speedSpread: 0.25,  // разброс темпа: у каждого своя скорость дыхания
+  },
+
   props: {
     libraryUrl: '/assets/models/props.glb',   // модели из Env.blend, как есть
     prefabsUrl: '/prefabs.json',              // их роли в игре: препятствие, физика, тени

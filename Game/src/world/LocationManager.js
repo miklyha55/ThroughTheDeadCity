@@ -5,9 +5,10 @@ import { Location } from './Location.js';
  * новая строится и персонаж ставится в её точку старта.
  */
 export class LocationManager {
-  constructor(scene, prefabs, player) {
+  constructor(scene, prefabs, player, zombies) {
     this.scene = scene;
     this.prefabs = prefabs;
+    this.zombies = zombies;
     this.player = player;
     this.current = null;
     this.loading = false;
@@ -45,7 +46,7 @@ export class LocationManager {
 
     this.current?.dispose();
 
-    const location = new Location(data, this.prefabs);
+    const location = new Location(data, this.prefabs, this.zombies);
     this.scene.add(location.group);
     this.current = location;
 

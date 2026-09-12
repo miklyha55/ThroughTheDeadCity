@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { batchSkinned } from '../world/batching.js';
 
 const CFG = CONFIG.player;
 
 /** Персонаж: модель, миксер анимаций и движение по земле. */
 export class Player {
   constructor(gltf) {
-    this.root = gltf.scene;
+    // семнадцать материалов персонажа сводятся к нескольким — по блеску и металлу
+    this.root = batchSkinned(gltf.scene);
     this.root.traverse((o) => {
       if (o.isMesh) {
         o.castShadow = true;

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Obstacles } from './Obstacles.js';
 import { Debris } from '../entities/Debris.js';
+import { batchStatic } from './batching.js';
 import { CONFIG } from '../config.js';
 
 // Стороны площадки: north — дальняя (−Z), south — ближняя (+Z).
@@ -20,9 +21,12 @@ const GROUND_Y = 0.02; // площадка лежит чуть выше подл
  * с единственным проёмом-выходом, расставленные пропы и точка старта.
  */
 export class Location {
-  constructor(data, prefabs) {
+  constructor(data, prefabs, zombieLibrary) {
     this.data = data;
     this.prefabs = prefabs;
+    this.zombieLibrary = zombieLibrary;
+    this.zombies = [];
+    this.statics = []; // неподвижные пропы: их геометрия сливается в общие меши
     this.group = new THREE.Group();
     this.group.name = `location:${data.id}`;
     this.obstacles = new Obstacles();
@@ -41,6 +45,8 @@ export class Location {
     this._buildGround();
     this._buildFence();
     this._buildProps();
+    this._buildZombies();
+    this._batchStatics();
   }
 
   /** Границы, за которые персонажу нельзя выходить (проём в заборе учитывается отдельно). */
@@ -194,6 +200,85 @@ export class Location {
   }
 
   /**
+   * Расставляет зомби: поштучно из `zombies` и толпами из `hordes`.
+   * Пока они только стоят — ходить и нападать будут потом.
+   */
+  _buildZombies() {
+    if (!this.zombieLibrary) return;
+
+    for (const entry of this.data.zombies ?? []) {
+      this._addZombie(entry.kind, entry.at[0], entry.at[1], (entry.rotation ?? 0) * DEG, Math.random());
+    }
+
+    for (const horde of this.data.hordes ?? []) {
+      const rand = mulberry32(horde.seed ?? 1);
+      const [x0, z0, x1, z1] = horde.area;
+      const kinds = horde.kinds ?? this.zombieLibrary.list();
+      const spacing = horde.spacing ?? CONFIG.zombies.spacing;
+
+      for (let i = 0; i < horde.count; i++) {
+        // ищем место, где зомби не влезет в дом, машину и в соседа
+        let x = 0;
+        let z = 0;
+        let free = false;
+        for (let attempt = 0; attempt < 24 && !free; attempt++) {
+          x = x0 + rand() * (x1 - x0);
+          z = z0 + rand() * (z1 - z0);
+          free = !this.occupied.hits(x, z, spacing);
+        }
+        if (!free) continue;
+
+        const kind = kinds[Math.floor(rand() * kinds.length)];
+        this._addZombie(kind, x, z, rand() * Math.PI * 2, rand());
+      }
+    }
+  }
+
+  /** Один зомби на своём месте, со сдвинутой фазой дыхания. */
+  _addZombie(kind, x, z, yaw, phase) {
+    const zombie = this.zombieLibrary.create(kind);
+    if (!zombie) return;
+
+    const { idleLength, speedSpread, spacing } = CONFIG.zombies;
+
+    zombie.root.position.set(x, GROUND_Y, z);
+    zombie.root.rotation.y = yaw;
+    // фаза и темп у каждого свои, иначе толпа дышит как один механизм
+    zombie.desync(phase * idleLength, 1 - speedSpread / 2 + phase * speedSpread);
+
+    this.group.add(zombie.root);
+    this.zombies.push(zombie);
+
+    // место под зомби считается занятым: соседи и россыпь сюда не встанут
+    this.occupied.add(zombie.root, [
+      [[-spacing, -spacing], [spacing, -spacing], [spacing, spacing], [-spacing, spacing]],
+    ]);
+  }
+
+  /**
+   * Сливает неподвижные пропы в несколько больших мешей.
+   *
+   * Столкновения к этому моменту уже посчитаны по отдельным объектам, а сами
+   * объекты больше не нужны: они не двигаются, и рисовать их поштучно — значит
+   * тратить сотни вызовов там, где хватает десятков.
+   */
+  _batchStatics() {
+    if (this.statics.length === 0) return;
+
+    const batched = batchStatic(this.statics);
+    for (const object of this.statics) object.removeFromParent();
+    this.statics.length = 0;
+
+    this.group.add(batched);
+    this._batched = batched;
+  }
+
+  /** Анимации зомби. Вызывается каждый кадр из игрового цикла. */
+  update(dt) {
+    for (const zombie of this.zombies) zombie.update(dt);
+  }
+
+  /**
    * Регистрирует поставленный объект: препятствие, занятое место, физическое тело.
    * Чем объект является, решает его префаб, а не имя модели, — поэтому одна и та же
    * вещь ведёт себя одинаково на любой локации.
@@ -204,7 +289,9 @@ export class Location {
 
     if (prefab.solid) this.obstacles.add(object, prefab.shapes);
     if (markOccupied) this.occupied.add(object, prefab.shapes);
+
     if (prefab.dynamic) this._makeDynamic(prefab, object);
+    else this.statics.push(object); // не двигается — значит можно слить с остальными
   }
 
   /**
@@ -274,6 +361,9 @@ export class Location {
 
   dispose() {
     this.group.removeFromParent();
+
+    // слитая геометрия принадлежит локации — её больше никто не переиспользует
+    this._batched?.traverse((o) => o.isMesh && o.geometry.dispose());
     // геометрия и материалы общие с библиотекой — освобождаем только то, что создано локацией
     this._ground.geometry.dispose();
     this._ground.material.dispose();

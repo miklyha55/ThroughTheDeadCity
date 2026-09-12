@@ -4,6 +4,7 @@ import { FollowCamera } from './core/FollowCamera.js';
 import { loadGLTF } from './core/AssetLoader.js';
 import { buildWorld } from './world/World.js';
 import { PrefabLibrary } from './world/PrefabLibrary.js';
+import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
@@ -14,15 +15,16 @@ const hud = document.getElementById('hud');
 
 const { sun } = buildWorld(engine.scene, engine.renderer);
 
-const [gltf, prefabs] = await Promise.all([
+let [gltf, prefabs, zombies] = await Promise.all([
   loadGLTF(CONFIG.player.modelUrl),
   PrefabLibrary.load(CONFIG.props.libraryUrl, CONFIG.props.prefabsUrl),
+  ZombieLibrary.load(CONFIG.zombies.sources),
 ]);
 
-const player = new Player(gltf);
+let player = new Player(gltf);
 engine.scene.add(player.root);
 
-const locations = new LocationManager(engine.scene, prefabs, player);
+const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 const params = new URLSearchParams(window.location.search);
 await locations.load(params.get('location') ?? CONFIG.locations.first);
 
@@ -42,6 +44,7 @@ engine.add({
       here.clampPosition(player.position); // и за забор тоже
     }
     here.debris.update(dt, player.position, CONFIG.player.radius, player.velocity);
+    here.update(dt); // анимации зомби
     camera.update(dt);
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },
@@ -71,20 +74,46 @@ if (import.meta.env.DEV) {
   const { createRebuildPanel } = await import('./dev/rebuildPanel.js');
   createRebuildPanel({
     onRebuilt: async () => {
-      // отдельный адрес на каждую сборку, иначе браузер отдаст старый файл из кэша
+      // Отдельный адрес на каждую сборку, иначе браузер отдаст старый файл из кэша.
       const stamp = Date.now();
-      const fresh = await PrefabLibrary.load(
-        `${CONFIG.props.libraryUrl}?v=${stamp}`,
-        `${CONFIG.props.prefabsUrl}?v=${stamp}`
+      const bust = (url) => `${url}?v=${stamp}`;
+
+      const zombieSources = Object.fromEntries(
+        Object.entries(CONFIG.zombies.sources).map(([kind, url]) => [kind, bust(url)])
       );
-      await locations.useLibrary(fresh);
-      window.__game.prefabs = fresh;
-      return `${fresh.prefabs.size} префабов`;
+
+      const [freshPrefabs, freshZombies, freshPlayer] = await Promise.all([
+        PrefabLibrary.load(bust(CONFIG.props.libraryUrl), bust(CONFIG.props.prefabsUrl)),
+        ZombieLibrary.load(zombieSources),
+        loadGLTF(bust(CONFIG.player.modelUrl)),
+      ]);
+
+      // Персонаж пересоздаётся из свежей модели и встаёт туда, где стоял:
+      // подменить модель внутри существующего Player нельзя — к ней привязан миксер.
+      const spot = player.position.clone();
+      const yaw = player.yaw;
+
+      player.root.removeFromParent();
+      player = new Player(freshPlayer);
+      player.placeAt(spot, yaw);
+      engine.scene.add(player.root);
+
+      // всё, что держало ссылку на прежнего персонажа
+      camera.target = player;
+      locations.player = player;
+
+      prefabs = freshPrefabs;
+      zombies = freshZombies;
+      locations.zombies = freshZombies;
+      await locations.useLibrary(freshPrefabs);
+
+      Object.assign(window.__game, { player, prefabs, zombies });
+      return `${freshPrefabs.prefabs.size} пропов, ${freshZombies.list().length} видов зомби, персонаж`;
     },
   });
 
   window.__game = {
-    engine, player, camera, input, joystick, prefabs, locations,
+    engine, player, camera, input, joystick, prefabs, zombies, locations,
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),
   };
