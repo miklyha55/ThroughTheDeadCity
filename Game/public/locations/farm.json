@@ -233,7 +233,6 @@
     {
       "seed": 21,
       "props": [
-        "Prop_Rubble",
         "Prop_Tires",
         "Prop_Cone"
       ],

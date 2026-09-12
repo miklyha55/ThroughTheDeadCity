@@ -38,19 +38,36 @@ engine.add({
     input.update();
     player.update(dt, input.move, camera.moveYaw);
     const here = locations.current;
-    if (here.reachedExit(player.position)) locations.advance(); // вышел через проём — следующая локация
-    else here.clampPosition(player.position); // за забор не пускаем
+    if (here.reachedExit(player.position)) {
+      locations.advance(); // вышел через проём — следующая локация
+    } else {
+      here.obstacles.resolve(player.position, CONFIG.player.radius); // не пускаем внутрь объектов
+      here.clampPosition(player.position); // и за забор тоже
+    }
     camera.update(dt);
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },
 });
 
+// ?debug=collision — показать контуры столкновений
+let debugView = null;
+async function updateDebugView() {
+  if (params.get('debug') !== 'collision') return;
+  const { showObstacles } = await import('./dev/collisionDebug.js');
+  debugView?.removeFromParent();
+  debugView = showObstacles(engine.scene, locations.current.obstacles);
+}
+
 function showLocationName(location) {
   hud.hidden = false;
   hud.textContent = touch ? location.data.name : `${location.data.name} · WASD — движение`;
 }
-locations.onChange = showLocationName;
+locations.onChange = (location) => {
+  showLocationName(location);
+  updateDebugView();
+};
 showLocationName(locations.current);
+updateDebugView();
 
 if (import.meta.env.DEV) {
   window.__game = {

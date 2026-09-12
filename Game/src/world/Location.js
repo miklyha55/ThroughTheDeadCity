@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { Obstacles } from './Obstacles.js';
+import { CONFIG } from '../config.js';
 
 // Стороны площадки: north — дальняя (−Z), south — ближняя (+Z).
 // Для каждой стороны: вдоль какой оси тянется забор, где он стоит и как повёрнута секция.
@@ -21,6 +23,7 @@ export class Location {
     this.props = props;
     this.group = new THREE.Group();
     this.group.name = `location:${data.id}`;
+    this.obstacles = new Obstacles();
 
     const [w, d] = data.size;
     this.width = w;
@@ -89,6 +92,7 @@ export class Location {
         if (cfg.along === 'x') section.position.set(at, 0, cfg.sign * offset);
         else section.position.set(cfg.sign * offset, 0, at);
         this.group.add(section);
+        this.obstacles.add(section, this.props.collisionShapes(segName));
       }
 
       if (gap) this._buildExit(side, cfg, gap, offset);
@@ -129,6 +133,7 @@ export class Location {
       obj.rotation.y = (entry.rotation ?? 0) * DEG;
       if (entry.scale) obj.scale.setScalar(entry.scale);
       this.group.add(obj);
+      this._addObstacle(entry.prop, obj);
     }
 
     // разбросанная мелочь: трава, кусты, мусор — задаётся не поштучно, а зоной
@@ -144,8 +149,23 @@ export class Location {
         const s = (patch.scale?.[0] ?? 1) + rand() * ((patch.scale?.[1] ?? 1) - (patch.scale?.[0] ?? 1));
         obj.scale.setScalar(s);
         this.group.add(obj);
+        this._addObstacle(name, obj);
       }
     }
+  }
+
+  /** Препятствием становится всё, кроме проходимых категорий и того, что ниже пояса. */
+  _addObstacle(name, object) {
+    const { passablePrefixes, passableHeight, alwaysBlocking } = CONFIG.locations;
+
+    if (!alwaysBlocking.some((prefix) => name.startsWith(prefix))) {
+      if (passablePrefixes.some((prefix) => name.startsWith(prefix))) return;
+
+      const size = this.props.size(name);
+      if (size && size.y * object.scale.y < passableHeight) return;
+    }
+
+    this.obstacles.add(object, this.props.collisionShapes(name));
   }
 
   /** Дошёл ли персонаж до выхода — то есть пересёк линию забора в створе проёма. */

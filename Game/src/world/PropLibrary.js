@@ -11,6 +11,7 @@ export class PropLibrary {
 
     this.templates = new Map();
     this.sizes = new Map();
+    this.shapes = new Map();
 
     const box = new THREE.Box3();
     const size = new THREE.Vector3();
@@ -24,6 +25,7 @@ export class PropLibrary {
       box.setFromObject(child).getSize(size);
       this.templates.set(name, child);
       this.sizes.set(name, size.clone());
+      this.shapes.set(name, buildCollisionShapes(child));
     }
   }
 
@@ -35,6 +37,9 @@ export class PropLibrary {
 
   /** Габариты пропа в метрах — по ним раскладывается забор и проверяются отступы. */
   size(name) { return this.sizes.get(name); }
+
+  /** Контуры столкновений: выпуклые многоугольники в локальных осях пропа. */
+  collisionShapes(name) { return this.shapes.get(name) ?? []; }
 
   /** Имена пропов по префиксу: list('Tree_') → все деревья. */
   list(prefix) {
@@ -98,6 +103,123 @@ function frontVariant(material, cache) {
     cache.set(material, variant);
   }
   return variant;
+}
+
+// Выше этой высоты геометрия в столкновения не идёт: крона дерева не должна мешать
+// пройти рядом со стволом, а козырёк заправки — заехать под него.
+const COLLISION_HEIGHT = 1.3;
+// Контуры мельче этого (м²) отбрасываем: заклёпки и мелкие накладки ловить нечего.
+const MIN_SHAPE_AREA = 0.02;
+// Если деталей больше — обводим проп одним контуром. Столбов у сетки-рабицы под сотню,
+// и каждый по отдельности считать дороже, чем он того стоит.
+const MAX_SHAPES = 14;
+
+/**
+ * Контуры столкновений по геометрии пропа.
+ *
+ * Меш разбивается на связные куски (корпус, колёса, столбы, жерди), каждый кусок
+ * обводится выпуклой оболочкой по его нижней части. Получается форма, повторяющая
+ * реальные очертания: у трактора отдельно корпус и колёса, у забора — столбы и жерди,
+ * у дерева — только ствол. Один общий прямоугольник так не умеет.
+ */
+function buildCollisionShapes(prop) {
+  const triangles = [];
+  const v = new THREE.Vector3();
+
+  prop.updateMatrixWorld(true);
+  prop.traverse((mesh) => {
+    if (!mesh.isMesh) return;
+    const position = mesh.geometry.getAttribute('position');
+    const index = mesh.geometry.getIndex();
+    const count = index ? index.count : position.count;
+
+    for (let i = 0; i < count; i += 3) {
+      const corners = [];
+      for (let c = 0; c < 3; c++) {
+        const at = index ? index.getX(i + c) : i + c;
+        v.fromBufferAttribute(position, at).applyMatrix4(mesh.matrixWorld);
+        corners.push([v.x, v.y, v.z]);
+      }
+      triangles.push(corners);
+    }
+  });
+
+  // связные куски: вершины склеиваем по совпадающим позициям
+  const owner = new Map();
+  const find = (key) => {
+    let root = key;
+    while (owner.get(root) !== root) root = owner.get(root);
+    while (owner.get(key) !== root) {
+      const next = owner.get(key);
+      owner.set(key, root);
+      key = next;
+    }
+    return root;
+  };
+  const keyOf = ([x, y, z]) => `${Math.round(x * 1e3)},${Math.round(y * 1e3)},${Math.round(z * 1e3)}`;
+
+  const triangleKeys = triangles.map((corners) => {
+    const keys = corners.map(keyOf);
+    for (const key of keys) if (!owner.has(key)) owner.set(key, key);
+    const root = find(keys[0]);
+    for (const key of keys) owner.set(find(key), root);
+    return keys;
+  });
+
+  const parts = new Map();
+  triangles.forEach((corners, i) => {
+    const root = find(triangleKeys[i][0]);
+    let points = parts.get(root);
+    if (!points) parts.set(root, (points = []));
+    for (const [x, y, z] of corners) {
+      if (y <= COLLISION_HEIGHT) points.push([x, z]); // всё, что выше пояса, в контур не идёт
+    }
+  });
+
+  let shapes = [];
+  for (const points of parts.values()) {
+    if (points.length < 3) continue;
+    const hull = convexHull(points);
+    if (hull.length >= 3 && polygonArea(hull) >= MIN_SHAPE_AREA) shapes.push(hull);
+  }
+
+  if (shapes.length > MAX_SHAPES) {
+    const merged = convexHull(shapes.flat());
+    shapes = merged.length >= 3 ? [merged] : [];
+  }
+  return shapes;
+}
+
+/** Выпуклая оболочка набора точек, обход против часовой стрелки (алгоритм Эндрю). */
+function convexHull(points) {
+  if (points.length < 3) return [];
+  const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+
+  const lower = [];
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const p = sorted[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
+}
+
+function polygonArea(polygon) {
+  let sum = 0;
+  for (let i = 0; i < polygon.length; i++) {
+    const [ax, az] = polygon[i];
+    const [bx, bz] = polygon[(i + 1) % polygon.length];
+    sum += ax * bz - bx * az;
+  }
+  return Math.abs(sum) / 2;
 }
 
 /** Герметичен ли объём: у замкнутой оболочки каждое ребро принадлежит ровно двум граням. */
