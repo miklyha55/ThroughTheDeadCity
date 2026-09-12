@@ -10,6 +10,7 @@ export class PropLibrary {
     this.templates = new Map();
     this.sizes = new Map();
     this.shapes = new Map();
+    this.tall = new Map();
     this.bodies = new Map();
 
     const box = new THREE.Box3();
@@ -24,7 +25,9 @@ export class PropLibrary {
       box.setFromObject(child).getSize(size);
       this.templates.set(name, child);
       this.sizes.set(name, size.clone());
-      this.shapes.set(name, buildCollisionShapes(child));
+      const { shapes, tall } = buildCollisionShapes(child);
+      this.shapes.set(name, shapes);
+      this.tall.set(name, tall);
       this.bodies.set(name, measureBody(child));
     }
   }
@@ -40,6 +43,9 @@ export class PropLibrary {
 
   /** Контуры столкновений: выпуклые многоугольники в локальных осях пропа. */
   collisionShapes(name) { return this.shapes.get(name) ?? []; }
+
+  /** Контуры кусков, за которыми не видно: по ним зомби теряет персонажа из виду. */
+  sightShapes(name) { return this.tall.get(name) ?? []; }
 
   /** Масса, центр масс и габариты для физики: { com, boxMin, boxMax, volume }. */
   body(name) { return this.bodies.get(name); }
@@ -76,6 +82,10 @@ const MIN_SHAPE_AREA = 0.02;
 // и каждый по отдельности считать дороже, чем он того стоит.
 const MAX_SHAPES = 14;
 
+// Выше этого куска модели уже не видно, что за ним: машина и дом заслоняют,
+// бочка и паллета — нет. По этой мерке зомби теряет персонажа из виду.
+const SIGHT_HEIGHT = 1.3;
+
 /**
  * Контуры столкновений по геометрии пропа.
  *
@@ -83,6 +93,12 @@ const MAX_SHAPES = 14;
  * обводится выпуклой оболочкой по его нижней части. Получается форма, повторяющая
  * реальные очертания: у трактора отдельно корпус и колёса, у забора — столбы и жерди,
  * у дерева — только ствол. Один общий прямоугольник так не умеет.
+ *
+ * Заодно отбираются куски, за которыми не видно: те, что поднимаются выше
+ * `SIGHT_HEIGHT`. Их контуры идут вторым списком — по нему зомби решает, скрылся
+ * персонаж за домом или просто зашёл за бочку.
+ *
+ * @returns {{shapes: Array, tall: Array}} контуры столкновений и заслоняющие обзор
  */
 function buildCollisionShapes(prop) {
   const triangles = [];
@@ -129,27 +145,40 @@ function buildCollisionShapes(prop) {
   });
 
   const parts = new Map();
+  const tops = new Map(); // до какой высоты поднимается кусок
   triangles.forEach((corners, i) => {
     const root = find(triangleKeys[i][0]);
     let points = parts.get(root);
     if (!points) parts.set(root, (points = []));
     for (const [x, y, z] of corners) {
+      if (y > (tops.get(root) ?? -Infinity)) tops.set(root, y);
       if (y <= COLLISION_HEIGHT) points.push([x, z]); // всё, что выше пояса, в контур не идёт
     }
   });
 
   let shapes = [];
-  for (const points of parts.values()) {
+  let tall = [];
+  for (const [root, points] of parts) {
     if (points.length < 3) continue;
     const hull = convexHull(points);
-    if (hull.length >= 3 && polygonArea(hull) >= MIN_SHAPE_AREA) shapes.push(hull);
+    if (hull.length < 3 || polygonArea(hull) < MIN_SHAPE_AREA) continue;
+
+    shapes.push(hull);
+    if ((tops.get(root) ?? 0) >= SIGHT_HEIGHT) tall.push(hull);
   }
 
   if (shapes.length > MAX_SHAPES) {
     const merged = convexHull(shapes.flat());
     shapes = merged.length >= 3 ? [merged] : [];
   }
-  return shapes;
+
+  // тот же приём для заслоняющих кусков, но по их собственному счёту: у сетки
+  // высоких столбов под сотню, а сливать их вместе с низкими жердями незачем
+  if (tall.length > MAX_SHAPES) {
+    const merged = convexHull(tall.flat());
+    tall = merged.length >= 3 ? [merged] : [];
+  }
+  return { shapes, tall };
 }
 
 /**

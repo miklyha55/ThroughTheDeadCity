@@ -85,6 +85,23 @@
       .devpanel__status[data-kind="fail"] { color: #e59a9a; }
       .devpanel__status[data-kind="busy"] { color: #e8d08f; }
 
+      .toggles {
+        position: fixed; left: 12px; bottom: 12px; z-index: 30;
+        display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+        font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .toggle {
+        font: inherit;
+        padding: 7px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.35);
+        background: rgba(20,26,32,0.72);
+        color: #e8eef4;
+        cursor: pointer;
+        backdrop-filter: blur(3px);
+      }
+      .toggle[data-on="1"] { background: rgba(240,196,74,0.82); color: #12171c; border-color: #f0c44a; }
+
       #hud {
         position: fixed; left: 12px; top: 10px;
         font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;

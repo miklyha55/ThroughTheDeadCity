@@ -8,8 +8,10 @@ import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
+import { createToggle } from './ui/ToggleButton.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
+import { VisionCones } from './fx/VisionCones.js';
 import { CONFIG } from './config.js';
 
 const engine = new Engine(document.getElementById('app'));
@@ -26,6 +28,7 @@ let [gltf, prefabs, zombies] = await Promise.all([
 const gunEffects = new GunEffects(engine.scene);
 const blood = new Blood(engine.scene);
 const playerBlood = new Blood(engine.scene, CONFIG.blood.playerColor, CONFIG.blood.playerPool);
+const visionCones = new VisionCones(engine.scene);
 
 let player = new Player(gltf);
 player.effects = gunEffects;
@@ -56,6 +59,7 @@ engine.add({
     gunEffects.update(dt);
     blood.update(dt);
     playerBlood.update(dt);
+    visionCones.update(dt, here, player);
     camera.update(dt);
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },
@@ -93,6 +97,9 @@ if (params.get('debug') === 'input') {
     },
   });
 }
+// видно, докуда достаёт взглядом каждый зомби и что этот взгляд загораживает
+createToggle('Обзор зомби', (on) => visionCones.setVisible(on));
+
 locations.onChange = (location) => {
   showLocationName(location);
   updateDebugView();

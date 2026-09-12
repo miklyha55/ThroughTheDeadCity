@@ -35,6 +35,9 @@ export class Location {
     // Контуры ВСЕХ моделей, включая проходимые: по ним проверяем, что россыпь
     // не встанет внутрь дома, машины или другой мелочи.
     this.occupied = new Obstacles();
+    // Только то, что выше пояса: дом, машина, контейнер. За такими персонаж
+    // пропадает из виду, а за бочкой или паллетой — нет.
+    this.sight = new Obstacles();
     this.debris = new Debris(this);
 
     const [w, d] = data.size;
@@ -406,7 +409,10 @@ export class Location {
     const prefab = this.prefabs.get(name);
     if (!prefab) return;
 
-    if (prefab.solid) this.obstacles.add(object, prefab.shapes);
+    if (prefab.solid) {
+      this.obstacles.add(object, prefab.shapes);
+      this.sight.add(object, prefab.sightShapes);
+    }
     if (markOccupied) this.occupied.add(object, prefab.shapes);
 
     if (prefab.dynamic) this._makeDynamic(prefab, object);

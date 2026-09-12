@@ -80,6 +80,8 @@ export class Zombie {
     this.waitTime = 0;
     this.stuckTime = 0;    // сколько он топчется на месте, никуда не продвигаясь
     this.alerted = false;  // поднят по тревоге выстрелом — пойдёт на цель без обзора
+    this.blindTime = 0;    // сколько он уже не видит персонажа в погоне
+    this.chaseMoving = true;
     this.state = STATE.PATROL;
     this.current = null;
     this.attackTime = 0;
@@ -95,6 +97,9 @@ export class Zombie {
 
   /** Чем он задевает предметы: телом такого радиуса и с такой скоростью. */
   get radius() { return CFG.bodyRadius; }
+
+  /** Идёт ли он по следу: в этом состоянии обзор уже круговой. */
+  get chasing() { return this.state === STATE.CHASE || this.state === STATE.ATTACK; }
 
   get speed() {
     if (this.state === STATE.CHASE) return CFG.speed;
@@ -182,6 +187,13 @@ export class Zombie {
     this.mixer.update(dt);
   }
 
+  /** Скрыт ли персонаж за чем-то высоким — домом, машиной, контейнером. */
+  _hidden(player, location) {
+    return location.sight.blocksLine(
+      this.root.position.x, this.root.position.z, player.position.x, player.position.z
+    );
+  }
+
   /** Расстояние до персонажа по земле: высота не в счёт. */
   _distanceTo(player) {
     _toPlayer.subVectors(player.position, this.root.position).setY(0);
@@ -214,6 +226,7 @@ export class Zombie {
 
       case STATE.CHASE:
         this.chaseMoving = true;
+        this.blindTime = 0;
         this.play('Run', 0.25);
         // темп клипа под шаг: зомби бредёт, а не бежит
         this.current.timeScale = CFG.speed / CFG.runClipSpeed;
@@ -324,9 +337,9 @@ export class Zombie {
 
     if (distance > CFG.senseRadius) return false;
 
-    if (location.obstacles.blocksLine(
-      this.root.position.x, this.root.position.z, player.position.x, player.position.z
-    )) return false;
+    // Заслоняет обзор только то, что выше пояса: через дом и машину зомби
+    // персонажа не увидит, а поверх бочки — вполне.
+    if (this._hidden(player, location)) return false;
 
     if (distance <= CFG.alertRadius) return true; // так близко, что слышит
 
@@ -378,8 +391,13 @@ export class Zombie {
   _chase(dt, distance, player, location, crowd) {
     this.recovery = Math.max(0, this.recovery - dt);
 
-    if (!player.alive || distance > CFG.loseRadius) {
+    // Скрылся за домом или машиной — зомби ещё немного идёт по памяти, а потом
+    // бросает погоню: стоять под стеной, за которой никого не видно, незачем.
+    this.blindTime = this._hidden(player, location) ? this.blindTime + dt : 0;
+
+    if (!player.alive || distance > CFG.loseRadius || this.blindTime >= CFG.loseSightFor) {
       this.alerted = false;
+      this.blindTime = 0;
       this.home.copy(this.root.position); // потерял цель — бродит уже здесь
       this._pickWaypoint(location);
       this._enter(STATE.PATROL);
