@@ -1,5 +1,5 @@
 {
-  "_": "Роли моделей из Env.blend. Правило ищется от частного к общему: overrides → groups (самый длинный подходящий префикс) → defaults. Сами модели не правятся — только то, как игра с ними обращается. Поле vault: через такой предмет персонаж перепрыгивает, если тот не выше player.vaultMaxHeight. Поле pickup: предмет не стоит на локации, а подбирается персонажем.",
+  "_": "Роли моделей из Env.blend. Правило ищется от частного к общему: overrides → groups (самый длинный подходящий префикс) → defaults. Сами модели не правятся — только то, как игра с ними обращается. Поле vault: через такой предмет персонаж перепрыгивает, если тот не выше player.vaultMaxHeight.",
   "defaults": {
     "solid": true,
     "dynamic": false,
@@ -47,13 +47,7 @@
     },
     "Prop_": {
       "solid": false,
-      "dynamic": true,
-      "vault": true
-    },
-    "Supply_": {
-      "solid": false,
-      "dynamic": false,
-      "pickup": true
+      "dynamic": true
     }
   },
   "overrides": {

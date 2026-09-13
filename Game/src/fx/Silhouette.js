@@ -111,16 +111,9 @@ export function addSilhouette(root, { color, opacity = 1 } = {}) {
     return copy;
   };
 
-  const masks = originals.map((mesh) => twin(mesh, maskMaterial, MASK_ORDER, 'silhouetteMask'));
-  const ghosts = originals.map((mesh) => twin(mesh, material, GHOST_ORDER, 'silhouette'));
-
-  // сама фигура ложится в глубину уже после трафарета
-  for (const mesh of originals) mesh.renderOrder = BODY_ORDER;
-
-  return {
-    material,
-    maskMaterial,
-    masks,
-    ghosts,
-  };
+  for (const mesh of originals) {
+    twin(mesh, maskMaterial, MASK_ORDER, 'silhouetteMask');
+    twin(mesh, material, GHOST_ORDER, 'silhouette');
+    mesh.renderOrder = BODY_ORDER; // сама фигура ложится в глубину после трафарета
+  }
 }

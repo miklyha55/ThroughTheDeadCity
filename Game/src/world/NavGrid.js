@@ -70,11 +70,6 @@ export class NavGrid {
     return true;
   }
 
-  /** Дошла ли волна до этой точки. */
-  reaches(x, z) {
-    const cell = this._cellOf(x, z);
-    return cell >= 0 && this.distance[cell] !== Infinity;
-  }
 
   /**
    * Волна от цели наружу. Стоимость шага — его длина: по диагонали дороже,

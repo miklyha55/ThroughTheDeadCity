@@ -45,7 +45,7 @@ export class Zombie {
       }
     });
 
-    this.silhouette = addSilhouette(model, {
+    addSilhouette(model, {
       color: CONFIG.silhouette.zombieColor,
       opacity: CONFIG.silhouette.opacity,
     });
@@ -514,10 +514,9 @@ export class Zombie {
     // Персонаж может обходить сбоку, но толкать его зомби не должен.
     this._turnTo(Math.atan2(_toPlayer.x, _toPlayer.z), dt);
 
-    // Замах начался — персонаж схвачен и вырваться не может до самого удара.
-    if (!this.hitDone) {
-      player.pin(this.attackLength * CFG.hitAt - this.attackTime + CFG.pinGrace);
-    }
+    // Замах персонажа не держит: пока зомби заносит руку, тот волен отбежать, и
+    // если успел выйти из досягаемости — удар уходит в пустоту. Это единственное
+    // окно, в которое можно вырваться, поэтому управление здесь не отбираем.
 
     if (!this.hitDone && this.attackTime >= this.attackLength * CFG.hitAt) {
       this.hitDone = true;

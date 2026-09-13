@@ -298,13 +298,5 @@
       ],
       "spacing": 0.6
     }
-  ],
-  "supplies": {
-    "prop": "Supply_ShotgunShells",
-    "count": 36,
-    "seed": 61,
-    "near": 2.4,
-    "clearance": 0.4,
-    "scale": 2
-  }
+  ]
 }

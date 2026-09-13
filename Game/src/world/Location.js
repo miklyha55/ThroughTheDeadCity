@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { Obstacles } from './Obstacles.js';
 import { Debris } from '../entities/Debris.js';
-import { Pickups } from '../entities/Pickups.js';
 import { batchStatic } from './batching.js';
 import { NavGrid } from './NavGrid.js';
 import { createBorderFog } from './BorderFog.js';
@@ -46,7 +45,6 @@ export class Location {
     // пропадает из виду, а за бочкой или паллетой — нет.
     this.sight = new Obstacles();
     this.debris = new Debris(this);
-    this.pickups = new Pickups(); // коробки патронов, разбросанные по площадке
 
     const [w, d] = data.size;
     this.width = w;
@@ -68,7 +66,6 @@ export class Location {
     this.nav.build(this.obstacles, CONFIG.zombies.radius);
 
     this._buildZombies();
-    this._buildSupplies(); // припасы кладём после толпы: они привязаны к ней
     this._batchStatics();
   }
 
@@ -274,53 +271,6 @@ export class Location {
     }
   }
 
-  /**
-   * Раскладывает припасы по толпе.
-   *
-   * Коробки не сыплются по площадке вслепую, а привязываются к самим зомби:
-   * список обходится равным шагом, и рядом с каждым выбранным кладётся коробка.
-   * Поэтому плотность припасов повторяет плотность толпы — там, где заслон у
-   * выхода стоит стеной, патронов под ногами больше, а на пустом поле их нет
-   * вовсе. Считать плотность отдельно для этого не нужно: её уже задали зомби.
-   */
-  _buildSupplies() {
-    const plan = this.data.supplies;
-    if (!plan || !this.zombies.length) return;
-
-    const count = Math.min(plan.count ?? 0, this.zombies.length);
-    if (count <= 0) return;
-
-    const rand = mulberry32(plan.seed ?? 5);
-    const step = this.zombies.length / count;
-    const near = plan.near ?? 2.4;   // на каком расстоянии от зомби класть, м
-    const clear = plan.clearance ?? 0.4;
-
-    for (let i = 0; i < count; i++) {
-      const host = this.zombies[Math.floor(i * step)];
-
-      // ищем рядом с ним место, где не стоит ни стена, ни сосед
-      for (let attempt = 0; attempt < 12; attempt++) {
-        const angle = rand() * Math.PI * 2;
-        const radius = near * (0.45 + rand() * 0.55);
-        const x = host.position.x + Math.cos(angle) * radius;
-        const z = host.position.z + Math.sin(angle) * radius;
-
-        if (!this.nav.isFree(x, z)) continue;
-        if (this.occupied.hits(x, z, clear)) continue;
-
-        const object = this.prefabs.create(plan.prop);
-        if (!object) return; // модели нет в библиотеке — дальше и пробовать незачем
-
-        object.position.set(x, GROUND_Y, z);
-        object.rotation.y = rand() * Math.PI * 2;
-        if (plan.scale) object.scale.setScalar(plan.scale); // модель мелкая, её нужно видеть
-        this.group.add(object);
-        this._place(plan.prop, object);
-        break;
-      }
-    }
-  }
-
   /** Делит область на клетки по числу зомби — по клетке на каждого. */
   _gridFor(count, x0, z0, x1, z1) {
     const width = Math.abs(x1 - x0);
@@ -414,7 +364,6 @@ export class Location {
       if (zombie.alive) this._movers.push(zombie);
     }
     this.debris.update(dt, this._movers);
-    this.pickups.update(dt, player);
 
     // ушедшие под землю больше не нужны
     if (this.zombies.some((z) => z.removed)) {
@@ -478,10 +427,7 @@ export class Location {
     }
     if (markOccupied) this.occupied.add(object, prefab.shapes);
 
-    // Припасы не сливаем с окружением: они улетают к персонажу, а слитая
-    // геометрия неподвижна — улететь ей уже нечем.
-    if (prefab.pickup) this.pickups.add(object, CONFIG.pickup.ammo);
-    else if (prefab.dynamic) this._makeDynamic(prefab, object);
+    if (prefab.dynamic) this._makeDynamic(prefab, object);
     else this.statics.push(object); // не двигается — значит можно слить с остальными
 
     this._markVault(prefab, object);
@@ -496,6 +442,11 @@ export class Location {
    */
   _markVault(prefab, object) {
     if (!prefab.vault || !prefab.size) return;
+
+    // Подвижное не годится: коробка снимается один раз, при размещении, и за
+    // предметом не ездит. Пнули бочку — прыгать пришлось бы через пустое место,
+    // где она лежала. Такую мелочь и так проще растолкать ногами.
+    if (prefab.dynamic) return;
 
     const CFG = CONFIG.player;
     const scale = object.scale.x;

@@ -3,7 +3,6 @@ import { CONFIG } from '../config.js';
 import { batchSkinned, enableCulling } from '../world/batching.js';
 import { addSilhouette } from '../fx/Silhouette.js';
 import { arcPoint } from '../core/arc.js';
-import { CONFIG as ROOT } from '../config.js';
 
 const CFG = CONFIG.player;
 const DEG = Math.PI / 180;
@@ -59,9 +58,9 @@ export class Player {
     });
 
     // силуэт проступает, когда персонаж уходит за дом
-    this.silhouette = addSilhouette(this.root, {
-      color: ROOT.silhouette.playerColor,
-      opacity: ROOT.silhouette.opacity,
+    addSilhouette(this.root, {
+      color: CONFIG.silhouette.playerColor,
+      opacity: CONFIG.silhouette.opacity,
     });
 
     // после двойников: отсечение нужно и им
@@ -117,7 +116,6 @@ export class Player {
     }
 
     this.lives = CFG.lives;
-    this.ammo = CFG.ammo;
 
     // Ствол: он закреплён на кости руки и развёрнут относительно корпуса, поэтому
     // целиться поворотом корпуса «в лоб» нельзя — оружие будет смотреть мимо.
@@ -140,7 +138,6 @@ export class Player {
     this._jumpFrom = new THREE.Vector3();
     this._jumpTo = new THREE.Vector3();
 
-    this.pinned = 0;       // зомби замахнулся: управление отобрано до удара
     this.reacting = 0;     // доигрывается реакция на попадание
 
     this.play('Idle', 0);
@@ -155,24 +152,13 @@ export class Player {
   get alive() { return this.lives > 0; }
 
   /**
-   * Управление отобрано: зомби замахнулся, либо персонажа ещё шатает от удара.
-   * И то и другое — время, когда он не бежит, не стреляет и не может уйти.
+   * Управление отобрано: персонажа шатает от полученного удара. Только это —
+   * замах зомби его больше не держит, иначе из кольца было бы не выбраться.
    */
-  get helpless() { return this.pinned > 0 || this.reacting > 0; }
+  get helpless() { return this.reacting > 0; }
 
   /** Летит ли он сейчас через препятствие. */
   get jumping() { return this.jumpTime > 0; }
-
-  /**
-   * Зомби начал замах — персонаж замирает, пока его не ударят.
-   * Время задаёт сам зомби: столько осталось до попадания в его анимации.
-   */
-  pin(seconds) {
-    if (!this.alive) return;
-    this.pinned = Math.max(this.pinned, seconds);
-    this.velocity.set(0, 0, 0);
-    this._holdFire(); // выстрела не будет, пока не ударят
-  }
 
   /** Чем он задевает предметы — то же, что и у зомби, чтобы обходить их одним списком. */
   get radius() { return CFG.radius; }
@@ -198,7 +184,6 @@ export class Player {
     // брызги летят от того, кто ударил, — дальше сквозь персонажа
     this._hitPoint.copy(this.root.position).setY(this.root.position.y + CFG.hitHeight);
     this.ownBlood?.splash(this._hitPoint, from ?? this.root.position);
-    this.pinned = 0; // замах отработал, дальше держит уже сама реакция
 
     if (!this.alive) {
       this._die();
@@ -243,7 +228,7 @@ export class Player {
    * кадра — а нужен здесь только свет.
    */
   _addGlow() {
-    const GLOW = ROOT.glow;
+    const GLOW = CONFIG.glow;
 
     const light = new THREE.PointLight(GLOW.color, GLOW.intensity, GLOW.distance, GLOW.decay);
     light.name = 'playerGlow';
@@ -275,7 +260,6 @@ export class Player {
    * @param {import('../world/Location.js').Location} [location] — цели и препятствия
    */
   update(dt, move, cameraYaw, location) {
-    if (this.pinned > 0) this.pinned -= dt;
     if (this.reacting > 0) this.reacting -= dt;
 
     // мёртвый не управляется: доигрывает падение и остаётся лежать
@@ -305,7 +289,7 @@ export class Player {
 
     if (this._desired.lengthSq() > 0) this._desired.normalize().multiplyScalar(CFG.runSpeed);
 
-    // В замахе и под ударом персонаж не управляется: вырваться нельзя.
+    // Под ударом персонаж не управляется: пока его шатает, он никуда не идёт.
     if (this.helpless) this._desired.set(0, 0, 0);
 
     // Упёрся в машину на ходу — перепрыгнул. Проверяем до движения: иначе он
@@ -339,10 +323,6 @@ export class Player {
 
     if (this.reacting > 0) {
       // доигрывает попадание: анимацию не трогаем, иначе оборвётся на первом кадре
-    } else if (this.pinned > 0) {
-      // в замахе персонаж только стоит
-      this.play('Idle', CFG.stopFade);
-      this.current.timeScale = 1;
     } else if (!shooting) {
       if (speed > 0) {
         this.play('Run', 0.15);
@@ -416,16 +396,7 @@ export class Player {
       return true;
     }
 
-    // Патроны кончились — целиться уже незачем: персонаж просто стоит.
-    // Стойку ставим сами, иначе он замрёт на последнем кадре выстрела.
-    if (this.ammo <= 0) {
-      this.play('Idle', CFG.stopFade);
-      this.current.timeScale = 1;
-      return true;
-    }
-
-    // цель есть, перезарядка кончилась и есть чем стрелять
-    this.ammo--;
+    // цель есть и перезарядка кончилась — стреляем
     this.play('Shoot', 0.08);
     this.current.reset().play();
     this.current.timeScale = CFG.shootSpeed;
@@ -648,7 +619,7 @@ export class Player {
       if (along <= 0 || along > CFG.fireRange) continue;
 
       const aside = Math.abs(ox * dirZ - oz * dirX); // и насколько он в стороне
-      if (aside > ROOT.zombies.bodyRadius) continue;
+      if (aside > CONFIG.zombies.bodyRadius) continue;
 
       if (location.obstacles.blocksLine(from.x, from.z, other.position.x, other.position.z)) continue;
 

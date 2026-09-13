@@ -20,22 +20,27 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
  * и за ним. При сотне зомби это сотня напрасных вызовов отрисовки плюс столько же
  * в проходе теней.
  *
- * Поэтому скину задаётся собственная сфера — та же, но с запасом на любую позу.
- * Три.js умеет считать её по костям, однако делает это один раз и по всем
- * вершинам сразу, так что дешевле и надёжнее назначить её самим.
+ * Поэтому скину задаётся собственная сфера, и не по геометрии, а просто вокруг
+ * фигуры: центр на уровне груди, радиус — с запасом в добрый десяток метров.
+ * Сфера геометрии тут не помощник — она снята с bind-позы, и её центр может
+ * лежать где угодно, хоть в ступнях, хоть в стороне от модели.
+ *
+ * Запас намеренно огромный: фигура должна начать рисоваться далеко за краем
+ * кадра, иначе зомби выскакивают на экран посреди пустого места. На площадке
+ * 44 x 44 м тридцать метров означают, что отсекается только совсем дальний край
+ * локации, — но и этого хватает, чтобы не гнать в отрисовку всю толпу разом.
+ *
+ * @param {THREE.Object3D} root
+ * @param {number} [radius] — радиус сферы отсечения, м
+ * @param {number} [height] — на какой высоте её центр, м
  */
-export function enableCulling(root, slack = 1.7) {
+export function enableCulling(root, radius = 30, height = 1) {
   root.traverse((mesh) => {
     if (!mesh.isMesh) return;
     mesh.frustumCulled = true;
 
     if (!mesh.isSkinnedMesh) return;
-
-    const geometry = mesh.geometry;
-    if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
-
-    mesh.boundingSphere = geometry.boundingSphere.clone();
-    mesh.boundingSphere.radius *= slack;
+    mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, height, 0), radius);
   });
 }
 
@@ -43,7 +48,7 @@ export function enableCulling(root, slack = 1.7) {
  * Общий кэш материалов на всё приложение: локации, зомби и персонаж делят
  * одни и те же объекты материалов — в этом и смысл сведения.
  */
-export const materialCache = new Map();
+const materialCache = new Map();
 
 /**
  * Ключ группы: всё, что нельзя запечь в вершины.

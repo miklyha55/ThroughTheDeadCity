@@ -1,4 +1,3 @@
-import { loadGLTF } from '../core/AssetLoader.js';
 import { PropLibrary } from './PropLibrary.js';
 
 /**
@@ -50,7 +49,6 @@ export class PrefabLibrary {
       solid,
       dynamic: rules.dynamic === true,
       vault: rules.vault === true,
-      pickup: rules.pickup === true,
       shadows: rules.shadows !== false,
       shapes: this.props.collisionShapes(name),
       sightShapes: this.props.sightShapes(name),
