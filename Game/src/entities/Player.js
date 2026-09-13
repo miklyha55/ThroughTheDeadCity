@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
-import { batchSkinned, enableCulling } from '../world/batching.js';
+import { batchSkinned } from '../world/batching.js';
 import { addSilhouette } from '../fx/Silhouette.js';
 import { arcPoint } from '../core/arc.js';
 
@@ -63,9 +63,6 @@ export class Player {
       opacity: CONFIG.silhouette.opacity,
       order: CONFIG.silhouette.playerOrder, // свой контур поверх чужих
     });
-
-    // после двойников: отсечение нужно и им
-    enableCulling(this.root);
 
     this._addGlow();
 

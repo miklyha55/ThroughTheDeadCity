@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { addSilhouette } from '../fx/Silhouette.js';
-import { enableCulling } from '../world/batching.js';
 
 const CFG = CONFIG.zombies;
 
@@ -49,10 +48,6 @@ export class Zombie {
       color: CONFIG.silhouette.zombieColor,
       opacity: CONFIG.silhouette.opacity,
     });
-
-    // Отсечение по кадру — вместе с двойниками силуэта: за краем экрана зомби
-    // не должен стоить ни одного вызова отрисовки, их тут сотни.
-    enableCulling(this.root);
 
     this.mixer = new THREE.AnimationMixer(model);
     this.actions = new Map();
