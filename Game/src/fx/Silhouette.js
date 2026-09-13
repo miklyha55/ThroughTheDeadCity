@@ -41,7 +41,9 @@ export function addSilhouette(root, { color, opacity = 1, order = ZOMBIE_ORDER }
 
   const originals = [];
   root.traverse((o) => {
-    if (o.isMesh) originals.push(o);
+    // Двойники, добавленные другим эффектом, — не модель: обводить обводку или
+    // подсвечивать подсветку незачем, а traverse видит их наравне с оригиналами.
+    if (o.isMesh && !o.userData.twin) originals.push(o);
   });
 
   // Зажжён ли контур. Общий на всю фигуру: перекрыли её — светится целиком.
@@ -53,6 +55,7 @@ export function addSilhouette(root, { color, opacity = 1, order = ZOMBIE_ORDER }
       : new THREE.Mesh(mesh.geometry, material);
 
     copy.name = `silhouette:${mesh.name}`;
+    copy.userData.twin = true;
     copy.renderOrder = order;
     copy.castShadow = false;
     copy.receiveShadow = false;

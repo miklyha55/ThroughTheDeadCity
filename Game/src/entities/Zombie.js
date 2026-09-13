@@ -89,7 +89,6 @@ export class Zombie {
     this.current = null;
     this.attackTime = 0;
     this.hitDone = false;
-    this.recovery = 0; // пауза после удара: даёт персонажу шанс убежать
 
     this.play('Idle', 0);
   }
@@ -430,8 +429,6 @@ export class Zombie {
 
   /** Медленно идёт к персонажу, обходя препятствия и расталкивая соседей. */
   _chase(dt, distance, player, location, crowd) {
-    this.recovery = Math.max(0, this.recovery - dt);
-
     // Ушёл из сектора взгляда — за дом, за машину или просто вбок, за край
     // обзора — и зомби тут же бросает погоню: гнаться за тем, кого не видит,
     // он не умеет.
@@ -442,9 +439,8 @@ export class Zombie {
       this._enter(STATE.PATROL);
       return;
     }
-    // Дотянулся — бьёт. Без оглядки на то, чем занят персонаж и били ли его
-    // только что: попал в досягаемость — сам виноват.
-    if (distance <= CFG.attackRadius && this.recovery <= 0) {
+    // Дотянулся — бьёт.
+    if (distance <= CFG.attackRadius) {
       this._enter(STATE.ATTACK);
       return;
     }
@@ -506,29 +502,28 @@ export class Zombie {
     }
   }
 
-  /** Бьёт, пока персонаж рядом. Урон приходится на середину замаха. */
+  /**
+   * Удар.
+   *
+   * Вся логика умещается в три шага: доворачиваемся к персонажу, на середине
+   * замаха проверяем, дотянулись ли, и по концу клипа возвращаемся в погоню.
+   * Дотянулись — персонаж получает своё; отбежал за это время — промах.
+   */
   _attack(dt, distance, player) {
     this.attackTime += dt;
 
-    // Во время замаха зомби стоит на месте: только доворачивается к цели.
-    // Персонаж может обходить сбоку, но толкать его зомби не должен.
+    // Замахиваясь, зомби стоит на месте и только доворачивается к цели.
     this._turnTo(Math.atan2(_toPlayer.x, _toPlayer.z), dt);
-
-    // Замах персонажа не держит: пока зомби заносит руку, тот волен отбежать, и
-    // если успел выйти из досягаемости — удар уходит в пустоту. Это единственное
-    // окно, в которое можно вырваться, поэтому управление здесь не отбираем.
 
     if (!this.hitDone && this.attackTime >= this.attackLength * CFG.hitAt) {
       this.hitDone = true;
       // бьём, только если цель всё ещё в досягаемости — иначе удар в воздух
       if (distance <= CFG.attackRadius + CFG.reach) player.takeDamage(CFG.damage, this.root.position);
-      this.recovery = CFG.recoverFor; // дальше он переводит дух
     }
 
     if (this.attackTime < this.attackLength) return;
 
-    // Замах закончился. Повторять сразу нельзя: персонажу нужна доля секунды,
-    // чтобы отскочить, иначе его забивают насмерть без единого шанса.
+    // Замах доигран: цела цель — идём за ней снова, нет — успокаиваемся.
     if (!player.alive) this._enter(STATE.IDLE);
     else this._enter(STATE.CHASE);
   }
