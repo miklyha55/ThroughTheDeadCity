@@ -41,6 +41,7 @@ const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 const params = new URLSearchParams(window.location.search);
 await locations.load(params.get('location') ?? CONFIG.locations.first);
 
+let shownAmmo = -1; // сколько патронов сейчас написано в углу
 const joystick = new Joystick();
 const input = new Input(joystick);
 const camera = new FollowCamera(engine.camera, player);
@@ -62,6 +63,7 @@ engine.add({
     blood.update(dt);
     playerBlood.update(dt);
     explosions.update(dt);
+    if (player.ammo !== shownAmmo) showHud(), (shownAmmo = player.ammo);
     camera.update(dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
@@ -77,9 +79,9 @@ async function updateDebugView() {
   debugView = showObstacles(engine.scene, locations.current.obstacles);
 }
 
-function showLocationName(location) {
+function showHud() {
   hud.hidden = false;
-  hud.textContent = location.data.name;
+  hud.textContent = `${locations.current.data.name}\nпатроны: ${player.ammo}`;
 }
 
 // ?debug=input — видно, что приходит со стика и куда едет персонаж
@@ -111,10 +113,10 @@ wireBlasts(locations.current);
 
 locations.onChange = (location) => {
   wireBlasts(location);
-  showLocationName(location);
+  showHud();
   updateDebugView();
 };
-showLocationName(locations.current);
+showHud();
 updateDebugView();
 
 if (import.meta.env.DEV) {

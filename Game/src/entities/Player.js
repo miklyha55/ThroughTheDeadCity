@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { batchSkinned, enableCulling } from '../world/batching.js';
 import { addSilhouette } from '../fx/Silhouette.js';
+import { arcPoint } from '../core/arc.js';
 import { CONFIG as ROOT } from '../config.js';
 
 const CFG = CONFIG.player;
@@ -116,6 +117,7 @@ export class Player {
     }
 
     this.lives = CFG.lives;
+    this.ammo = CFG.ammo;
 
     // Ствол: он закреплён на кости руки и развёрнут относительно корпуса, поэтому
     // целиться поворотом корпуса «в лоб» нельзя — оружие будет смотреть мимо.
@@ -414,7 +416,16 @@ export class Player {
       return true;
     }
 
-    // цель есть и перезарядка кончилась — стреляем
+    // Патроны кончились — целиться уже незачем: персонаж просто стоит.
+    // Стойку ставим сами, иначе он замрёт на последнем кадре выстрела.
+    if (this.ammo <= 0) {
+      this.play('Idle', CFG.stopFade);
+      this.current.timeScale = 1;
+      return true;
+    }
+
+    // цель есть, перезарядка кончилась и есть чем стрелять
+    this.ammo--;
     this.play('Shoot', 0.08);
     this.current.reset().play();
     this.current.timeScale = CFG.shootSpeed;
@@ -468,10 +479,7 @@ export class Player {
     this.jumpTime += dt;
 
     const share = Math.max(0, Math.min(1, this.jumpTime / this.jumpLanding));
-    const arc = CFG.jumpArc * 4 * share * (1 - share); // парабола: ноль на концах
-
-    this.root.position.lerpVectors(this._jumpFrom, this._jumpTo, share);
-    this.root.position.y = this._jumpFrom.y + arc;
+    arcPoint(this.root.position, this._jumpFrom, this._jumpTo, share, CFG.jumpArc);
 
     if (this.jumpTime < this.jumpLanding) return;
 
