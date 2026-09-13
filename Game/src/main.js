@@ -101,6 +101,9 @@ engine.add({
       if (!player.jumping) here.obstacles.resolve(player.position, CONFIG.player.radius);
       here.clampPosition(player.position); // и за забор тоже
     }
+    if (!player.alive && !diedAt) diedAt = performance.now();
+    if (player.alive) diedAt = 0;
+
     here.update(dt, player); // зомби: заметить, дойти, ударить
     gunEffects.update(dt);
     blood.update(dt);
@@ -167,6 +170,24 @@ function wireBlasts(location) {
   };
 }
 wireBlasts(locations.current);
+
+/**
+ * После смерти уровень начинается заново по любому нажатию.
+ *
+ * Ждём секунду, прежде чем слушать: иначе тот самый выстрел или касание стика,
+ * на котором персонаж и погиб, тут же перезапустил бы игру, и падения никто бы
+ * не увидел.
+ */
+let diedAt = 0;
+for (const event of ['pointerdown', 'keydown', 'touchstart']) {
+  addEventListener(event, () => {
+    if (player.alive || locations.loading) return;
+    if (performance.now() - diedAt < CONFIG.player.restartAfter * 1000) return;
+
+    player.revive();
+    locations.load(locations.current.data.id);
+  });
+}
 
 locations.onChange = (location) => {
   wireBlasts(location);

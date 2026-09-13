@@ -1,8 +1,11 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
-// м/с, с которой камера едет по локации от стрелок и WASD
+// м/с, с которой камера едет по локации от WASD и стрелок вверх-вниз
 const PAN_SPEED = 18;
+
+// рад/с разворота камеры стрелками влево-вправо
+const TURN_SPEED = 1.2;
 
 // Шар, которым ловится фигура при выборе: по росту человека и чуть шире плеч.
 const FIGURE_HEIGHT = 1.9;
@@ -47,11 +50,14 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
   // нажатию: автоповтор клавиатуры идёт рывками и с задержкой в полсекунды.
   const held = new Set();
   const ARROWS = {
-    ArrowLeft: [-1, 0], ArrowRight: [1, 0],
     ArrowUp: [0, 1], ArrowDown: [0, -1],
     KeyA: [-1, 0], KeyD: [1, 0],
     KeyW: [0, 1], KeyS: [0, -1],
   };
+
+  // Стрелки влево-вправо разворачивают камеру вокруг точки взгляда: с одного
+  // ракурса не видно ни дальней стороны домов, ни того, что за ними стоит.
+  const TURNS = { ArrowLeft: 1, ArrowRight: -1 };
 
   const panel = document.createElement('div');
   panel.className = 'editor';
@@ -116,7 +122,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
   const status = (text) => {
     title.textContent = active ? locations.current.data.name : '';
     hint.textContent = active
-      ? 'WASD и стрелки — камера · 1 сдвиг · 2 поворот · 3 размер\n'
+      ? 'WASD — камера · ←→ поворот · 1 сдвиг · 2 разворот · 3 размер\n'
         + 'Enter — сохранить · Tab — выйти\n'
         + 'сохранение переводит россыпь и зомби в поимённый список\n'
         + text
@@ -282,7 +288,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
   addEventListener('keyup', (event) => held.delete(event.code));
 
   addEventListener('keydown', (event) => {
-    if (active && ARROWS[event.code]) {
+    if (active && (ARROWS[event.code] || TURNS[event.code])) {
       event.preventDefault(); // иначе страница поедет вместе с камерой
       held.add(event.code);
       return;
@@ -327,12 +333,16 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
       let forward = 0;
 
       for (const code of held) {
-        const [x, z] = ARROWS[code];
+        const [x, z] = ARROWS[code] ?? [0, 0];
         right += x;
         forward += z;
       }
 
       if (right || forward) camera?.pan(right * PAN_SPEED * dt, forward * PAN_SPEED * dt);
+
+      let turn = 0;
+      for (const code of held) turn += TURNS[code] ?? 0;
+      if (turn) camera?.turn(turn * TURN_SPEED * dt);
     },
   };
 }

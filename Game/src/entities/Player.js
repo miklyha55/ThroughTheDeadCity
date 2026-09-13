@@ -197,6 +197,24 @@ export class Player {
     this.current.timeScale = CFG.reactionSpeed;
   }
 
+  /**
+   * Вернуть к жизни: уровень начинается заново, а модель у нас та же самая.
+   * Пересоздавать её незачем — достаточно сбросить всё, что накопила прошлая
+   * попытка, и снова поставить в стойку.
+   */
+  revive() {
+    this.lives = CFG.lives;
+    this.reacting = 0;
+    this.velocity.set(0, 0, 0);
+    this.spotted = null;
+    this.jumpTime = 0;
+    this._holdFire();
+    this._holdGun(false);
+    this.play('Idle', 0);
+    this.current.reset().play();
+    this.current.timeScale = 1;
+  }
+
   _die() {
     this.velocity.set(0, 0, 0);
     this.play('Death', 0.15);
@@ -627,9 +645,13 @@ export class Player {
       ? this._muzzle.copy(from).setY(from.y + CFG.hitHeight)
       : this._muzzlePoint();
 
-    const base = pointBlank
-      ? Math.atan2(zombie.position.x - muzzle.x, zombie.position.z - muzzle.z)
-      : this._barrelAngle();
+    // Целимся из дула прямо в зомби, а не «вдоль ствола».
+    //
+    // Ствол вынесен вбок, и его направление не совпадает с линией на цель: на
+    // восьми метрах расхождение около двух градусов, на двух — уже четырнадцать.
+    // Пуля при этом попадала, а росчерк уходил мимо — со стороны выглядело, будто
+    // персонаж бьёт в сторону. Линия должна показывать, куда правда летит пуля.
+    const base = Math.atan2(zombie.position.x - muzzle.x, zombie.position.z - muzzle.z);
 
     const middle = (CFG.pellets - 1) / 2;
 
@@ -647,10 +669,6 @@ export class Player {
       const dirX = Math.sin(angle);
       const dirZ = Math.cos(angle);
 
-      // бочка на пути детонирует — и дальше пуля летит уже по пустому месту
-      const barrels = location?.debris.explosivesAlong(muzzle, dirX, dirZ, CFG.fireRange) ?? [];
-      for (const barrel of barrels) location.explode(barrel, this);
-
       // Средняя пуля всегда достаёт того, кого персонаж взял на прицел.
       //
       // Без этого вблизи выходил систематический промах: корпус доворачивается
@@ -661,6 +679,18 @@ export class Player {
       const victim = i === middle
         ? zombie
         : this._pelletHit(location, muzzle, dirX, dirZ);
+
+      // Докуда пуля вообще долетела: до того, в кого попала, иначе — сколько
+      // прочертила. Дальше этого она никого и ничего задеть не может.
+      const flight = victim
+        ? Math.hypot(victim.position.x - muzzle.x, victim.position.z - muzzle.z)
+        : range;
+
+      // Бочка на пути детонирует. Ищем её только в пределах полёта: раньше
+      // поиск шёл на всю дальность огня, и боковая пуля веера подрывала бочку
+      // далеко в стороне — там, куда персонаж вовсе не целился.
+      const barrels = location?.debris.explosivesAlong(muzzle, dirX, dirZ, flight) ?? [];
+      for (const barrel of barrels) location.explode(barrel);
 
       // росчерк обрывается на том, в кого попали, — или тянется в пустоту
       if (victim) {

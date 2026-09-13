@@ -202,6 +202,8 @@ export class Location {
     // предметы разлетаются и от зомби: толпа проходит — ящики расходятся
     this._movers.length = 0;
     this._movers.push(player);
+    // Персонажа взрыв не трогает: он сам его и устроил, а погибать от того, во
+    // что стрелял, — наказание не за ошибку, а за приём.
     for (const zombie of this.zombies) {
       if (zombie.alive) this._movers.push(zombie);
     }
@@ -226,6 +228,8 @@ export class Location {
     const gap = CONFIG.zombies.bodyRadius + CONFIG.player.radius;
     const position = player.position;
 
+    // Персонажа взрыв не трогает: он сам его и устроил, а погибать от того, во
+    // что стрелял, — наказание не за ошибку, а за приём.
     for (const zombie of this.zombies) {
       if (!zombie.alive) continue; // через труп можно перешагнуть
 
@@ -246,6 +250,8 @@ export class Location {
   _someoneNear(player) {
     const range = CONFIG.zombies.loseRadius;
 
+    // Персонажа взрыв не трогает: он сам его и устроил, а погибать от того, во
+    // что стрелял, — наказание не за ошибку, а за приём.
     for (const zombie of this.zombies) {
       const dx = zombie.position.x - player.position.x;
       const dz = zombie.position.z - player.position.z;
@@ -357,20 +363,18 @@ export class Location {
    * @param {object} item — тело из физики: сама бочка
    * @param {import('../entities/Player.js').Player} player
    */
-  explode(item, player) {
+  explode(item) {
     const CFG = CONFIG.explosion;
     const at = item.object.position.clone();
 
     this.debris.remove(item);
     this.debris.blast(at, CFG.kickRadius, CFG.kick, CFG.lift);
 
+    // Персонажа взрыв не трогает: он сам его и устроил, а погибать от того, во
+    // что стрелял, — наказание не за ошибку, а за приём.
     for (const zombie of this.zombies) {
       if (!zombie.alive) continue;
       if (zombie.position.distanceTo(at) <= CFG.radius) zombie.crush(at, CFG.gore);
-    }
-
-    if (player?.alive && player.position.distanceTo(at) <= CFG.radius) {
-      player.takeDamage(player.lives, at);
     }
 
     this.onBlast?.(at); // вспышка и тряска — дело сцены, а не локации

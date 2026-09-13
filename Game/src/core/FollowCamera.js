@@ -32,15 +32,7 @@ export class FollowCamera {
     // остаётся тем же: меняется только сторона, с которой мы смотрим.
     if (this.target.alive === false) {
       this.orbit += CFG.orbitSpeed * dt;
-
-      const horizontal = Math.cos(this.pitch) * CFG.distance;
-      const angle = this.yaw + this.orbit;
-
-      this._offset.set(
-        Math.sin(angle) * horizontal,
-        Math.sin(this.pitch) * CFG.distance,
-        Math.cos(angle) * horizontal
-      );
+      this._setAngle(this.yaw + this.orbit);
       this.camera.position.copy(this._focus).add(this._offset);
     }
 
@@ -106,10 +98,41 @@ export class FollowCamera {
    */
   snap() {
     this._focus.copy(this.target.position).setY(this.target.position.y + CFG.lookAtHeight);
-    this.orbit = 0; // круг вокруг погибшего начинается заново
+
+    // Возвращаем ракурс, с которого игра и начинается. Облёт погибшего крутит
+    // смещение камеры вокруг цели, и без этого уровень начинался бы заново с
+    // того угла, на котором оборвалась прошлая попытка.
+    this.orbit = 0;
+    this._setAngle(this.yaw);
 
     this.camera.position.copy(this._focus).add(this._offset);
     this.camera.lookAt(this._focus);
+  }
+
+  /**
+   * Развернуть камеру вокруг того, на что она смотрит. Нужно правке локации:
+   * с одного ракурса не видно, что творится за домами и с их дальней стороны.
+   *
+   * Поворачивается сам угол обзора, поэтому и стрелки, ведущие камеру по земле,
+   * продолжают работать «по экрану»: вправо — вправо для зрителя.
+   */
+  turn(by) {
+    this.yaw += by;
+    this._setAngle(this.yaw);
+
+    this.camera.position.copy(this._focus).add(this._offset);
+    this.camera.lookAt(this._focus);
+  }
+
+  /** Ставит смещение камеры по заданному повороту вокруг цели. */
+  _setAngle(angle) {
+    const horizontal = Math.cos(this.pitch) * CFG.distance;
+
+    this._offset.set(
+      Math.sin(angle) * horizontal,
+      Math.sin(this.pitch) * CFG.distance,
+      Math.cos(angle) * horizontal
+    );
   }
 
   /** Направление «вперёд по камере» для управления персонажем. */
@@ -135,15 +158,7 @@ export class FollowCamera {
     // остаётся тем же: меняется только сторона, с которой мы смотрим.
     if (this.target.alive === false) {
       this.orbit += CFG.orbitSpeed * dt;
-
-      const horizontal = Math.cos(this.pitch) * CFG.distance;
-      const angle = this.yaw + this.orbit;
-
-      this._offset.set(
-        Math.sin(angle) * horizontal,
-        Math.sin(this.pitch) * CFG.distance,
-        Math.cos(angle) * horizontal
-      );
+      this._setAngle(this.yaw + this.orbit);
       this.camera.position.copy(this._focus).add(this._offset);
     }
 
