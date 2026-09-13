@@ -58,11 +58,22 @@ const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 locations.splash = new Splash();
 locations.sfx = sfx;
 
-// Музыка принадлежит игре, а не уровню: заводится один раз и играет по кругу,
-// пока открыта вкладка. Перезагрузка локации её не трогает.
-new Music();
+const music = new Music();
 const params = new URLSearchParams(window.location.search);
-await locations.load(params.get('location') ?? CONFIG.locations.first);
+
+/**
+ * Какой уровень открыть и где его запомнить.
+ *
+ * В разработке игра возвращается туда, где её закрыли: правишь локацию, жмёшь
+ * перезагрузку — и снова на ней, а не в начале цепочки. В собранной игре этого
+ * нет: там уровни идут по порядку, и прыгать в середину незачем.
+ *
+ * Адрес сильнее памяти: `?location=` открывает то, что в нём написано.
+ */
+const LAST_LEVEL = 'dev:location';
+const remembered = import.meta.env.DEV ? localStorage.getItem(LAST_LEVEL) : null;
+
+await locations.load(params.get('location') ?? remembered ?? CONFIG.locations.first);
 
 let editor = null; // правка расстановки: появляется только на dev-сервере
 const joystick = new Joystick();
@@ -157,9 +168,13 @@ locations.onChange = (location) => {
   wireBlasts(location);
   showHud();
   updateDebugView();
+  music.play(location.data.music ?? 1); // у каждого уровня своя дорожка
+
+  if (import.meta.env.DEV) localStorage.setItem(LAST_LEVEL, location.data.id);
 };
 showHud();
 updateDebugView();
+music.play(locations.current.data.music ?? 1); // первый уровень: onChange к нему ещё не привязан
 
 if (import.meta.env.DEV) {
   // Tab — правка расстановки мышью; пока она открыта, игра стоит на паузе

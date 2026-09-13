@@ -17,7 +17,25 @@ const SIDES = {
 };
 
 const DEG = Math.PI / 180;
-const GROUND_Y = 0.02; // площадка лежит чуть выше подложки мира
+// Ноль — уровень, по которому ходят: на нём стоит всё, от домов до зомби.
+// Сам пол лежит на волос ниже — только чтобы не спорить за пиксели с дорожным
+// полотном, чей верх приведён ровно к нулю.
+const GROUND_Y = -0.02;
+
+/**
+ * На сколько утопить предмет, чтобы по нему можно было ходить.
+ *
+ * Модели нарисованы от нуля вверх, поэтому дорожная плита толщиной в ладонь
+ * торчит над землёй, и все, кто на ней стоит, вязнут по щиколотку. Дорогу мы
+ * опускаем на толщину её полотна — ровно настолько, чтобы асфальт лёг вровень
+ * с землёй.
+ *
+ * Именно на толщину, а не «на высоту модели»: у воронки над полотном поднимается
+ * вал в полметра, и просадка по нему утопила бы весь тайл, оставив в дороге дыру.
+ */
+function sinkOf(prefab) {
+  return prefab?.sink ?? 0;
+}
 
 /** Округление до сантиметра: в файле не нужны хвосты из пятнадцати знаков. */
 const round = (value) => Math.round(value * 100) / 100;
@@ -71,6 +89,7 @@ export class Location {
     this._buildGround();
     this.group.add(createBorderFog(w, d)); // за забором мир тонет во мгле
     this._buildFence();
+    this._buildWalls();
     this._buildProps();
 
     // сетка проходимости снимается с готовых препятствий: локация дальше не меняется
@@ -92,10 +111,11 @@ export class Location {
       new THREE.MeshStandardMaterial({ color: new THREE.Color(g.color ?? '#6b6357'), roughness: 1 })
     );
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = GROUND_Y; // чуть выше подложки мира, чтобы не мерцало
+    ground.position.y = g.y ?? GROUND_Y;
     ground.receiveShadow = true;
+    ground.name = 'ground';
     this.group.add(ground);
-    this._ground = ground;
+    this.ground = ground; // редактор двигает его тем же гизмо, что и всё прочее
   }
 
   _buildFence() {
@@ -168,11 +188,53 @@ export class Location {
     this.group.add(marker);
   }
 
+  /**
+   * Стены по ломаной — граница уровня там, где он не прямоугольный.
+   *
+   * Улица с поворотами квадратным забором не огораживается: вокруг остаётся
+   * пустое поле, которое можно просто обежать. Поэтому границу задают сами
+   * линии улицы: секции забора ставятся вплотную вдоль каждой, а на поворотах
+   * шаг подгоняется под длину отрезка, чтобы в углах не зияли щели.
+   */
+  _buildWalls() {
+    for (const wall of this.data.walls ?? []) {
+      const name = wall.prop ?? this.data.fence?.prop;
+      const size = this.prefabs.size(name);
+      if (!size || !wall.points || wall.points.length < 2) continue;
+
+      for (let i = 0; i < wall.points.length - 1; i++) {
+        const [x0, z0] = wall.points[i];
+        const [x1, z1] = wall.points[i + 1];
+
+        const span = Math.hypot(x1 - x0, z1 - z0);
+        const count = Math.max(1, Math.round(span / size.x));
+        const step = span / count;
+
+        // модель тянется вдоль своей оси X, поэтому её +X кладём вдоль отрезка
+        const yaw = Math.atan2(-(z1 - z0), x1 - x0);
+
+        for (let k = 0; k < count; k++) {
+          const t = (k + 0.5) / count;
+          const section = this.prefabs.create(name);
+          if (!section) return;
+
+          section.scale.x = step / size.x; // подгон под шаг: стыки без щелей
+          section.rotation.y = yaw;
+          section.position.set(x0 + (x1 - x0) * t, 0, z0 + (z1 - z0) * t);
+
+          this.group.add(section);
+          this._place(name, section);
+        }
+      }
+    }
+  }
+
   _buildProps() {
     for (const entry of this.data.props ?? []) {
       const obj = this.prefabs.create(entry.prop);
-      if (!obj) continue;
-      obj.position.set(entry.at[0], entry.y ?? 0, entry.at[1]);
+      const prefab = this.prefabs.get(entry.prop);
+      if (!obj || !prefab) continue;
+      obj.position.set(entry.at[0], (entry.y ?? 0) - sinkOf(prefab), entry.at[1]);
       obj.rotation.y = (entry.rotation ?? 0) * DEG;
       if (entry.scale) obj.scale.setScalar(entry.scale);
       this.group.add(obj);
@@ -215,7 +277,11 @@ export class Location {
 
           const jitter = stack ? (rand() - 0.5) * stack.jitter * 2 : 0;
           const jitterZ = stack ? (rand() - 0.5) * stack.jitter * 2 : 0;
-          obj.position.set(x + jitter, layer * (stack?.step ?? 0), z + jitterZ);
+          obj.position.set(
+            x + jitter,
+            layer * (stack?.step ?? 0) - sinkOf(this.prefabs.get(name)),
+            z + jitterZ
+          );
           obj.rotation.y = rand() * Math.PI * 2;
 
           if (stack?.tilt) {
@@ -328,10 +394,10 @@ export class Location {
 
     zombie.blood = this.blood;
     zombie.sfx = this.sfx;
-    zombie.root.position.set(x, GROUND_Y, z);
+    zombie.root.position.set(x, 0, z);
     zombie.root.rotation.y = yaw;
     zombie.yaw = yaw;
-    zombie.home.set(x, GROUND_Y, z);   // вокруг этого места он и будет бродить
+    zombie.home.set(x, 0, z);   // вокруг этого места он и будет бродить
     zombie.waypoint.copy(zombie.home);
     // фаза и темп у каждого свои, иначе толпа дышит как один механизм
     zombie.desync(phase * idleLength, 1 - speedSpread / 2 + phase * speedSpread);
@@ -533,7 +599,7 @@ export class Location {
       boxMin: body.boxMin.clone().multiply(scale),
       boxMax: body.boxMax.clone().multiply(scale),
       volume: body.volume * scale.x * scale.y * scale.z,
-    }, GROUND_Y, CONFIG.explosion.props.includes(prefab.name));
+    }, 0, CONFIG.explosion.props.includes(prefab.name));
 
     // По сцене такой предмет носит контейнер, а модель сидит внутри со сдвигом
     // в центр масс. Редактору нужен контейнер: двигая модель, он возил бы её
@@ -638,14 +704,15 @@ export class Location {
    * Остальные разделы (забор, орды зомби, выход) остаются как были: их правят
    * руками, а не мышью.
    */
-  snapshot() {
+  snapshot(player = null) {
     const props = this.placed.map(({ object, com, entry }) => {
       // У физического предмета начало координат сидит в центре масс, а в файле
       // хранится точка, из которой его ставят. Сдвиг снимаем обратно — иначе вся
       // мелочь съезжает в центр карты и уходит под землю.
       const x = object.position.x - (com?.x ?? 0);
-      const y = object.position.y - (com?.y ?? 0);
       const z = object.position.z - (com?.z ?? 0);
+      // настилы лежат утопленными — в файл пишем высоту так, будто их не топили
+      const y = object.position.y - (com?.y ?? 0) + sinkOf(this.prefabs.get(entry.prop));
 
       const saved = { prop: entry.prop, at: [round(x), round(z)] };
 
@@ -657,14 +724,29 @@ export class Location {
     });
 
     // Зомби сохраняем там, где они стоят сейчас, — по одной записи на каждого.
+    // Поворот, как и у персонажа, снимаем с модели: в правке её крутит гизмо.
     const zombies = this.zombies.map((zombie) => ({
       kind: zombie.kind,
       at: [round(zombie.position.x), round(zombie.position.z)],
-      rotation: Math.round((zombie.yaw / DEG) * 10) / 10,
+      rotation: Math.round((zombie.root.rotation.y / DEG) * 10) / 10,
     }));
 
+    // Точка старта — там, где персонаж стоит сейчас: в правке его двигают тем же
+    // гизмо, что и всё остальное, и незачем разносить это по разным местам.
+    // Поворот берём у самой модели, а не из поля `yaw`: гизмо крутит объект на
+    // сцене, и поле о его правках не знает.
+    const spawn = player
+      ? {
+        position: [round(player.position.x), round(player.position.z)],
+        rotation: Math.round((player.root.rotation.y / DEG) * 10) / 10,
+      }
+      : this.data.spawn;
+
     // Оба процедурных раздела уходят: и россыпь, и орды теперь лежат поимённо.
-    const data = { ...this.data, props, zombies };
+    // Пол тоже правится мышью: в файл уходит та высота, на которой он стоит.
+    const ground = { ...this.data.ground, y: round(this.ground.position.y) };
+
+    const data = { ...this.data, ground, spawn, props, zombies };
     delete data.scatter;
     delete data.hordes;
     return data;
@@ -672,6 +754,14 @@ export class Location {
 
   /** Дошёл ли персонаж до выхода — то есть пересёк линию забора в створе проёма. */
   reachedExit(p) {
+    // Выход точкой — для локаций без прямоугольного забора: у извилистой улицы
+    // «сторона света» смысла не имеет, есть просто место, куда надо дойти.
+    const spot = this.data.exitAt;
+    if (spot) {
+      const [x, z, radius = 3] = spot;
+      return Math.hypot(p.x - x, p.z - z) <= radius;
+    }
+
     const e = this.exit;
     if (!e) return false;
     const half = e.width / 2;
@@ -714,8 +804,8 @@ export class Location {
       batch?.traverse((o) => o.isMesh && o.geometry.dispose());
     }
     // геометрия и материалы общие с библиотекой — освобождаем только то, что создано локацией
-    this._ground.geometry.dispose();
-    this._ground.material.dispose();
+    this.ground.geometry.dispose();
+    this.ground.material.dispose();
   }
 }
 

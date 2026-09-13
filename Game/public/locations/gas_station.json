@@ -1,51 +1,165 @@
 {
   "id": "gas_station",
   "name": "Заправка на 40-м шоссе",
+  "music": 2,
   "next": "farm",
   "size": [
-    40,
-    36
+    124,
+    84
   ],
   "ground": {
-    "color": "#5c3a22"
+    "color": "#4a3526",
+    "y": -0.07
   },
-  "fence": {
-    "prop": "Fence_ChainLink",
-    "exit": {
-      "side": "east",
-      "offset": -2,
-      "width": 8
+  "walls": [
+    {
+      "prop": "Fence_ChainLink",
+      "points": [
+        [
+          -40,
+          -20
+        ],
+        [
+          40,
+          -20
+        ]
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "points": [
+        [
+          40,
+          -20
+        ],
+        [
+          40,
+          -15
+        ]
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "points": [
+        [
+          40,
+          -9
+        ],
+        [
+          40,
+          -4
+        ]
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "points": [
+        [
+          40,
+          -4
+        ],
+        [
+          -24,
+          -4
+        ]
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "points": [
+        [
+          -24,
+          -4
+        ],
+        [
+          -24,
+          20
+        ]
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "points": [
+        [
+          -24,
+          20
+        ],
+        [
+          -40,
+          20
+        ]
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "points": [
+        [
+          -40,
+          20
+        ],
+        [
+          -40,
+          -20
+        ]
+      ]
     }
-  },
+  ],
+  "exitAt": [
+    41,
+    -12,
+    3.5
+  ],
   "spawn": {
     "position": [
-      -15,
-      0
+      -35.12,
+      12.82
     ],
-    "rotation": 90
+    "rotation": 180
   },
   "props": [
     {
-      "prop": "Bld_GasStation",
+      "prop": "Road_Cross",
+      "at": [
+        -36,
+        -16
+      ]
+    },
+    {
+      "prop": "Road_Cross",
+      "at": [
+        -28,
+        -16
+      ]
+    },
+    {
+      "prop": "Road_Damaged",
+      "at": [
+        -20,
+        -16
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -12,
+        -16
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        -16
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Crater",
       "at": [
         4,
-        -9
-      ],
-      "rotation": 0
-    },
-    {
-      "prop": "Bld_Diner",
-      "at": [
-        -9,
-        10
-      ],
-      "rotation": 180
-    },
-    {
-      "prop": "Bld_AutoShop",
-      "at": [
-        -11,
-        -10
+        -16
       ],
       "rotation": 90
     },
@@ -53,200 +167,719 @@
       "prop": "Road_Straight",
       "at": [
         12,
-        6
+        -16
       ],
-      "rotation": 0
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Damaged",
+      "at": [
+        20,
+        -16
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        28,
+        -16
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        36,
+        -16
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Cross",
+      "at": [
+        -36,
+        -8
+      ]
+    },
+    {
+      "prop": "Road_Cross",
+      "at": [
+        -28,
+        -8
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -20,
+        -8
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -12,
+        -8
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        -8
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        4,
+        -8
+      ],
+      "rotation": 90
     },
     {
       "prop": "Road_Damaged",
       "at": [
         12,
-        14
-      ],
-      "rotation": 0
-    },
-    {
-      "prop": "Road_Crater",
-      "at": [
-        4,
-        6
-      ],
-      "rotation": 0
-    },
-    {
-      "prop": "Car_VanRust",
-      "at": [
-        -2,
-        2
-      ],
-      "rotation": 75
-    },
-    {
-      "prop": "Car_SchoolBusFort",
-      "at": [
-        8,
-        15
-      ],
-      "rotation": 12
-    },
-    {
-      "prop": "Car_MuscleRaider",
-      "at": [
-        -6,
-        -2
-      ],
-      "rotation": 200
-    },
-    {
-      "prop": "Heavy_SemiTruck",
-      "at": [
-        14,
-        -12
+        -8
       ],
       "rotation": 90
     },
     {
-      "prop": "Prop_JerseyBarrier",
+      "prop": "Road_Straight",
       "at": [
-        15,
-        2
+        20,
+        -8
       ],
-      "rotation": 0
+      "rotation": 90
     },
     {
-      "prop": "Prop_JerseyBarrier",
+      "prop": "Road_Straight",
       "at": [
-        15,
-        -2.2
+        28,
+        -8
       ],
-      "rotation": 0
+      "rotation": 90
     },
     {
-      "prop": "Prop_Cone",
+      "prop": "Road_Straight",
       "at": [
-        6,
-        2
+        36,
+        -8
       ],
-      "rotation": 0
+      "rotation": 90
     },
     {
-      "prop": "Prop_Sign",
+      "prop": "Road_Damaged",
       "at": [
-        17,
-        -7
-      ],
-      "rotation": -90
+        -36,
+        0
+      ]
     },
     {
-      "prop": "Tree_Dead",
+      "prop": "Road_Straight",
+      "at": [
+        -28,
+        0
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -36,
+        8
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -28,
+        8
+      ]
+    },
+    {
+      "prop": "Road_Crater",
+      "at": [
+        -36,
+        16
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -28,
+        16
+      ]
+    },
+    {
+      "prop": "Bld_Motel",
+      "at": [
+        -28.26,
+        -28.1
+      ]
+    },
+    {
+      "prop": "Bld_Shop",
+      "at": [
+        -10.64,
+        -26.07
+      ]
+    },
+    {
+      "prop": "Bld_AutoShop",
+      "at": [
+        4.58,
+        -26.7
+      ]
+    },
+    {
+      "prop": "Bld_Diner",
+      "at": [
+        20.04,
+        -25.3
+      ]
+    },
+    {
+      "prop": "Bld_GasStation",
+      "at": [
+        34.4,
+        -30.45
+      ]
+    },
+    {
+      "prop": "Bld_Warehouse",
+      "at": [
+        31.08,
+        1.5
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_Shop",
+      "at": [
+        15.78,
+        2.07
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_SuburbHouse",
+      "at": [
+        -1.65,
+        4.95
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_Warehouse",
+      "at": [
+        -18.5,
+        4.03
+      ],
+      "rotation": 270
+    },
+    {
+      "prop": "Bld_GasStation",
+      "at": [
+        -13.55,
+        18.89
+      ],
+      "rotation": 270,
+      "y": 0.04
+    },
+    {
+      "prop": "Bld_Shop",
+      "at": [
+        -30.31,
+        26.07
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_Diner",
+      "at": [
+        -45.3,
+        9.21
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Bld_Ranch",
+      "at": [
+        -46.55,
+        -6.42
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -31.48,
+        8
+      ],
+      "rotation": -45.3
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -36.2,
+        4
+      ],
+      "rotation": 70.9
+    },
+    {
+      "prop": "Car_PickupArmored",
+      "at": [
+        -25.58,
+        3
+      ],
+      "rotation": 82
+    },
+    {
+      "prop": "Prop_Crate",
+      "at": [
+        -33.83,
+        0
+      ],
+      "rotation": -23.1
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        -35.12,
+        -4
+      ],
+      "rotation": 71.5
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        -30.64,
+        -8
+      ],
+      "rotation": -34.6
+    },
+    {
+      "prop": "Car_SedanWreck",
+      "at": [
+        -37.08,
+        -10
+      ],
+      "rotation": 82.4
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -32,
+        -7.8
+      ],
+      "rotation": -70.7
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -28,
+        -16.16
+      ],
+      "rotation": -73.7
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        -24,
+        -17.85
+      ],
+      "rotation": -18.3
+    },
+    {
+      "prop": "Car_PickupArmored",
+      "at": [
+        -21,
+        -8.74
+      ],
+      "rotation": 340.7
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        -20,
+        -8.2
+      ],
+      "rotation": 44.5
+    },
+    {
+      "prop": "Prop_Tires",
       "at": [
         -16,
-        15
+        -7.5
       ],
-      "rotation": 0
+      "rotation": 16.8
     },
     {
-      "prop": "Cactus_Saguaro",
+      "prop": "Prop_Crate",
       "at": [
-        16,
-        12
+        -12,
+        -16.21
       ],
-      "rotation": 0
+      "rotation": 42.8
+    },
+    {
+      "prop": "Heavy_DumpTruck",
+      "at": [
+        -8,
+        -14.68
+      ],
+      "rotation": 17.7
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        -8,
+        -14.05
+      ],
+      "rotation": -38.6
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -4,
+        -15.29
+      ],
+      "rotation": 38.9
     },
     {
       "prop": "Prop_Barricade",
       "at": [
-        10,
-        3
+        0,
+        -8.72
       ],
-      "rotation": 20
-    }
-  ],
-  "scatter": [
-    {
-      "seed": 3,
-      "props": [
-        "Prop_Barrel",
-        "Grass_Clump",
-        "Prop_Tires"
-      ],
-      "count": 30,
-      "area": [
-        -18,
-        -16,
-        18,
-        16
-      ],
-      "scale": [
-        0.7,
-        1.3
-      ],
-      "stack": {
-        "only": [
-          "Prop_Tires"
-        ],
-        "layers": [
-          2,
-          4
-        ],
-        "step": 0.19,
-        "jitter": 0.13,
-        "tilt": 14
-      },
-      "clearance": 0.55
+      "rotation": 47.8
     },
     {
-      "seed": 17,
-      "props": [
-        "Prop_Crate",
-        "Prop_Barrel",
-        "Prop_Jerrycan",
-        "Prop_Pallet"
+      "prop": "Prop_Tires",
+      "at": [
+        4,
+        -14.69
       ],
-      "count": 20,
-      "area": [
-        -18,
-        -16,
-        18,
-        16
-      ],
-      "scale": [
-        0.85,
-        1.15
-      ],
-      "clearance": 0.5
-    }
-  ],
-  "hordes": [
-    {
-      "seed": 21,
-      "kinds": [
-        "zombie1",
-        "zombie2"
-      ],
-      "count": 40,
-      "area": [
-        -17.0,
-        -15.0,
-        17.0,
-        15.0
-      ],
-      "spacing": 0.9
+      "rotation": -19.5
     },
     {
-      "seed": 47,
-      "kinds": [
-        "zombie1",
-        "zombie2"
+      "prop": "Car_VanRust",
+      "at": [
+        5,
+        -10.13
       ],
-      "count": 40,
-      "area": [
-        7.0,
-        -15.0,
-        19.0,
-        13.0
+      "rotation": 0.5
+    },
+    {
+      "prop": "Prop_Crate",
+      "at": [
+        8,
+        -13.81
       ],
-      "spacing": 0.6
+      "rotation": 57.6
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        12,
+        -6.4
+      ],
+      "rotation": 33.1
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        16,
+        -9.55
+      ],
+      "rotation": 63.9
+    },
+    {
+      "prop": "Car_MuscleRaider",
+      "at": [
+        18,
+        -13.81
+      ],
+      "rotation": 8.8
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        20,
+        -14.52
+      ],
+      "rotation": 58.2
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        24,
+        -17.96
+      ],
+      "rotation": -12.1
+    },
+    {
+      "prop": "Prop_Crate",
+      "at": [
+        28,
+        -13.24
+      ],
+      "rotation": -86.6
+    }
+  ],
+  "zombies": [
+    {
+      "kind": "zombie1",
+      "at": [
+        -33.91,
+        1.65
+      ],
+      "rotation": 352.5
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -30.34,
+        -5.29
+      ],
+      "rotation": 353.3
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -31.6,
+        -11.24
+      ],
+      "rotation": 60.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -30.08,
+        -14.04
+      ],
+      "rotation": 331.9
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -23.98,
+        -9.95
+      ],
+      "rotation": 248
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -18.03,
+        -14
+      ],
+      "rotation": 40.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -12.32,
+        -7.31
+      ],
+      "rotation": 312.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -11.98,
+        -16.17
+      ],
+      "rotation": 181
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -10.14,
+        -17.68
+      ],
+      "rotation": 12.4
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -9.83,
+        -14.23
+      ],
+      "rotation": 95.3
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -4.54,
+        -5.81
+      ],
+      "rotation": 64.3
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -4.73,
+        -7.53
+      ],
+      "rotation": 98.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        0.17,
+        -14.93
+      ],
+      "rotation": 98.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -0.09,
+        -13.62
+      ],
+      "rotation": 62.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        4.86,
+        -7.32
+      ],
+      "rotation": 51.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        4.86,
+        -5.31
+      ],
+      "rotation": 101.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        7.92,
+        -17.44
+      ],
+      "rotation": 337
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        7.8,
+        -11.73
+      ],
+      "rotation": 312.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        11.7,
+        -14.94
+      ],
+      "rotation": 224.7
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        11.68,
+        -16
+      ],
+      "rotation": 355.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        16.39,
+        -6.06
+      ],
+      "rotation": 348.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        15.92,
+        -12.38
+      ],
+      "rotation": 238.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        20.22,
+        -17.78
+      ],
+      "rotation": 126.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        20.37,
+        -5.84
+      ],
+      "rotation": 197
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        23.8,
+        -6.08
+      ],
+      "rotation": 184.6
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        23.85,
+        -6.42
+      ],
+      "rotation": 147.3
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        26.97,
+        -11.5
+      ],
+      "rotation": 137.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        26.63,
+        -12.71
+      ],
+      "rotation": 295.6
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        29.83,
+        -9.45
+      ],
+      "rotation": 194.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        30.06,
+        -14.37
+      ],
+      "rotation": 351.6
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        30.21,
+        -12.2
+      ],
+      "rotation": 307.8
     }
   ]
 }

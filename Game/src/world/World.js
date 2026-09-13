@@ -48,6 +48,7 @@ export function buildWorld(scene, renderer) {
     new THREE.MeshStandardMaterial({ color: CFG.groundColor, roughness: 0.95 })
   );
   ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.05; // ниже пола локации: два плоских листа не должны совпадать
   ground.receiveShadow = true;
   scene.add(ground);
 

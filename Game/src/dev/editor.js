@@ -1,8 +1,13 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
-// м/с, с которой камера едет по локации от стрелок
+// м/с, с которой камера едет по локации от стрелок и WASD
 const PAN_SPEED = 18;
+
+// Шар, которым ловится фигура при выборе: по росту человека и чуть шире плеч.
+const FIGURE_HEIGHT = 1.9;
+const _bubble = new THREE.Sphere(new THREE.Vector3(), 0.85);
+const _where = new THREE.Vector3();
 
 /**
  * Правка расстановки прямо в игре.
@@ -44,25 +49,173 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
   const ARROWS = {
     ArrowLeft: [-1, 0], ArrowRight: [1, 0],
     ArrowUp: [0, 1], ArrowDown: [0, -1],
+    KeyA: [-1, 0], KeyD: [1, 0],
+    KeyW: [0, 1], KeyS: [0, -1],
   };
 
   const panel = document.createElement('div');
   panel.className = 'editor';
   panel.hidden = true;
+
+  // Переключатель уровней: стрелки по бокам от названия текущего.
+  const switcher = document.createElement('div');
+  switcher.className = 'editor__levels';
+
+  const title = document.createElement('span');
+  const prev = arrowButton('‹', -1);
+  const next = arrowButton('›', 1);
+
+  switcher.append(prev, title, next);
+
+  const hint = document.createElement('div');
+  panel.append(switcher, hint);
   document.body.appendChild(panel);
 
+  /**
+   * Кнопка соседнего уровня. Цепочка берётся из самих локаций: каждая знает,
+   * какая идёт за ней, и по этим ссылкам список собирается сам — держать его
+   * отдельно значило бы иметь два источника правды.
+   */
+  function arrowButton(label, step) {
+    const button = document.createElement('button');
+    button.className = 'editor__arrow';
+    button.textContent = label;
+
+    button.addEventListener('click', async () => {
+      if (locations.loading || chain.length < 2) return;
+
+      const at = chain.indexOf(locations.current.data.id);
+      const to = chain[(at + step + chain.length) % chain.length];
+
+      gizmo.detach();
+      picked = null;
+      await locations.load(to);
+      status('щёлкни по предмету');
+    });
+
+    return button;
+  }
+
+  let chain = [];
+
+  /** Собирает цепочку уровней, идя по ссылкам `next`, пока не замкнётся круг. */
+  async function readChain() {
+    const list = [];
+    let id = locations.current.data.id;
+
+    while (id && !list.includes(id)) {
+      list.push(id);
+
+      const res = await fetch(`/locations/${id}.json`);
+      if (!res.ok) break;
+      id = (await res.json()).next;
+    }
+    chain = list;
+  }
+
   const status = (text) => {
-    panel.textContent = active
-      ? `правка: ${locations.current.data.name}\n`
-        + 'стрелки — камера · W — сдвиг · E — поворот · R — размер\n'
-        + 'S — сохранить · Tab — выйти\n'
+    title.textContent = active ? locations.current.data.name : '';
+    hint.textContent = active
+      ? 'WASD и стрелки — камера · 1 сдвиг · 2 поворот · 3 размер\n'
+        + 'Enter — сохранить · Tab — выйти\n'
         + 'сохранение переводит россыпь и зомби в поимённый список\n'
         + text
       : '';
   };
 
-  /** Что можно тянуть: всё, что локация расставила на площадке. */
-  const targets = () => locations.current.placed.map((p) => p.object);
+  /**
+   * Что можно тянуть: всё, что есть на площадке, — предметы, зомби, персонаж и
+   * сам пол. Точка старта, места зомби и высота пола правятся тем же гизмо, а
+   * не числами в файле.
+   */
+  const targets = () => {
+    const list = locations.current.placed.map((p) => p.object);
+    for (const zombie of locations.current.zombies) list.push(zombie.root);
+    if (locations.player) list.push(locations.player.root);
+    if (locations.current.ground) list.push(locations.current.ground);
+    return list;
+  };
+
+  /** Все фигуры на локации: персонаж и зомби. */
+  const figures = () => {
+    const list = locations.current.zombies.slice();
+    if (locations.player) list.push(locations.player);
+    return list;
+  };
+
+  /**
+   * Что выбрано щелчком.
+   *
+   * Предметы ловятся обычным лучом, а фигуры — отдельной проверкой по шару
+   * вокруг них. Дело в скине: луч по анимированному мешу считается в позе
+   * привязки и по кэшированной сфере, поэтому по бегущему или дышащему
+   * персонажу он то попадает, то нет. Шар вокруг ног такой мороки не знает.
+   *
+   * Фигура всегда важнее предмета. Её контур светится поверх домов, и щелчок по
+   * нему должен брать именно её — а не крышу, которая оказалась ближе к камере.
+   * Промахнуться мимо предмета из-за этого трудно: шар у фигуры размером с неё
+   * саму, и попасть в него можно, только целясь прямо в неё.
+   */
+  function nearestTarget(list) {
+    let prop = null;
+    let propAt = Infinity;
+
+    const hit = raycaster.intersectObjects([locations.current.group], true)[0];
+    if (hit) {
+      let object = hit.object;
+      while (object.parent && !list.includes(object)) object = object.parent;
+
+      // взяли, только если луч упёрся именно в него, а не в стену перед ним
+      if (list.includes(object)) {
+        prop = object;
+        propAt = hit.distance;
+      }
+    }
+
+    let figure = null;
+    let figureAt = Infinity; // из нескольких фигур берём ближнюю к камере
+
+    for (const one of figures()) {
+      const at = one.position;
+      _bubble.center.set(at.x, at.y + FIGURE_HEIGHT / 2, at.z);
+
+      const where = raycaster.ray.intersectSphere(_bubble, _where);
+      if (!where) continue;
+
+      const away = raycaster.ray.origin.distanceTo(where);
+      if (away >= figureAt) continue;
+
+      figure = one.root;
+      figureAt = away;
+    }
+
+    return figure ?? prop;
+  }
+
+  /**
+   * Что луч нашёл под курсором — строкой в панель.
+   *
+   * Пока правка отлаживается вслепую, это единственный способ понять, почему
+   * щелчок не выбрал того, кого видно: не нашлась фигура, не попал шар или
+   * объект просто не числится среди тех, кого можно двигать.
+   */
+  function report(list) {
+    const hit = raycaster.intersectObjects([locations.current.group], true)[0];
+    const crowd = figures();
+
+    const near = crowd
+      .map((one) => {
+        const at = one.position;
+        _bubble.center.set(at.x, at.y + FIGURE_HEIGHT / 2, at.z);
+        return raycaster.ray.distanceToPoint(_bubble.center);
+      })
+      .sort((a, b) => a - b)[0];
+
+    return `луч: ${hit ? hit.object.name || 'меш' : 'пусто'}`
+      + ` · фигур ${crowd.length}`
+      + ` · ближняя в ${near === undefined ? '—' : near.toFixed(2)} м от луча`
+      + ` · двигать можно ${list.length}`;
+  }
 
   function pick(event) {
     const rect = engine.renderer.domElement.getBoundingClientRect();
@@ -72,22 +225,21 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
     const list = targets();
     raycaster.setFromCamera(pointer, engine.camera);
 
-    const hit = raycaster.intersectObjects(list, true)[0];
-    if (!hit) {
+    const object = nearestTarget(list);
+    if (!object) {
       gizmo.detach();
       picked = null;
-      status(`мимо · под мышью пусто (предметов на локации: ${list.length})`);
+      status(`мимо · ${report(list)}`);
       return;
     }
 
-    // Попали в меш внутри пропа — поднимаемся до самого пропа: тянуть нужно его
-    // целиком, а не отдельную деталь.
-    let object = hit.object;
-    while (object.parent && !list.includes(object)) object = object.parent;
-
     picked = object;
     gizmo.attach(object);
-    status(`выбран ${object.name || 'проп'}`);
+
+    if (object === locations.player?.root) status('выбран персонаж: это точка старта');
+    else if (object === locations.current.ground) status('выбран пол: двигается по высоте');
+    else if (locations.current.zombies.some((z) => z.root === object)) status('выбран зомби');
+    else status(`выбран ${object.name || 'проп'}`);
   }
 
   async function save() {
@@ -97,7 +249,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
     const response = await fetch('/api/save-location', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: location.data.id, data: location.snapshot() }),
+      body: JSON.stringify({ id: location.data.id, data: location.snapshot(locations.player) }),
     });
 
     const result = await response.json();
@@ -120,6 +272,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
 
     // пересобираем локацию: в правке нужна несклеенная геометрия, в игре — склеенная
     await locations.load(locations.current.data.id);
+    if (active && chain.length === 0) await readChain();
     onToggle?.(active);
     status('щёлкни по предмету');
   }
@@ -143,10 +296,12 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
     }
     if (!active) return;
 
-    if (event.code === 'KeyW') gizmo.setMode('translate');
-    if (event.code === 'KeyE') gizmo.setMode('rotate');
-    if (event.code === 'KeyR') gizmo.setMode('scale');
-    if (event.code === 'KeyS') save();
+    // Режимы гизмо переехали на цифры: WASD заняты камерой, а S к тому же
+    // ездит назад — сохранять по ней больше нельзя.
+    if (event.code === 'Digit1') gizmo.setMode('translate');
+    if (event.code === 'Digit2') gizmo.setMode('rotate');
+    if (event.code === 'Digit3') gizmo.setMode('scale');
+    if (event.code === 'Enter') save();
     if (event.code === 'Escape') { gizmo.detach(); picked = null; }
   });
 

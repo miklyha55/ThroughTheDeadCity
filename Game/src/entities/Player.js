@@ -649,8 +649,6 @@ export class Player {
       const barrels = location?.debris.explosivesAlong(muzzle, dirX, dirZ, CFG.fireRange) ?? [];
       for (const barrel of barrels) location.explode(barrel, this);
 
-      const victims = this._pelletHits(location, muzzle, dirX, dirZ);
-
       // Средняя пуля всегда достаёт того, кого персонаж взял на прицел.
       //
       // Без этого вблизи выходил систематический промах: корпус доворачивается
@@ -658,37 +656,41 @@ export class Player {
       // вынесенного вбок почти на полметра. На десяти метрах эта разница —
       // считаные сантиметры, а в упор она больше ширины тела, и зомби, бегущий
       // по пятам, оставался цел при выстреле в упор.
-      if (i === middle && !victims.includes(zombie)) victims.unshift(zombie);
+      const victim = i === middle
+        ? zombie
+        : this._pelletHit(location, muzzle, dirX, dirZ);
 
-      // росчерк тянем до последнего задетого, а если никого — на всю дальность
-      const last = victims[victims.length - 1];
-      if (last) {
-        this._hitPoint.copy(last.position).setY(last.position.y + CFG.hitHeight);
+      // росчерк обрывается на том, в кого попали, — или тянется в пустоту
+      if (victim) {
+        this._hitPoint.copy(victim.position).setY(victim.position.y + CFG.hitHeight);
       } else {
         this._hitPoint.set(muzzle.x + dirX * range, muzzle.y, muzzle.z + dirZ * range);
       }
       this.effects?.fire(muzzle, this._hitPoint);
 
-      for (const victim of victims) {
-        this._hitPoint.copy(victim.position).setY(victim.position.y + CFG.hitHeight);
-        this.blood?.splash(this._hitPoint, muzzle); // капли летят дальше по ходу пули
-        victim.takeDamage(CFG.shotDamage, from);
-      }
+      if (!victim) continue;
+
+      this.blood?.splash(this._hitPoint, muzzle); // капли летят дальше по ходу пули
+      victim.takeDamage(CFG.shotDamage, from);
     }
   }
 
   /**
-   * Все, кого прошивает одна пуля, по порядку от дула.
+   * Кого задевает одна пуля: ближайший к дулу зомби на её пути.
+   *
+   * Именно ближайший, а не все подряд: пуля вязнет в первом же теле, и стоящие
+   * за ним прикрыты — иначе один выстрел вдоль строя валил бы половину шеренги.
    *
    * Толщина пути — ширина тела: пуля не нитка, и мазать на полметра ей незачем.
-   * Стену она по-прежнему не берёт: до каждого зомби проверяется, свободна ли
-   * линия огня, и закрытые машиной или домом выпадают.
+   * Стену она не берёт: до зомби проверяется, свободна ли линия огня, и закрытые
+   * машиной или домом не считаются.
    */
-  _pelletHits(location, muzzle, dirX, dirZ) {
-    if (!location) return [];
+  _pelletHit(location, muzzle, dirX, dirZ) {
+    if (!location) return null;
 
     const from = this.root.position;
-    const hits = [];
+    let best = null;
+    let bestAlong = CFG.fireRange;
 
     for (const other of location.zombies) {
       if (!other.alive) continue; // взрыв мог убрать его прямо этим выстрелом
@@ -697,17 +699,17 @@ export class Player {
       const oz = other.position.z - muzzle.z;
 
       const along = ox * dirX + oz * dirZ;          // сколько по лучу до него
-      if (along <= 0 || along > CFG.fireRange) continue;
+      if (along <= 0 || along >= bestAlong) continue;
 
       const aside = Math.abs(ox * dirZ - oz * dirX); // и насколько он в стороне
       if (aside > CONFIG.zombies.bodyRadius) continue;
 
       if (location.obstacles.blocksLine(from.x, from.z, other.position.x, other.position.z)) continue;
 
-      hits.push({ zombie: other, along });
+      best = other;
+      bestAlong = along; // дальше этого искать незачем: пуля остановится здесь
     }
-
-    return hits.sort((a, b) => a.along - b.along).map((h) => h.zombie);
+    return best;
   }
 
   /** Точка дула в мировых координатах: конец ствола оружия в руке. */

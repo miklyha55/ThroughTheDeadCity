@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { spawn } from 'node:child_process';
 import { basename, resolve } from 'node:path';
-import { cp, mkdir, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
@@ -29,6 +29,15 @@ const EXPORTS = [
   { blend: 'Zombie1/Zombie.blend', script: 'tools/export_zombie.py', what: 'зомби 1' },
   { blend: 'Zombie2/Zombie.blend', script: 'tools/export_zombie.py', what: 'зомби 2' },
 ];
+
+/** Сколько файлов легло в папку, считая вложенные. */
+async function countFiles(dir) {
+  let total = 0;
+  for (const item of await readdir(dir, { withFileTypes: true })) {
+    total += item.isDirectory() ? await countFiles(resolve(dir, item.name)) : 1;
+  }
+  return total;
+}
 
 /** Один прогон Blender без интерфейса. */
 function runBlender(task) {
@@ -79,14 +88,21 @@ function blenderExport() {
           }
 
           const target = resolve(import.meta.dirname, asset.to);
+
+          // Сносим прежнее целиком, а не докладываем поверх. Иначе переименования
+          // и перестановки не доезжают: файл, которого в исходной папке больше
+          // нет, остаётся лежать в игре и подхватывается вместо нового.
+          await rm(target, { recursive: true, force: true });
           await mkdir(target, { recursive: true });
 
-          // Служебные файлы системы в игру не нужны, всё остальное — как есть.
+          // Служебные файлы системы в игру не нужны, всё остальное — как есть,
+          // вместе с вложенными папками: музыка разложена по номерам уровней.
           await cp(source, target, {
             recursive: true,
             filter: (path) => !basename(path).startsWith('.'),
           });
-          lines.push(`${asset.what}: обновлён`);
+
+          lines.push(`${asset.what}: ${await countFiles(target)} файлов`);
         }
 
         // последовательно, а не разом: четыре Blender'а сразу только мешают друг другу

@@ -49,7 +49,10 @@ export class Dust {
 
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(CFG.area, CFG.area), material);
       mesh.rotation.x = -Math.PI / 2;
-      mesh.position.y = CFG.height * (0.2 + share);
+      // Над дорогой, а не вровень с ней: полотно и его выбоины поднимаются над
+      // землёй на десяток сантиметров, и полотнище пыли, задев их, рисовало бы
+      // по асфальту ползущую границу — со стороны это читается как дрожь.
+      mesh.position.y = CFG.height * (0.5 + share);
       mesh.renderOrder = 2;
       mesh.frustumCulled = false;
       mesh.name = `dust:${i}`;
@@ -138,8 +141,8 @@ const FRAGMENT = /* glsl */`
     // Завихрение: перед тем как взять шум, смещаем саму точку по другому шуму.
     // Оттого струи закручиваются, а не ползут параллельными полосами.
     vec2 warp = vec2(
-      layered(p * 0.5 + vec2(0.0, time * 0.15)),
-      layered(p * 0.5 + vec2(time * 0.12, 0.0))
+      layered(p * 0.5 + vec2(0.0, time * 0.05)),
+      layered(p * 0.5 + vec2(time * 0.04, 0.0))
     ) - 0.5;
 
     float density = layered(p + warp * swirl);
