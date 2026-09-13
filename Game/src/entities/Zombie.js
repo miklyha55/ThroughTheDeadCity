@@ -45,7 +45,7 @@ export class Zombie {
       }
     });
 
-    addSilhouette(model, {
+    this.silhouette = addSilhouette(model, {
       color: CONFIG.silhouette.zombieColor,
       opacity: CONFIG.silhouette.opacity,
     });

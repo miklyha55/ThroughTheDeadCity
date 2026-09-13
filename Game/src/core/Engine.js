@@ -8,18 +8,16 @@ export class Engine {
     this.updatables = [];
     this.timer = new THREE.Timer();
 
-    // stencil нужен силуэтам: по нему они отсекают саму фигуру
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
-      stencil: true,
     });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = CONFIG.world.exposure;
-    this.renderer.localClippingEnabled = true; // силуэт обрезается по уровню земли
+    this.renderer.localClippingEnabled = true; // контур обрезается по уровню земли
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();

@@ -58,9 +58,10 @@ export class Player {
     });
 
     // силуэт проступает, когда персонаж уходит за дом
-    addSilhouette(this.root, {
+    this.silhouette = addSilhouette(this.root, {
       color: CONFIG.silhouette.playerColor,
       opacity: CONFIG.silhouette.opacity,
+      order: CONFIG.silhouette.playerOrder, // свой контур поверх чужих
     });
 
     // после двойников: отсечение нужно и им

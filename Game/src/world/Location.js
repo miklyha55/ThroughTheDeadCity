@@ -44,6 +44,9 @@ export class Location {
     // Только то, что выше пояса: дом, машина, контейнер. За такими персонаж
     // пропадает из виду, а за бочкой или паллетой — нет.
     this.sight = new Obstacles();
+    // Только то, что выше фигуры целиком: дом, вышка, фура. За такими и
+    // проступает силуэт — за кустом или легковушкой подсвечивать нечего.
+    this.cover = new Obstacles();
     this.debris = new Debris(this);
 
     const [w, d] = data.size;
@@ -424,6 +427,7 @@ export class Location {
     if (prefab.solid) {
       this.obstacles.add(object, prefab.shapes);
       this.sight.add(object, prefab.sightShapes);
+      this.cover.add(object, prefab.coverShapes, prefab.coverTops);
     }
     if (markOccupied) this.occupied.add(object, prefab.shapes);
 

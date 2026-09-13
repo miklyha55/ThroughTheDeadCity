@@ -11,6 +11,8 @@ export class PropLibrary {
     this.sizes = new Map();
     this.shapes = new Map();
     this.tall = new Map();
+    this.cover = new Map();
+    this.tops = new Map();
     this.bodies = new Map();
 
     const box = new THREE.Box3();
@@ -25,9 +27,11 @@ export class PropLibrary {
       box.setFromObject(child).getSize(size);
       this.templates.set(name, child);
       this.sizes.set(name, size.clone());
-      const { shapes, tall } = buildCollisionShapes(child);
+      const { shapes, tall, cover, coverTops } = buildCollisionShapes(child);
       this.shapes.set(name, shapes);
       this.tall.set(name, tall);
+      this.cover.set(name, cover);
+      this.tops.set(name, coverTops);
       this.bodies.set(name, measureBody(child));
     }
   }
@@ -46,6 +50,10 @@ export class PropLibrary {
 
   /** Контуры кусков, за которыми не видно: по ним зомби теряет персонажа из виду. */
   sightShapes(name) { return this.tall.get(name) ?? []; }
+
+  /** Контуры кусков, за которыми фигуру не видно вовсе, и их высоты. */
+  coverShapes(name) { return this.cover.get(name) ?? []; }
+  coverTops(name) { return this.tops.get(name) ?? []; }
 
   /** Масса, центр масс и габариты для физики: { com, boxMin, boxMax, volume }. */
   body(name) { return this.bodies.get(name); }
@@ -86,6 +94,10 @@ const MAX_SHAPES = 14;
 // бочка и паллета — нет. По этой мерке зомби теряет персонажа из виду.
 const SIGHT_HEIGHT = 1.3;
 
+// Выше этого предмет перекрывает фигуру целиком — за ним и проступает силуэт.
+// Ниже (кусты, легковушки, заборы) фигуру видно поверх, и подсвечивать нечего.
+const COVER_HEIGHT = 2.1;
+
 /**
  * Контуры столкновений по геометрии пропа.
  *
@@ -98,7 +110,8 @@ const SIGHT_HEIGHT = 1.3;
  * `SIGHT_HEIGHT`. Их контуры идут вторым списком — по нему зомби решает, скрылся
  * персонаж за домом или просто зашёл за бочку.
  *
- * @returns {{shapes: Array, tall: Array}} контуры столкновений и заслоняющие обзор
+ * @returns {{shapes: Array, tall: Array, cover: Array, coverTops: number[]}} контуры
+ *   столкновений, заслоняющие обзор зомби и перекрывающие фигуру целиком
  */
 function buildCollisionShapes(prop) {
   const triangles = [];
@@ -158,13 +171,21 @@ function buildCollisionShapes(prop) {
 
   let shapes = [];
   let tall = [];
+  let cover = [];   // куски, за которыми фигура пропадает целиком
+  let coverTops = []; // и до какой высоты каждый из них поднимается
   for (const [root, points] of parts) {
     if (points.length < 3) continue;
     const hull = convexHull(points);
     if (hull.length < 3 || polygonArea(hull) < MIN_SHAPE_AREA) continue;
 
     shapes.push(hull);
-    if ((tops.get(root) ?? 0) >= SIGHT_HEIGHT) tall.push(hull);
+
+    const top = tops.get(root) ?? 0;
+    if (top >= SIGHT_HEIGHT) tall.push(hull);
+    if (top >= COVER_HEIGHT) {
+      cover.push(hull);
+      coverTops.push(top);
+    }
   }
 
   if (shapes.length > MAX_SHAPES) {
@@ -178,7 +199,14 @@ function buildCollisionShapes(prop) {
     const merged = convexHull(tall.flat());
     tall = merged.length >= 3 ? [merged] : [];
   }
-  return { shapes, tall };
+
+  if (cover.length > MAX_SHAPES) {
+    const highest = Math.max(...coverTops);
+    const merged = convexHull(cover.flat());
+    cover = merged.length >= 3 ? [merged] : [];
+    coverTops = cover.length ? [highest] : [];
+  }
+  return { shapes, tall, cover, coverTops };
 }
 
 /**

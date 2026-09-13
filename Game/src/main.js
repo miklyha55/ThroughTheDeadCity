@@ -10,6 +10,7 @@ import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
+import { SilhouetteWatch } from './fx/SilhouetteWatch.js';
 import { HealthBars } from './fx/HealthBars.js';
 import { Explosions } from './fx/Explosions.js';
 import { CONFIG } from './config.js';
@@ -44,6 +45,7 @@ await locations.load(params.get('location') ?? CONFIG.locations.first);
 const joystick = new Joystick();
 const input = new Input(joystick);
 const camera = new FollowCamera(engine.camera, player);
+const silhouettes = new SilhouetteWatch(engine.camera);
 
 engine.add({
   update(dt) {
@@ -63,6 +65,7 @@ engine.add({
     playerBlood.update(dt);
     explosions.update(dt);
     camera.update(dt);
+    silhouettes.update(here, player); // после камеры: луч к ней считается по её позе
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },
