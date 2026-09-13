@@ -43,11 +43,11 @@ export class Splash {
   /** Показать заставку и вести полосу, пока идёт работа. */
   show() {
     this.caption.textContent = '';
+    this.image.style.backgroundImage = ''; // картинка появится, когда узнаем уровень
     this.progress = 0;
     this.shownAt = performance.now();
 
     this.root.hidden = false;
-    this.image.style.backgroundImage = `url(${CFG.image})`;
     this._draw();
 
     // Полоса ползёт сама и тормозит у конца: дойти до края раньше, чем работа
@@ -59,9 +59,16 @@ export class Splash {
     }, CFG.tick);
   }
 
-  /** Название загружаемой локации: известно только после чтения её файла. */
-  setTitle(title) {
+  /**
+   * Чей уровень грузится. Известно только после чтения его файла, поэтому и
+   * название, и картинка ставятся здесь, а не при показе.
+   *
+   * @param {string} title — название уровня
+   * @param {number} number — его номер: под ним лежит и картинка, и музыка
+   */
+  setLevel(title, number) {
     this.caption.textContent = title ?? '';
+    this.image.style.backgroundImage = `url(${CFG.folder}${number}.png)`;
   }
 
   /** Довести полосу до конца и убрать заставку — не раньше, чем истечёт `minTime`. */

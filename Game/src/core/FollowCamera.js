@@ -97,6 +97,21 @@ export class FollowCamera {
     this.camera.lookAt(this._focus);
   }
 
+  /**
+   * Поставить камеру на цель сразу, без плавного подхода.
+   *
+   * Нужно при смене уровня: персонаж возникает в новом месте, а камера осталась
+   * там, где была, и вместо готового кадра игрок видит долгий перелёт через всю
+   * карту. Догонять имеет смысл бегущего, а не телепортированного.
+   */
+  snap() {
+    this._focus.copy(this.target.position).setY(this.target.position.y + CFG.lookAtHeight);
+    this.orbit = 0; // круг вокруг погибшего начинается заново
+
+    this.camera.position.copy(this._focus).add(this._offset);
+    this.camera.lookAt(this._focus);
+  }
+
   /** Направление «вперёд по камере» для управления персонажем. */
   get moveYaw() { return this.yaw + Math.PI; }
 

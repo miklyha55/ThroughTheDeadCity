@@ -7,16 +7,8 @@ import { NavGrid } from './NavGrid.js';
 import { createBorderFog } from './BorderFog.js';
 import { CONFIG } from '../config.js';
 
-// Стороны площадки: north — дальняя (−Z), south — ближняя (+Z).
-// Для каждой стороны: вдоль какой оси тянется забор, где он стоит и как повёрнута секция.
-const SIDES = {
-  north: { along: 'x', fixed: 'z', sign: -1, rotationY: 0 },
-  south: { along: 'x', fixed: 'z', sign: 1, rotationY: 0 },
-  west: { along: 'z', fixed: 'x', sign: -1, rotationY: Math.PI / 2 },
-  east: { along: 'z', fixed: 'x', sign: 1, rotationY: Math.PI / 2 },
-};
-
 const DEG = Math.PI / 180;
+
 // Ноль — уровень, по которому ходят: на нём стоит всё, от домов до зомби.
 // Сам пол лежит на волос ниже — только чтобы не спорить за пиксели с дорожным
 // полотном, чей верх приведён ровно к нулю.
@@ -88,14 +80,13 @@ export class Location {
 
     this._buildGround();
     this.group.add(createBorderFog(w, d)); // за забором мир тонет во мгле
-    this._buildFence();
-    this._buildWalls();
     this._buildProps();
 
     // сетка проходимости снимается с готовых препятствий: локация дальше не меняется
     this.nav.build(this.obstacles, CONFIG.zombies.radius);
 
     this._buildZombies();
+    this._buildExitMark();
     if (batched) this._batchStatics();
   }
 
@@ -118,117 +109,6 @@ export class Location {
     this.ground = ground; // редактор двигает его тем же гизмо, что и всё прочее
   }
 
-  _buildFence() {
-    const fence = this.data.fence;
-    if (!fence) return;
-
-    const segName = fence.prop;
-    const segSize = this.prefabs.size(segName);
-    if (!segSize) return;
-
-    const segLength = segSize.x;
-    const exit = fence.exit;
-
-    for (const side of Object.keys(SIDES)) {
-      const cfg = SIDES[side];
-      const length = cfg.along === 'x' ? this.width : this.depth;
-      const offset = (cfg.fixed === 'z' ? this.depth : this.width) / 2;
-
-      // проём делаем только на одной стороне — выход из локации всегда один
-      let gap = null;
-      if (exit && exit.side === side) {
-        const center = exit.offset ?? 0;
-        gap = { from: center - exit.width / 2, to: center + exit.width / 2 };
-      }
-
-      const count = Math.ceil(length / segLength);
-      const step = length / count;
-
-      for (let i = 0; i < count; i++) {
-        const at = -length / 2 + step * (i + 0.5);
-        if (gap && at - step / 2 < gap.to && at + step / 2 > gap.from) continue;
-
-        const section = this.prefabs.create(segName);
-        if (!section) return;
-        section.scale.x = step / segLength; // подгон под шаг, чтобы не было щелей на стыках
-        section.rotation.y = cfg.rotationY;
-        if (cfg.along === 'x') section.position.set(at, 0, cfg.sign * offset);
-        else section.position.set(cfg.sign * offset, 0, at);
-        this.group.add(section);
-        this._place(segName, section);
-      }
-
-      if (gap) this._buildExit(side, cfg, gap, offset);
-    }
-  }
-
-  _buildExit(side, cfg, gap, offset) {
-    const width = gap.to - gap.from;
-    const center = (gap.from + gap.to) / 2;
-
-    this.exit = {
-      side,
-      width,
-      position: cfg.along === 'x'
-        ? new THREE.Vector3(center, 0, cfg.sign * offset)
-        : new THREE.Vector3(cfg.sign * offset, 0, center),
-    };
-
-    // подсветка проёма на земле — куда бежать, видно сразу
-    const marker = new THREE.Mesh(
-      new THREE.PlaneGeometry(width, 2.5),
-      new THREE.MeshBasicMaterial({ color: 0xffd27f, transparent: true, opacity: 0.28, depthWrite: false })
-    );
-    marker.rotation.x = -Math.PI / 2;
-    if (cfg.along === 'x') marker.position.set(center, 0.04, cfg.sign * (offset - 1.2));
-    else {
-      marker.rotation.z = Math.PI / 2;
-      marker.position.set(cfg.sign * (offset - 1.2), 0.04, center);
-    }
-    this.group.add(marker);
-  }
-
-  /**
-   * Стены по ломаной — граница уровня там, где он не прямоугольный.
-   *
-   * Улица с поворотами квадратным забором не огораживается: вокруг остаётся
-   * пустое поле, которое можно просто обежать. Поэтому границу задают сами
-   * линии улицы: секции забора ставятся вплотную вдоль каждой, а на поворотах
-   * шаг подгоняется под длину отрезка, чтобы в углах не зияли щели.
-   */
-  _buildWalls() {
-    for (const wall of this.data.walls ?? []) {
-      const name = wall.prop ?? this.data.fence?.prop;
-      const size = this.prefabs.size(name);
-      if (!size || !wall.points || wall.points.length < 2) continue;
-
-      for (let i = 0; i < wall.points.length - 1; i++) {
-        const [x0, z0] = wall.points[i];
-        const [x1, z1] = wall.points[i + 1];
-
-        const span = Math.hypot(x1 - x0, z1 - z0);
-        const count = Math.max(1, Math.round(span / size.x));
-        const step = span / count;
-
-        // модель тянется вдоль своей оси X, поэтому её +X кладём вдоль отрезка
-        const yaw = Math.atan2(-(z1 - z0), x1 - x0);
-
-        for (let k = 0; k < count; k++) {
-          const t = (k + 0.5) / count;
-          const section = this.prefabs.create(name);
-          if (!section) return;
-
-          section.scale.x = step / size.x; // подгон под шаг: стыки без щелей
-          section.rotation.y = yaw;
-          section.position.set(x0 + (x1 - x0) * t, 0, z0 + (z1 - z0) * t);
-
-          this.group.add(section);
-          this._place(name, section);
-        }
-      }
-    }
-  }
-
   _buildProps() {
     for (const entry of this.data.props ?? []) {
       const obj = this.prefabs.create(entry.prop);
@@ -243,147 +123,17 @@ export class Location {
       // связь со строкой в JSON: по ней редактор сохраняет сдвинутое обратно
       this.placed.push({ object: carrier, com, entry });
     }
-
-    // разбросанная мелочь: трава, кусты, мусор — задаётся не поштучно, а зоной
-    for (const patch of this.data.scatter ?? []) {
-      const rand = mulberry32(patch.seed ?? 1);
-      const [x0, z0, x1, z1] = patch.area;
-      const [minScale, maxScale] = patch.scale ?? [1, 1];
-
-      for (let i = 0; i < patch.count; i++) {
-        // вид выбираем один раз на точку: куча получается из однотипных предметов
-        const name = patch.props[Math.floor(rand() * patch.props.length)];
-        const stack = patch.stack && (!patch.stack.only || patch.stack.only.includes(name))
-          ? patch.stack
-          : null;
-        const clearance = (patch.clearance ?? 0) + (stack ? stack.jitter : 0);
-
-        // ищем свободное место: с первого раза точка может попасть в стену или машину
-        let x = 0;
-        let z = 0;
-        let free = false;
-        for (let attempt = 0; attempt < 16 && !free; attempt++) {
-          x = x0 + rand() * (x1 - x0);
-          z = z0 + rand() * (z1 - z0);
-          free = !this.occupied.hits(x, z, clearance);
-        }
-        if (!free) continue; // места не нашлось — лучше пропустить, чем воткнуть в стену
-
-        const layers = stack ? stack.layers[0] + Math.floor(rand() * (stack.layers[1] - stack.layers[0] + 1)) : 1;
-
-        for (let layer = 0; layer < layers; layer++) {
-          const obj = this.prefabs.create(name);
-          if (!obj) continue;
-
-          const jitter = stack ? (rand() - 0.5) * stack.jitter * 2 : 0;
-          const jitterZ = stack ? (rand() - 0.5) * stack.jitter * 2 : 0;
-          obj.position.set(
-            x + jitter,
-            layer * (stack?.step ?? 0) - sinkOf(this.prefabs.get(name)),
-            z + jitterZ
-          );
-          obj.rotation.y = rand() * Math.PI * 2;
-
-          if (stack?.tilt) {
-            // лёгкий завал: верхние лежат неровно, как свалено руками
-            const tilt = (stack.tilt * DEG * layer) / Math.max(1, layers - 1);
-            obj.rotation.x = (rand() - 0.5) * tilt;
-            obj.rotation.z = (rand() - 0.5) * tilt;
-          }
-
-          obj.scale.setScalar(minScale + rand() * (maxScale - minScale));
-          this.group.add(obj);
-          const { carrier, com } = this._place(name, obj, layer === 0);
-
-          // Россыпь тоже двигается мышью, а при сохранении запекается в обычные
-          // записи: зона задаёт не места, а правило, по которому они каждый раз
-          // разыгрываются заново.
-          this.placed.push({ object: carrier, com, entry: { prop: name } });
-        }
-      }
-    }
   }
 
-  /**
-   * Расставляет зомби: поштучно из `zombies` и толпами из `hordes`.
-   * Пока они только стоят — ходить и нападать будут потом.
-   */
+  /** Расставляет зомби: каждый записан в локации поимённо, со своим местом. */
   _buildZombies() {
     if (!this.zombieLibrary) return;
 
     for (const entry of this.data.zombies ?? []) {
       this._addZombie(entry.kind, entry.at[0], entry.at[1], (entry.rotation ?? 0) * DEG, Math.random());
     }
-
-    for (const horde of this.data.hordes ?? []) {
-      const rand = mulberry32(horde.seed ?? 1);
-      const [x0, z0, x1, z1] = horde.area;
-      const kinds = horde.kinds ?? this.zombieLibrary.list();
-      const spacing = horde.spacing ?? CONFIG.zombies.spacing;
-
-      // Равномерно — значит по клеткам сетки, а не россыпью: случайные точки
-      // сбиваются в кучи и оставляют пустые углы.
-      const cells = horde.even === false ? null : this._gridFor(horde.count, x0, z0, x1, z1);
-
-      for (let i = 0; i < horde.count; i++) {
-        const cell = cells?.[i];
-
-        // ищем место, где зомби не влезет в дом, машину и в соседа
-        let x = 0;
-        let z = 0;
-        let free = false;
-
-        for (let attempt = 0; attempt < 24 && !free; attempt++) {
-          if (cell) {
-            // внутри своей клетки, со сдвигом — чтобы строй не выглядел решёткой
-            x = cell.x + (rand() - 0.5) * cell.w;
-            z = cell.z + (rand() - 0.5) * cell.d;
-          } else {
-            x = x0 + rand() * (x1 - x0);
-            z = z0 + rand() * (z1 - z0);
-          }
-          // Вокруг точки старта держим пустое место: иначе персонаж появляется
-          // в кольце зомби и первый удар получает раньше, чем успевает оглядеться.
-          if (Math.hypot(x - this.spawn.x, z - this.spawn.z) < CONFIG.zombies.spawnClear) continue;
-
-          free = !this.occupied.hits(x, z, spacing);
-        }
-        if (!free) continue;
-
-        const kind = kinds[Math.floor(rand() * kinds.length)];
-        this._addZombie(kind, x, z, rand() * Math.PI * 2, rand());
-      }
-    }
   }
 
-  /** Делит область на клетки по числу зомби — по клетке на каждого. */
-  _gridFor(count, x0, z0, x1, z1) {
-    const width = Math.abs(x1 - x0);
-    const depth = Math.abs(z1 - z0);
-
-    // пропорции клеток близки к квадратным, поэтому покрытие ровное
-    const cols = Math.max(1, Math.round(Math.sqrt((count * width) / depth)));
-    const rows = Math.max(1, Math.ceil(count / cols));
-
-    const cellW = width / cols;
-    const cellD = depth / rows;
-    const cells = [];
-
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (cells.length >= count) break;
-        cells.push({
-          x: Math.min(x0, x1) + cellW * (c + 0.5),
-          z: Math.min(z0, z1) + cellD * (r + 0.5),
-          w: cellW * 0.8,
-          d: cellD * 0.8,
-        });
-      }
-    }
-    return cells;
-  }
-
-  /** Один зомби на своём месте, со сдвинутой фазой дыхания. */
   _addZombie(kind, x, z, yaw, phase) {
     const zombie = this.zombieLibrary.create(kind);
     if (!zombie) return;
@@ -742,24 +492,62 @@ export class Location {
       }
       : this.data.spawn;
 
-    // Оба процедурных раздела уходят: и россыпь, и орды теперь лежат поимённо.
+    // Область перехода: центр и радиус читаем прямо с метки.
+    const exitAt = this.exitMark
+      ? [round(this.exitMark.position.x), round(this.exitMark.position.z),
+        round(this.exitMark.scale.x)]
+      : this.data.exitAt;
+
     // Пол тоже правится мышью: в файл уходит та высота, на которой он стоит.
     const ground = { ...this.data.ground, y: round(this.ground.position.y) };
 
     const data = { ...this.data, ground, spawn, props, zombies };
-    delete data.scatter;
-    delete data.hordes;
+    if (exitAt) data.exitAt = exitAt;
+
     return data;
+  }
+
+  /**
+   * Метка выхода — круг, по которому уровень и сменяется.
+   *
+   * Она же и подсветка выхода в игре: куда бежать, видно сразу. Отдельной
+   * картинки под это больше нет — один объект и показывает место, и задаёт
+   * область перехода, и правится мышью.
+   *
+   * Радиус задаётся размером метки: растянули гизмо — вырос и сам триггер.
+   */
+  _buildExitMark() {
+    const spot = this.data.exitAt;
+    const at = spot
+      ? new THREE.Vector3(spot[0], 0, spot[1])
+      : this.exit?.position?.clone();
+
+    if (!at) return;
+
+    const radius = spot?.[2] ?? (this.exit ? this.exit.width / 2 : 3);
+    const mark = new THREE.Mesh(
+      new THREE.CylinderGeometry(1, 1, 0.1, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffd27f, transparent: true, opacity: 0.35 })
+    );
+
+    mark.name = 'exit';
+    mark.position.copy(at).setY(0.05);
+    mark.scale.set(radius, 1, radius);
+    mark.castShadow = false;
+    mark.receiveShadow = false;
+
+    this.group.add(mark);
+    this.exitMark = mark;
   }
 
   /** Дошёл ли персонаж до выхода — то есть пересёк линию забора в створе проёма. */
   reachedExit(p) {
-    // Выход точкой — для локаций без прямоугольного забора: у извилистой улицы
+    // Выход кругом — для локаций без прямоугольного забора: у извилистой улицы
     // «сторона света» смысла не имеет, есть просто место, куда надо дойти.
-    const spot = this.data.exitAt;
-    if (spot) {
-      const [x, z, radius = 3] = spot;
-      return Math.hypot(p.x - x, p.z - z) <= radius;
+    // Считаем по самой метке: её и двигают в редакторе.
+    const mark = this.data.exitAt && this.exitMark;
+    if (mark) {
+      return Math.hypot(p.x - mark.position.x, p.z - mark.position.z) <= mark.scale.x;
     }
 
     const e = this.exit;
@@ -809,13 +597,4 @@ export class Location {
   }
 }
 
-/** Детерминированный генератор: одна и та же локация собирается одинаково при каждом запуске. */
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+

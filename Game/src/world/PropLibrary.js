@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { loadGLTF } from '../core/AssetLoader.js';
+import { batchParts } from './batching.js';
 
 /**
  * Библиотека пропов из Env.blend: один GLB со всеми объектами, из которого
@@ -23,12 +24,17 @@ export class PropLibrary {
       child.updateMatrixWorld(true);
 
       box.setFromObject(child).getSize(size);
-      this.templates.set(name, child);
-      this.sizes.set(name, size.clone());
+
+      // Контуры снимаем до слияния: после него куски модели уже не различить,
+      // а столкновения считаются именно по ним.
       const { shapes, tall } = buildCollisionShapes(child);
+      this.bodies.set(name, measureBody(child));
+
+      // И только теперь сводим проп в один меш — дальше он копируется таким.
+      this.templates.set(name, batchParts(child));
+      this.sizes.set(name, size.clone());
       this.shapes.set(name, shapes);
       this.tall.set(name, tall);
-      this.bodies.set(name, measureBody(child));
     }
   }
 

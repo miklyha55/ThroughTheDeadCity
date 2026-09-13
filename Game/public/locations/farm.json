@@ -1,22 +1,15 @@
 {
   "id": "farm",
   "name": "Ферма Уилсона",
-  "music": 1,
+  "number": 1,
   "next": "gas_station",
   "size": [
     44,
     44
   ],
   "ground": {
-    "color": "#6b4225"
-  },
-  "fence": {
-    "prop": "Fence_RanchRail",
-    "exit": {
-      "side": "north",
-      "offset": 0,
-      "width": 8
-    }
+    "color": "#6b4225",
+    "y": -0.02
   },
   "spawn": {
     "position": [
@@ -26,6 +19,356 @@
     "rotation": 180
   },
   "props": [
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -20,
+        -22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -16,
+        -22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -12,
+        -22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -8,
+        -22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        8,
+        -22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        12,
+        -22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        16,
+        -22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        20,
+        -22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -20,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -16,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -12,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -8,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -4,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        0,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        4,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        8,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        12,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        16,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        20,
+        22
+      ],
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        -20
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        -16
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        -12
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        -8
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        -4
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        0
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        4
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        8
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        12
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        16
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        -22,
+        20
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        -20
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        -16
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        -12
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        -8
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        -4
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        0
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        4
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        8
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        12
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        16
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
+    {
+      "prop": "Fence_RanchRail",
+      "at": [
+        22,
+        20
+      ],
+      "rotation": 90,
+      "scale": 0.96
+    },
     {
       "prop": "Bld_Barn",
       "at": [
@@ -1235,5 +1578,10 @@
       ],
       "rotation": 317.8
     }
+  ],
+  "exitAt": [
+    -2.06,
+    -23.09,
+    4
   ]
 }

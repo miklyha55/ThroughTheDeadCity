@@ -124,8 +124,8 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
   };
 
   /**
-   * Что можно тянуть: всё, что есть на площадке, — предметы, зомби, персонаж и
-   * сам пол. Точка старта, места зомби и высота пола правятся тем же гизмо, а
+   * Что можно тянуть: всё, что есть на площадке, — предметы, зомби, персонаж,
+   * пол и область перехода на следующий уровень. Всё правится тем же гизмо, а
    * не числами в файле.
    */
   const targets = () => {
@@ -133,6 +133,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
     for (const zombie of locations.current.zombies) list.push(zombie.root);
     if (locations.player) list.push(locations.player.root);
     if (locations.current.ground) list.push(locations.current.ground);
+    if (locations.current.exitMark) list.push(locations.current.exitMark);
     return list;
   };
 
@@ -238,6 +239,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
 
     if (object === locations.player?.root) status('выбран персонаж: это точка старта');
     else if (object === locations.current.ground) status('выбран пол: двигается по высоте');
+    else if (object === locations.current.exitMark) status('выбрана область перехода: размер — радиус');
     else if (locations.current.zombies.some((z) => z.root === object)) status('выбран зомби');
     else status(`выбран ${object.name || 'проп'}`);
   }
@@ -272,6 +274,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
 
     // пересобираем локацию: в правке нужна несклеенная геометрия, в игре — склеенная
     await locations.load(locations.current.data.id);
+    if (locations.current.exitMark) locations.current.exitMark.visible = active;
     if (active && chain.length === 0) await readChain();
     onToggle?.(active);
     status('щёлкни по предмету');

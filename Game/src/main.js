@@ -79,6 +79,7 @@ let editor = null; // правка расстановки: появляется 
 const joystick = new Joystick();
 const input = new Input(joystick);
 const camera = new FollowCamera(engine.camera, player);
+locations.camera = camera; // при смене уровня камера встаёт на персонажа сразу
 const targetMark = new TargetMark(engine.scene);
 
 engine.add({
@@ -168,13 +169,13 @@ locations.onChange = (location) => {
   wireBlasts(location);
   showHud();
   updateDebugView();
-  music.play(location.data.music ?? 1); // у каждого уровня своя дорожка
+  music.play(location.data.number ?? 1); // у каждого уровня своя дорожка
 
   if (import.meta.env.DEV) localStorage.setItem(LAST_LEVEL, location.data.id);
 };
 showHud();
 updateDebugView();
-music.play(locations.current.data.music ?? 1); // первый уровень: onChange к нему ещё не привязан
+music.play(locations.current.data.number ?? 1); // первый уровень: onChange к нему ещё не привязан
 
 if (import.meta.env.DEV) {
   // Tab — правка расстановки мышью; пока она открыта, игра стоит на паузе
@@ -215,6 +216,7 @@ if (import.meta.env.DEV) {
 
       // всё, что держало ссылку на прежнего персонажа
       camera.target = player;
+      locations.camera = camera;
       locations.player = player;
 
       prefabs = freshPrefabs;

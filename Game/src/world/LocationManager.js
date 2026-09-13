@@ -14,6 +14,7 @@ export class LocationManager {
     this.loading = false;
     this.onChange = null; // вызывается после смены локации — обновить HUD и прочее
     this.editing = false; // в режиме правки статику не сливаем: её двигают мышью
+    this.camera = null;   // ставится снаружи: её надо переносить вместе с игроком
     this.splash = null;   // заставка на время загрузки; ставится снаружи
     this.sfx = null;      // голоса зомби; тоже ставится снаружи
   }
@@ -49,7 +50,7 @@ export class LocationManager {
     const res = await fetch(`/locations/${id}.json`);
     if (!res.ok) throw new Error(`локация «${id}» не найдена (${res.status})`);
     const data = await res.json();
-    this.splash?.setTitle(data.name); // имя знаем только теперь, из самого файла
+    this.splash?.setLevel(data.name, data.number ?? 1); // узнали только теперь, из файла
 
     this.current?.dispose();
 
@@ -61,6 +62,7 @@ export class LocationManager {
     this.current = location;
 
     this.player.placeAt(location.spawn, location.spawnYaw);
+    this.camera?.snap(); // кадр готов сразу: перелёта через всю карту не будет
     this.onChange?.(location);
     return location;
   }
