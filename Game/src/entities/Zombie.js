@@ -79,6 +79,8 @@ export class Zombie {
     this.waitTime = 0;
     this.stuckTime = 0;    // сколько он топчется на месте, никуда не продвигаясь
     this.alerted = false;  // поднят по тревоге выстрелом — пойдёт на цель без обзора
+    this.sfx = null;       // голос; ставится снаружи
+    this.heardAt = Infinity; // как далеко от персонажа он сейчас — для громкости
     this.chaseMoving = true;
     this.state = STATE.PATROL;
     this.current = null;
@@ -183,6 +185,7 @@ export class Zombie {
     }
 
     const distance = this._distanceTo(player);
+    this.heardAt = distance; // по нему считается громкость голоса
 
     switch (this.state) {
       case STATE.PATROL:
@@ -225,6 +228,27 @@ export class Zombie {
       (Math.sin(this.yaw) * _toPlayer.x + Math.cos(this.yaw) * _toPlayer.z) / (distance || 1);
 
     return forward >= Math.cos((CFG.senseAngle * Math.PI) / 360);
+  }
+
+  /**
+   * Подать голос.
+   *
+   * Громкость падает с расстоянием, а дальше `voiceRange` зомби не слышно вовсе:
+   * иначе вся сотня, разбросанная по локации, звучала бы так же близко, как та,
+   * что стоит перед носом.
+   *
+   * @param {string} sound — какой набор голосов брать
+   * @param {number} loudness — громкость вблизи, доля от общей
+   * @param {number} chance — с какой вероятностью он вообще подаст голос
+   */
+  _voice(sound, loudness, chance = CFG.voiceChance) {
+    if (!this.sfx || Math.random() > chance) return;
+
+    const away = this.heardAt ?? CFG.voiceRange;
+    if (away >= CFG.voiceRange) return;
+
+    const near = 1 - away / CFG.voiceRange;
+    this.sfx.play(sound, CONFIG.sounds.volume * loudness * near);
   }
 
   /** Расстояние до персонажа по земле: высота не в счёт. */
@@ -283,6 +307,7 @@ export class Zombie {
 
       case STATE.DEAD:
         this.deadTime = 0;
+        this._voice('zombieDead', CFG.deathVolume, 1); // хрип слышно всегда
         this.play('Death', 0.15);
         this.current.reset().play();
         this.current.timeScale = 1;
@@ -296,6 +321,7 @@ export class Zombie {
   _idle(dt, distance, player, location) {
     if (this._sees(player, distance, location)) {
       this._enter(STATE.CHASE);
+      this._voice('zombieAlert', CFG.voiceVolume);
       return;
     }
 
@@ -307,6 +333,7 @@ export class Zombie {
   _patrol(dt, distance, player, location, crowd) {
     if (this._sees(player, distance, location)) {
       this._enter(STATE.CHASE);
+      this._voice('zombieAlert', CFG.voiceVolume);
       return;
     }
 

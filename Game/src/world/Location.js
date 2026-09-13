@@ -27,11 +27,12 @@ const round = (value) => Math.round(value * 100) / 100;
  * с единственным проёмом-выходом, расставленные пропы и точка старта.
  */
 export class Location {
-  constructor(data, prefabs, zombieLibrary, blood = null, { batched = true } = {}) {
+  constructor(data, prefabs, zombieLibrary, blood = null, { batched = true, sfx = null } = {}) {
     this.data = data;
     this.prefabs = prefabs;
     this.zombieLibrary = zombieLibrary;
     this.blood = blood; // общая на сцену: зомби брызжут ею, когда их сносит предметом
+    this.sfx = sfx;     // и голос у них тоже общий
     this.onBlast = null; // сцена подхватывает взрыв: вспышка, свет, тряска камеры
     // Коробки, через которые персонаж перепрыгивает: только габариты модели,
     // без её мелких деталей — зеркала и колёса прыжку не помеха.
@@ -326,6 +327,7 @@ export class Location {
     const { idleLength, speedSpread, spacing } = CONFIG.zombies;
 
     zombie.blood = this.blood;
+    zombie.sfx = this.sfx;
     zombie.root.position.set(x, GROUND_Y, z);
     zombie.root.rotation.y = yaw;
     zombie.yaw = yaw;

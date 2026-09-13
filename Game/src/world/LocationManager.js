@@ -15,6 +15,7 @@ export class LocationManager {
     this.onChange = null; // вызывается после смены локации — обновить HUD и прочее
     this.editing = false; // в режиме правки статику не сливаем: её двигают мышью
     this.splash = null;   // заставка на время загрузки; ставится снаружи
+    this.sfx = null;      // голоса зомби; тоже ставится снаружи
   }
 
   /** Подменяет библиотеку префабов и пересобирает текущую локацию на свежих моделях. */
@@ -53,7 +54,8 @@ export class LocationManager {
     this.current?.dispose();
 
     const location = new Location(
-      data, this.prefabs, this.zombies, this.player?.blood, { batched: !this.editing }
+      data, this.prefabs, this.zombies, this.player?.blood,
+      { batched: !this.editing, sfx: this.sfx }
     );
     this.scene.add(location.group);
     this.current = location;

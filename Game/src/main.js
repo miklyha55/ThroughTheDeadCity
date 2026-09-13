@@ -53,6 +53,7 @@ engine.scene.add(player.root);
 
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 locations.splash = new Splash();
+locations.sfx = sfx;
 
 // Музыка принадлежит игре, а не уровню: заводится один раз и играет по кругу,
 // пока открыта вкладка. Перезагрузка локации её не трогает.
@@ -132,8 +133,15 @@ if (params.get('debug') === 'input') {
 /** Что сцена делает со взрывом: вспышка на месте и толчок камере. */
 function wireBlasts(location) {
   location.onBlast = (at) => {
+    const CFG = CONFIG.explosion;
+
     explosions.burst(at);
-    camera.shake(CONFIG.explosion.shake, CONFIG.explosion.shakeFor);
+    camera.shake(CFG.shake, CFG.shakeFor);
+
+    // Дальний взрыв слышно тише: иначе бочка на том конце площадки грохочет
+    // так же, как та, что рванула под ногами.
+    const near = Math.max(0, 1 - at.distanceTo(player.position) / CFG.hearing);
+    if (near > 0) sfx.play('explosion', CONFIG.sounds.volume * CFG.volume * near, CFG.layers);
   };
 }
 wireBlasts(locations.current);

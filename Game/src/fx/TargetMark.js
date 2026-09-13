@@ -64,13 +64,17 @@ export class TargetMark {
     return mesh;
   }
 
-  /** @param {{position: THREE.Vector3} | null} target — кто сейчас на прицеле */
+  /** @param {{position: THREE.Vector3, alive?: boolean} | null} target — кто на прицеле */
   update(target) {
-    this.mesh.visible = Boolean(target);
-    this.ghost.visible = Boolean(target);
-    if (!target) return;
+    // Труп не цель: помечать его незачем, а пока он оседает и уходит под землю,
+    // кольцо ещё какое-то время ездило бы за ним.
+    const marked = target?.alive === false ? null : target;
 
-    const at = target.position;
+    this.mesh.visible = Boolean(marked);
+    this.ghost.visible = Boolean(marked);
+    if (!marked) return;
+
+    const at = marked.position;
     this.mesh.position.set(at.x, at.y + CFG.height, at.z);
     this.ghost.position.copy(this.mesh.position);
   }

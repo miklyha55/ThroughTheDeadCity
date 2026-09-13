@@ -265,6 +265,7 @@ export class Player {
     // мёртвый не управляется: доигрывает падение и остаётся лежать
     if (!this.alive) {
       this.velocity.set(0, 0, 0);
+      this.spotted = null; // и никого больше не держит на прицеле
       this.mixer.update(dt);
       return;
     }
@@ -402,7 +403,6 @@ export class Player {
     }
 
     // цель есть и перезарядка кончилась — стреляем
-    this.sfx?.play('fire');
     this.play('Shoot', 0.08);
     this.current.reset().play();
     this.current.timeScale = CFG.shootSpeed;
@@ -576,6 +576,11 @@ export class Player {
 
     const from = this.root.position;
     if (Math.hypot(zombie.position.x - from.x, zombie.position.z - from.z) > CFG.fireRange) return;
+
+    // Звук — здесь, вместе с самой пулей, а не при запуске анимации. Между ними
+    // проходит `shotDelay`, и за это время выстрел могут отменить: персонажа
+    // ударили или он снова побежал. Тогда раньше оставался хлопок без выстрела.
+    this.sfx?.play('fire', CONFIG.sounds.volume * CFG.fireVolume);
 
     const muzzle = this._muzzlePoint();
 

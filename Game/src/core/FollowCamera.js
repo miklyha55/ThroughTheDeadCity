@@ -23,8 +23,26 @@ export class FollowCamera {
       Math.cos(this.yaw) * horizontal
     );
 
+    this.orbit = 0; // доворот вокруг цели: копится, пока персонаж мёртв
+
     this._focus = new THREE.Vector3().copy(target.position).setY(CFG.lookAtHeight);
     this.camera.position.copy(this._focus).add(this._offset);
+
+    // Погиб — камера идёт по кругу, не отводя от него взгляда. Ракурс при этом
+    // остаётся тем же: меняется только сторона, с которой мы смотрим.
+    if (this.target.alive === false) {
+      this.orbit += CFG.orbitSpeed * dt;
+
+      const horizontal = Math.cos(this.pitch) * CFG.distance;
+      const angle = this.yaw + this.orbit;
+
+      this._offset.set(
+        Math.sin(angle) * horizontal,
+        Math.sin(this.pitch) * CFG.distance,
+        Math.cos(angle) * horizontal
+      );
+      this.camera.position.copy(this._focus).add(this._offset);
+    }
 
     // Тряска смещает саму камеру, а не точку интереса: кадр дёргается, но
     // продолжает смотреть туда же, и после затухания встаёт ровно как был.
@@ -78,6 +96,22 @@ export class FollowCamera {
     this._focus.add(this._desiredFocus);
 
     this.camera.position.copy(this._focus).add(this._offset);
+
+    // Погиб — камера идёт по кругу, не отводя от него взгляда. Ракурс при этом
+    // остаётся тем же: меняется только сторона, с которой мы смотрим.
+    if (this.target.alive === false) {
+      this.orbit += CFG.orbitSpeed * dt;
+
+      const horizontal = Math.cos(this.pitch) * CFG.distance;
+      const angle = this.yaw + this.orbit;
+
+      this._offset.set(
+        Math.sin(angle) * horizontal,
+        Math.sin(this.pitch) * CFG.distance,
+        Math.cos(angle) * horizontal
+      );
+      this.camera.position.copy(this._focus).add(this._offset);
+    }
 
     // Тряска смещает саму камеру, а не точку интереса: кадр дёргается, но
     // продолжает смотреть туда же, и после затухания встаёт ровно как был.
