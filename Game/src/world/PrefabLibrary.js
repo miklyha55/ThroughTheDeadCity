@@ -49,6 +49,7 @@ export class PrefabLibrary {
       size,
       solid,
       dynamic: rules.dynamic === true,
+      vault: rules.vault === true,
       shadows: rules.shadows !== false,
       shapes: this.props.collisionShapes(name),
       sightShapes: this.props.sightShapes(name),

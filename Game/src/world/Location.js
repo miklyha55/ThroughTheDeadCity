@@ -29,6 +29,9 @@ export class Location {
     this.zombieLibrary = zombieLibrary;
     this.blood = blood; // общая на сцену: зомби брызжут ею, когда их сносит предметом
     this.onBlast = null; // сцена подхватывает взрыв: вспышка, свет, тряска камеры
+    // Коробки, через которые персонаж перепрыгивает: только габариты модели,
+    // без её мелких деталей — зеркала и колёса прыжку не помеха.
+    this.vaults = [];
     this.zombies = [];
     this._movers = [];  // кто может задеть разбросанные предметы
     this.statics = []; // неподвижные пропы: их геометрия сливается в общие меши
@@ -426,6 +429,31 @@ export class Location {
 
     if (prefab.dynamic) this._makeDynamic(prefab, object);
     else this.statics.push(object); // не двигается — значит можно слить с остальными
+
+    this._markVault(prefab, object);
+  }
+
+  /**
+   * Запоминает габариты предмета, если через него можно перепрыгнуть.
+   *
+   * Берётся именно габаритная коробка модели, а не её геометрия: персонажу важно,
+   * какой длины препятствие поперёк его пути и насколько оно высокое, а не то,
+   * что у машины торчит зеркало.
+   */
+  _markVault(prefab, object) {
+    if (!prefab.vault || !prefab.size) return;
+
+    const CFG = CONFIG.player;
+    const scale = object.scale.x;
+    if (prefab.size.y * object.scale.y > CFG.vaultMaxHeight) return;
+
+    this.vaults.push({
+      x: object.position.x,
+      z: object.position.z,
+      yaw: object.rotation.y,
+      halfW: (prefab.size.x * scale) / 2,
+      halfD: (prefab.size.z * scale) / 2,
+    });
   }
 
   /**
@@ -484,6 +512,63 @@ export class Location {
     }
 
     this.onBlast?.(at); // вспышка и тряска — дело сцены, а не локации
+  }
+
+  /**
+   * Куда персонаж перепрыгнет, если сейчас упрётся в машину.
+   *
+   * Щупаем точку прямо перед ним: попала внутрь габаритной коробки — значит
+   * препятствие на пути. Дальше идём вдоль того же направления, пока коробка не
+   * кончится, и ставим ноги чуть за её краем. Прыжок отменяется, если препятствие
+   * слишком широкое поперёк хода или если приземляться некуда.
+   *
+   * @param {THREE.Vector3} from — где персонаж стоит
+   * @param {number} dirX @param {number} dirZ — куда бежит, единичный вектор
+   * @param {number} radius — его радиус
+   * @returns {{x: number, z: number} | null} точка приземления
+   */
+  vaultTarget(from, dirX, dirZ, radius) {
+    const CFG = CONFIG.player;
+    const probe = radius + CFG.vaultProbe;
+
+    for (const box of this.vaults) {
+      if (!this._insideBox(box, from.x + dirX * probe, from.z + dirZ * probe)) continue;
+
+      // шагаем вперёд, пока не выйдем из коробки
+      const step = 0.15;
+      let travelled = probe;
+
+      while (travelled < CFG.vaultMaxDepth + probe) {
+        travelled += step;
+        const x = from.x + dirX * travelled;
+        const z = from.z + dirZ * travelled;
+        if (this._insideBox(box, x, z)) continue;
+
+        // вышли: отступаем ещё немного, чтобы ноги встали за краем
+        const landX = from.x + dirX * (travelled + CFG.vaultClearance);
+        const landZ = from.z + dirZ * (travelled + CFG.vaultClearance);
+
+        if (this.obstacles.hits(landX, landZ, radius)) return null; // там стена
+        return { x: landX, z: landZ };
+      }
+      return null; // слишком широкое: такое обходят, а не перепрыгивают
+    }
+    return null;
+  }
+
+  /** Лежит ли точка внутри повёрнутой габаритной коробки. */
+  _insideBox(box, x, z) {
+    const dx = x - box.x;
+    const dz = z - box.z;
+    const cos = Math.cos(-box.yaw);
+    const sin = Math.sin(-box.yaw);
+
+    // Поворот объекта вокруг Y идёт по часовой стрелке в осях сцены, поэтому
+    // обратное преобразование записано именно так.
+    const lx = dx * cos + dz * sin;
+    const lz = -dx * sin + dz * cos;
+
+    return Math.abs(lx) <= box.halfW && Math.abs(lz) <= box.halfD;
   }
 
   /** Дошёл ли персонаж до выхода — то есть пересёк линию забора в створе проёма. */

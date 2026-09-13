@@ -53,7 +53,8 @@ engine.add({
     if (here.reachedExit(player.position)) {
       locations.advance(); // вышел через проём — следующая локация
     } else {
-      here.obstacles.resolve(player.position, CONFIG.player.radius); // не пускаем внутрь объектов
+      // в прыжке он летит над препятствием, поэтому выталкивать его оттуда нельзя
+      if (!player.jumping) here.obstacles.resolve(player.position, CONFIG.player.radius);
       here.clampPosition(player.position); // и за забор тоже
     }
     here.update(dt, player); // зомби: заметить, дойти, ударить

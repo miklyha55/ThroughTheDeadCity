@@ -7,6 +7,44 @@ import { CONFIG as ROOT } from '../config.js';
 const CFG = CONFIG.player;
 const DEG = Math.PI / 180;
 
+/**
+ * Где в клипе прыжка персонаж отрывается от земли и где касается её снова.
+ *
+ * Смотрим на высоту бёдер: пока они на месте — он приседает перед толчком, пик
+ * приходится на середину полёта, а возврат к исходной высоте и есть приземление.
+ * Всё, что после, — уже пружинистое приседание, к полёту не относящееся.
+ *
+ * Так дуга и клип сходятся сами, без чисел, подобранных на глаз: поправят
+ * анимацию в Blender — подстроится и полёт.
+ *
+ * @returns {{takeoff: number, landing: number}} секунды от начала клипа
+ */
+function jumpPhases(clip) {
+  const hips = clip.tracks.find((t) => /hips/i.test(t.name) && t.name.endsWith('.position'));
+  if (!hips || hips.times.length < 3) {
+    return { takeoff: clip.duration * 0.15, landing: clip.duration * 0.7 };
+  }
+
+  const base = hips.values[1]; // высота бёдер в первом кадре — стойка
+  let peak = base;
+  for (let i = 0; i < hips.times.length; i++) peak = Math.max(peak, hips.values[i * 3 + 1]);
+
+  const level = base + (peak - base) * CFG.jumpLiftShare;
+  let takeoff = -1;
+  let landing = -1;
+
+  for (let i = 0; i < hips.times.length; i++) {
+    if (hips.values[i * 3 + 1] <= level) continue;
+    if (takeoff < 0) takeoff = hips.times[i];
+    landing = hips.times[i];
+  }
+
+  if (takeoff < 0 || landing <= takeoff) {
+    return { takeoff: clip.duration * 0.15, landing: clip.duration * 0.7 };
+  }
+  return { takeoff, landing };
+}
+
 /** Персонаж: модель, миксер анимаций и движение по земле. */
 export class Player {
   constructor(gltf) {
@@ -63,6 +101,20 @@ export class Player {
       this.shootLength = shoot.getClip().duration;
     }
 
+    const jump = this.actions.get('Jump');
+    this.jumpLanding = 0.6;   // когда в клипе он касается земли, с
+    if (jump) {
+      jump.setLoop(THREE.LoopOnce, 1);
+      jump.clampWhenFinished = true;
+
+      // Полёт начинается вместе с клипом, поэтому фаза отрыва не нужна: важно
+      // только, где в анимации он касается земли — там дуга и кончается. Момент
+      // касания берём с небольшим опережением: по клипу нога встаёт чуть раньше,
+      // чем бёдра опускаются до исходной высоты.
+      const landing = jumpPhases(jump.getClip()).landing * CFG.jumpLandShare;
+      this.jumpLanding = landing / CFG.jumpSpeed;
+    }
+
     this.lives = CFG.lives;
 
     // Ствол: он закреплён на кости руки и развёрнут относительно корпуса, поэтому
@@ -82,6 +134,10 @@ export class Player {
     this.shotPending = 0;  // сколько осталось до момента выстрела в клипе
     this.shootPlaying = 0; // сколько ещё идёт клип выстрела
     this.reloading = 0;    // пауза между выстрелами: в неё зомби и подходят
+    this.jumpTime = 0;     // сколько уже длится прыжок, с; ноль — значит стоит на земле
+    this._jumpFrom = new THREE.Vector3();
+    this._jumpTo = new THREE.Vector3();
+
     this.pinned = 0;       // зомби замахнулся: управление отобрано до удара
     this.reacting = 0;     // доигрывается реакция на попадание
 
@@ -101,6 +157,9 @@ export class Player {
    * И то и другое — время, когда он не бежит, не стреляет и не может уйти.
    */
   get helpless() { return this.pinned > 0 || this.reacting > 0; }
+
+  /** Летит ли он сейчас через препятствие. */
+  get jumping() { return this.jumpTime > 0; }
 
   /**
    * Зомби начал замах — персонаж замирает, пока его не ударят.
@@ -224,6 +283,13 @@ export class Player {
       return;
     }
 
+    // в полёте управление отобрано: траектория уже задана, менять её нечем
+    if (this.jumping) {
+      this._flyOver(dt, move);
+      this.mixer.update(dt);
+      return;
+    }
+
     // «вперёд» — от камеры к персонажу, «вправо» — векторное произведение forward × up
     this._forward.set(Math.sin(cameraYaw), 0, Math.cos(cameraYaw));
     this._right.set(-this._forward.z, 0, this._forward.x);
@@ -239,6 +305,14 @@ export class Player {
 
     // В замахе и под ударом персонаж не управляется: вырваться нельзя.
     if (this.helpless) this._desired.set(0, 0, 0);
+
+    // Упёрся в машину на ходу — перепрыгнул. Проверяем до движения: иначе он
+    // сначала встанет в неё носом, и прыжок начнётся уже из стенки.
+    if (this._desired.lengthSq() > 0 && !this.helpless && location
+        && this._tryVault(location)) {
+      this.mixer.update(dt);
+      return;
+    }
 
     // ни разгона, ни выбега — скорость появляется и пропадает мгновенно
     this.velocity.copy(this._desired);
@@ -349,6 +423,69 @@ export class Player {
     this.shootPlaying = this.shootLength / CFG.shootSpeed;
     this.reloading = CFG.reloadFor; // пауза отсчитывается после клипа, а не вместе с ним
     return true;
+  }
+
+  /**
+   * Пробует перепрыгнуть то, во что персонаж упёрся.
+   *
+   * Решает не сам прыжок, а локация: она знает габариты предметов и отдаёт точку
+   * приземления за препятствием — или ничего, если оно слишком высокое, слишком
+   * широкое или садиться за ним некуда.
+   *
+   * @returns {boolean} начался ли прыжок
+   */
+  _tryVault(location) {
+    const dirX = this._desired.x / CFG.runSpeed;
+    const dirZ = this._desired.z / CFG.runSpeed;
+
+    const landing = location.vaultTarget(this.root.position, dirX, dirZ, CFG.radius);
+    if (!landing) return false;
+
+    this._jumpFrom.copy(this.root.position);
+    this._jumpTo.set(landing.x, this.root.position.y, landing.z);
+
+    this.jumpTime = 1e-6; // уже в воздухе: дуга идёт с первого кадра клипа
+    this.velocity.set(0, 0, 0);
+    this._holdFire();
+    this._holdGun(false); // в прыжке ружьё за спиной, руки заняты
+
+    this._turnTo(Math.atan2(dirX, dirZ), CFG.turnSpeed * 8, 1); // сразу лицом по ходу
+
+    this.play('Jump', 0.08);
+    this.current.reset().play();
+    this.current.timeScale = CFG.jumpSpeed;
+    return true;
+  }
+
+  /**
+   * Полёт по дуге, заведённый на сам клип прыжка.
+   *
+   * Дуга стартует вместе с первым кадром клипа и кончается там, где в анимации
+   * он касается земли. Приседание в хвосте полётом уже не считается — на касании
+   * состояние заканчивается, и дальше персонаж либо бежит, либо встаёт.
+   */
+  _flyOver(dt, move) {
+    this.jumpTime += dt;
+
+    const share = Math.max(0, Math.min(1, this.jumpTime / this.jumpLanding));
+    const arc = CFG.jumpArc * 4 * share * (1 - share); // парабола: ноль на концах
+
+    this.root.position.lerpVectors(this._jumpFrom, this._jumpTo, share);
+    this.root.position.y = this._jumpFrom.y + arc;
+
+    if (this.jumpTime < this.jumpLanding) return;
+
+    // коснулся земли: дальше он либо бежит, либо встаёт — смотря держат ли стик
+    this.jumpTime = 0;
+    this.root.position.copy(this._jumpTo);
+
+    if (move.lengthSq() > 0) {
+      this.play('Run', 0.1);
+      this.current.timeScale = CFG.runSpeed / CFG.runClipSpeed;
+    } else {
+      this.play('Idle', CFG.stopFade);
+      this.current.timeScale = 1;
+    }
   }
 
   /**

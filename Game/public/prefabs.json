@@ -1,33 +1,63 @@
 {
-  "_": "Роли моделей из Env.blend. Правило ищется от частного к общему: overrides → groups (самый длинный подходящий префикс) → defaults. Сами модели не правятся — только то, как игра с ними обращается.",
-
+  "_": "Роли моделей из Env.blend. Правило ищется от частного к общему: overrides → groups (самый длинный подходящий префикс) → defaults. Сами модели не правятся — только то, как игра с ними обращается. Поле vault: через такой предмет персонаж перепрыгивает, если тот не выше player.vaultMaxHeight.",
   "defaults": {
     "solid": true,
     "dynamic": false,
     "shadows": true,
-    "minSolidHeight": 0
+    "minSolidHeight": 0,
+    "vault": false
   },
-
   "groups": {
-    "Bld_":    { "solid": true },
-    "Rock_":   { "solid": true },
-    "Heavy_":  { "solid": true },
-    "Car_":    { "solid": true },
-    "Fence_":  { "solid": true },
-    "Tree_":   { "solid": true },
-    "Cactus_": { "solid": true },
-
-    "Bush_":   { "solid": true, "minSolidHeight": 1.5 },
-
-    "Crop_":   { "solid": false },
-    "Grass_":  { "solid": false },
-    "Road_":   { "solid": false, "shadows": false },
-
-    "Prop_":   { "solid": false, "dynamic": true }
+    "Bld_": {
+      "solid": true
+    },
+    "Rock_": {
+      "solid": true
+    },
+    "Heavy_": {
+      "solid": true,
+      "vault": true
+    },
+    "Car_": {
+      "solid": true,
+      "vault": true
+    },
+    "Fence_": {
+      "solid": true
+    },
+    "Tree_": {
+      "solid": true
+    },
+    "Cactus_": {
+      "solid": true
+    },
+    "Bush_": {
+      "solid": true,
+      "minSolidHeight": 1.5
+    },
+    "Crop_": {
+      "solid": false
+    },
+    "Grass_": {
+      "solid": false
+    },
+    "Road_": {
+      "solid": false,
+      "shadows": false
+    },
+    "Prop_": {
+      "solid": false,
+      "dynamic": true,
+      "vault": true
+    }
   },
-
   "overrides": {
-    "Bush_Tumbleweed": { "solid": false },
-    "Prop_Sign": { "solid": true, "dynamic": false }
+    "Bush_Tumbleweed": {
+      "solid": false
+    },
+    "Prop_Sign": {
+      "solid": true,
+      "dynamic": false
+    }
   }
 }
