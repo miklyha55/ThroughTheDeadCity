@@ -11,8 +11,6 @@ const _right = new THREE.Vector3();
 const _up = new THREE.Vector3();
 const _center = new THREE.Vector3();
 const _color = new THREE.Color();
-const _from = new THREE.Color();
-const _to = new THREE.Color();
 
 /**
  * Полоски здоровья над зомби.
@@ -54,9 +52,6 @@ export class HealthBars {
     this.mesh.receiveShadow = false;
     this.mesh.renderOrder = 4;
     scene.add(this.mesh);
-
-    _from.set(CFG.fullColor);
-    _to.set(CFG.lowColor);
   }
 
   /**
@@ -86,7 +81,7 @@ export class HealthBars {
       _color.set(CFG.backColor);
       vertex = this._quad(vertex, _center, -0.5, 0.5, _color);
 
-      _color.copy(_from).lerp(_to, 1 - share);
+      _color.set(CFG.fillColor);
       vertex = this._quad(vertex, _center, -0.5, -0.5 + share, _color);
     }
 

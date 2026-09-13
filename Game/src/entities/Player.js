@@ -131,7 +131,8 @@ export class Player {
 
     this._holdGun(false); // пока не стреляет, ружьё висит за спиной
 
-    this.target = null;    // зомби на прицеле, держится до его смерти
+    this.target = null;    // зомби, по которому идёт стрельба
+    this.spotted = null;   // ближайший в радиусе огня — он же помечается отметкой
     this.shotPending = 0;  // сколько осталось до момента выстрела в клипе
     this.shootPlaying = 0; // сколько ещё идёт клип выстрела
     this.reloading = 0;    // пауза между выстрелами: в неё зомби и подходят
@@ -313,6 +314,11 @@ export class Player {
       this._turnTo(target, CFG.turnSpeed, dt);
     }
 
+    // Кого персонаж держит на прицеле — считаем всегда, даже на бегу: по этому
+    // зомби рисуется отметка, и видно, кто уже попал под выстрел, ещё до того,
+    // как остановишься.
+    this.spotted = location ? this._pickTarget(location) : null;
+
     // Стрелять можно только стоя. Проверяем сам ввод, а не скорость: на кадре
     // отпускания стика скорость ещё старая, и выстрел терялся бы до следующего.
     const standing = this._desired.lengthSq() === 0;
@@ -365,7 +371,7 @@ export class Player {
    */
   _aimAndFire(dt, location) {
     // прицел пересматривается каждый кадр: ближе подошёл — по нему и стреляем
-    this.target = this._pickTarget(location);
+    this.target = this.spotted;
 
     if (!this.target) {
       this.shotPending = 0;
@@ -601,6 +607,15 @@ export class Player {
       for (const barrel of barrels) location.explode(barrel, this);
 
       const victims = this._pelletHits(location, muzzle, dirX, dirZ);
+
+      // Средняя пуля всегда достаёт того, кого персонаж взял на прицел.
+      //
+      // Без этого вблизи выходил систематический промах: корпус доворачивается
+      // так, чтобы ствол смотрел на цель ИЗ ЦЕНТРА фигуры, а пуля летит из дула,
+      // вынесенного вбок почти на полметра. На десяти метрах эта разница —
+      // считаные сантиметры, а в упор она больше ширины тела, и зомби, бегущий
+      // по пятам, оставался цел при выстреле в упор.
+      if (i === middle && !victims.includes(zombie)) victims.unshift(zombie);
 
       // росчерк тянем до последнего задетого, а если никого — на всю дальность
       const last = victims[victims.length - 1];

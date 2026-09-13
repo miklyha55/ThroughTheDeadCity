@@ -68,7 +68,7 @@ engine.add({
     explosions.update(dt);
     camera.update(dt);
     silhouettes.update(here, player); // после камеры: луч к ней считается по её позе
-    targetMark.update(player.target);
+    targetMark.update(player.spotted);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },

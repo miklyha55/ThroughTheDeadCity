@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 
 const CFG = CONFIG.silhouette;
+
+// На каких долях роста щупать фигуру: ноги, грудь, макушка. Хватает и одной
+// закрытой точки — контур зажигается, как только за дом ушла хоть часть фигуры.
+const PROBES = [0.15, 0.55, 0.95];
+
 const _look = new THREE.Vector3();
 
 /**
@@ -38,9 +43,21 @@ export class SilhouetteWatch {
     if (!figure.silhouette) return;
 
     const at = figure.position;
-    const hidden = location.cover.blocksView(
-      at.x, at.y + CFG.height, at.z, ux, uz, slope, CFG.viewDistance
-    );
+
+    // Проверяем фигуру по всей высоте, а не только макушку: заходя за дом,
+    // она скрывается снизу вверх, и по одной верхней точке контур загорался бы
+    // с опозданием — когда персонаж уже наполовину пропал. Какие именно части
+    // светятся, решает сама видеокарта: контур рисуется только там, где фрагмент
+    // оказался за преградой, поэтому фигура проявляется постепенно.
+    let hidden = false;
+    for (const share of PROBES) {
+      if (!location.cover.blocksView(
+        at.x, at.y + CFG.height * share, at.z, ux, uz, slope, CFG.viewDistance
+      )) continue;
+
+      hidden = true;
+      break;
+    }
 
     figure.silhouette.setVisible(hidden);
   }
