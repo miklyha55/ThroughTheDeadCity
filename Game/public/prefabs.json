@@ -1,5 +1,5 @@
 {
-  "_": "Роли моделей из Env.blend. Правило ищется от частного к общему: overrides → groups (самый длинный подходящий префикс) → defaults. Сами модели не правятся — только то, как игра с ними обращается. Поле vault: через такой предмет персонаж перепрыгивает, если тот не выше player.vaultMaxHeight.",
+  "_": "Роли моделей из Env.blend. Правило ищется от частного к общему: overrides → groups (самый длинный подходящий префикс) → defaults. Сами модели не правятся — только то, как игра с ними обращается. Поле vault: через такой предмет персонаж перепрыгивает, если тот не выше player.vaultMaxHeight. Поле silhouette: false — за таким предметом контур фигуры не проступает (деревья, поля, мелочь: подсвечивать за ними нечего).",
   "defaults": {
     "solid": true,
     "dynamic": false,
@@ -23,23 +23,29 @@
       "vault": true
     },
     "Fence_": {
-      "solid": true
+      "solid": true,
+      "silhouette": false
     },
     "Tree_": {
-      "solid": true
+      "solid": true,
+      "silhouette": false
     },
     "Cactus_": {
-      "solid": true
+      "solid": true,
+      "silhouette": false
     },
     "Bush_": {
       "solid": true,
-      "minSolidHeight": 1.5
+      "minSolidHeight": 1.5,
+      "silhouette": false
     },
     "Crop_": {
-      "solid": false
+      "solid": false,
+      "silhouette": false
     },
     "Grass_": {
-      "solid": false
+      "solid": false,
+      "silhouette": false
     },
     "Road_": {
       "solid": false,
@@ -47,7 +53,8 @@
     },
     "Prop_": {
       "solid": false,
-      "dynamic": true
+      "dynamic": true,
+      "silhouette": false
     }
   },
   "overrides": {
@@ -57,6 +64,9 @@
     "Prop_Sign": {
       "solid": true,
       "dynamic": false
+    },
+    "Bld_WaterTower": {
+      "silhouette": false
     }
   }
 }

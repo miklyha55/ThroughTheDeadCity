@@ -49,6 +49,7 @@ export class PrefabLibrary {
       solid,
       dynamic: rules.dynamic === true,
       vault: rules.vault === true,
+      silhouette: rules.silhouette !== false, // за таким предметом контур проступает
       shadows: rules.shadows !== false,
       shapes: this.props.collisionShapes(name),
       sightShapes: this.props.sightShapes(name),

@@ -26,7 +26,16 @@ const FLOOR = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.02);
 // контур уже нарисован, а открытые части фигуры ближе окружения и тест глубины
 // не проходят — рука поверх торса контуром не светится.
 const ZOMBIE_ORDER = 3;
-const BODY_ORDER = 5;
+
+/**
+ * Слой, с которого начинается «после контура».
+ *
+ * Всё, что рисуется здесь, в момент отрисовки контура ещё не лежит в буфере
+ * глубины — значит контур за таким предметом не появится, а сам предмет ляжет
+ * поверх. На этом и держатся исключения: и сами фигуры, и то, за чем подсветка
+ * не нужна, — деревья, поля, мелочь под ногами.
+ */
+export const ABOVE_SILHOUETTE = 5;
 
 export function addSilhouette(root, { color, opacity = 1, order = ZOMBIE_ORDER } = {}) {
   const material = new THREE.MeshBasicMaterial({
@@ -73,6 +82,6 @@ export function addSilhouette(root, { color, opacity = 1, order = ZOMBIE_ORDER }
     }
 
     mesh.parent.add(copy);
-    mesh.renderOrder = BODY_ORDER; // сама фигура ложится поверх любых контуров
+    mesh.renderOrder = ABOVE_SILHOUETTE; // фигура ложится поверх любых контуров
   }
 }

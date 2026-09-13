@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Obstacles } from './Obstacles.js';
 import { Debris } from '../entities/Debris.js';
 import { batchStatic } from './batching.js';
+import { ABOVE_SILHOUETTE } from '../fx/Silhouette.js';
 import { NavGrid } from './NavGrid.js';
 import { createBorderFog } from './BorderFog.js';
 import { CONFIG } from '../config.js';
@@ -38,6 +39,9 @@ export class Location {
     this.zombies = [];
     this._movers = [];  // кто может задеть разбросанные предметы
     this.statics = []; // неподвижные пропы: их геометрия сливается в общие меши
+    // Те из них, за которыми контур фигуры не нужен: деревья, поля, кусты,
+    // водонапорная башня. Сливаются отдельно, чтобы рисоваться после контуров.
+    this.plainStatics = [];
     this.group = new THREE.Group();
     this.group.name = `location:${data.id}`;
     this.obstacles = new Obstacles();
@@ -347,14 +351,25 @@ export class Location {
    * тратить сотни вызовов там, где хватает десятков.
    */
   _batchStatics() {
-    if (this.statics.length === 0) return;
+    this._batched = this._merge(this.statics, 0);
 
-    const batched = batchStatic(this.statics);
-    for (const object of this.statics) object.removeFromParent();
-    this.statics.length = 0;
+    // Второй пачкой — то, за чем контур не проступает. Всё дело в порядке: эти
+    // меши рисуются уже после контуров, поэтому в буфере глубины их в тот момент
+    // нет и подсвечивать фигуру за ними нечему. А сами они ложатся поверх.
+    this._batchedPlain = this._merge(this.plainStatics, ABOVE_SILHOUETTE);
+  }
 
+  /** Сливает список пропов в общие меши и ставит им слой отрисовки. */
+  _merge(objects, renderOrder) {
+    if (objects.length === 0) return null;
+
+    const batched = batchStatic(objects);
+    for (const object of objects) object.removeFromParent();
+    objects.length = 0;
+
+    batched.traverse((mesh) => { mesh.renderOrder = renderOrder; });
     this.group.add(batched);
-    this._batched = batched;
+    return batched;
   }
 
   /** Зомби: поведение и анимации. Вызывается каждый кадр из игрового цикла. */
@@ -449,8 +464,13 @@ export class Location {
     if (prefab.dynamic) {
       const body = this._makeDynamic(prefab, object);
       if (body) ({ carrier, com } = body);
-    } else {
+      if (!prefab.silhouette) {
+        carrier.traverse((mesh) => { mesh.renderOrder = ABOVE_SILHOUETTE; });
+      }
+    } else if (prefab.silhouette) {
       this.statics.push(object); // не двигается — значит можно слить с остальными
+    } else {
+      this.plainStatics.push(object);
     }
 
     this._markVault(prefab, object);
@@ -688,7 +708,9 @@ export class Location {
     this.group.removeFromParent();
 
     // слитая геометрия принадлежит локации — её больше никто не переиспользует
-    this._batched?.traverse((o) => o.isMesh && o.geometry.dispose());
+    for (const batch of [this._batched, this._batchedPlain]) {
+      batch?.traverse((o) => o.isMesh && o.geometry.dispose());
+    }
     // геометрия и материалы общие с библиотекой — освобождаем только то, что создано локацией
     this._ground.geometry.dispose();
     this._ground.material.dispose();

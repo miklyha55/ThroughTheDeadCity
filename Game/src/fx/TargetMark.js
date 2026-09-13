@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { ABOVE_SILHOUETTE } from './Silhouette.js';
 
 const CFG = CONFIG.aimMark;
 
@@ -11,34 +12,66 @@ const CFG = CONFIG.aimMark;
  * ровной каймы модель разлетается лоскутами. Кольцо от геометрии не зависит
  * вовсе: читается на любом фоне, не ломается в анимации и стоит одного меша на
  * всю сцену, ведь цель всегда одна.
+ *
+ * Рисуется оно в два прохода. Открытая часть подчиняется глубине как обычный
+ * предмет на земле, а то, что скрыто преградой, проступает вторым, приглушённым
+ * кольцом — и только там, где скрыто. Простое «поверх всего» тут не годится:
+ * метка лезла бы поверх зомби, стоящих ближе к камере.
  */
 export class TargetMark {
   constructor(scene) {
     const geometry = new THREE.RingGeometry(CFG.radius - CFG.width, CFG.radius, 40);
     geometry.rotateX(-Math.PI / 2); // положить на землю
 
-    this.mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
-      color: CFG.color,
-      transparent: true,
+    // Открытая часть кольца — обычный меш со своим местом в глубине: его
+    // закрывает всё, что стоит ближе, как и любой предмет на земле.
+    this.mesh = this._ring(scene, geometry, {
       opacity: CFG.opacity,
+      renderOrder: 0,
+    });
+
+    // И призрак за преградой — тем же приёмом, что и контур фигуры: рисуется
+    // только там, где кольцо оказалось ДАЛЬШЕ уже нарисованного.
+    //
+    // Он намеренно непрозрачный: прозрачные объекты рисуются последними, уже
+    // после всех фигур, и кольцо проступало прямо по ногам зомби, которого само
+    // же и метит. Непрозрачный идёт в общем проходе и встаёт на свой слой —
+    // перед фигурами, но после окружения.
+    this.ghost = this._ring(scene, geometry, {
+      color: CONFIG.silhouette.zombieColor, // в тон контуру того, кого метим
+      renderOrder: ABOVE_SILHOUETTE - 1,
+      depthFunc: THREE.GreaterDepth,
+    });
+  }
+
+  _ring(scene, geometry, { opacity, color, renderOrder, depthFunc }) {
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+      color: color ?? CFG.color,
+      transparent: opacity !== undefined,
+      opacity: opacity ?? 1,
       depthWrite: false,
+      depthFunc: depthFunc ?? THREE.LessEqualDepth,
       side: THREE.DoubleSide,
       fog: false,
     }));
 
-    this.mesh.name = 'targetMark';
-    this.mesh.visible = false;
-    this.mesh.castShadow = false;
-    this.mesh.receiveShadow = false;
-    this.mesh.renderOrder = 2;
-    scene.add(this.mesh);
+    mesh.name = 'targetMark';
+    mesh.visible = false;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.renderOrder = renderOrder;
+    scene.add(mesh);
+    return mesh;
   }
 
   /** @param {{position: THREE.Vector3} | null} target — кто сейчас на прицеле */
   update(target) {
     this.mesh.visible = Boolean(target);
+    this.ghost.visible = Boolean(target);
     if (!target) return;
 
-    this.mesh.position.set(target.position.x, target.position.y + CFG.height, target.position.z);
+    const at = target.position;
+    this.mesh.position.set(at.x, at.y + CFG.height, at.z);
+    this.ghost.position.copy(this.mesh.position);
   }
 }
