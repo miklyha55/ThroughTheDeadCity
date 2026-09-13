@@ -3,10 +3,6 @@ import { CONFIG } from '../config.js';
 
 const CFG = CONFIG.aimMark;
 
-// Слой, на котором кольцо проступает сквозь дома: раньше самих фигур, чтобы они
-// его собой закрывали.
-const THROUGH_WALLS = 4;
-
 /**
  * Отметка цели: кольцо на земле под тем, в кого персонаж целится.
  *
@@ -15,55 +11,29 @@ const THROUGH_WALLS = 4;
  * Кольцо от геометрии не зависит вовсе, читается на любом фоне, не ломается в
  * анимации и стоит одного меша на всю сцену: цель всегда одна.
  *
- * Рисуется оно в два прохода. Открытая часть подчиняется глубине как обычный
- * предмет на земле, а то, что скрыто преградой, проступает вторым, приглушённым
- * кольцом — и только там, где скрыто. Простое «поверх всего» тут не годится:
- * метка лезла бы поверх зомби, стоящих ближе к камере.
+ * Лежит оно именно на земле и подчиняется глубине как обычный предмет: зомби
+ * стоит на кольце, а не кольцо на зомби. Отдельного прохода «сквозь стены» ему
+ * не нужно — здание, заслонившее цель, просвечивает само.
  */
 export class TargetMark {
   constructor(scene) {
     const geometry = new THREE.RingGeometry(CFG.radius - CFG.width, CFG.radius, 40);
     geometry.rotateX(-Math.PI / 2); // положить на землю
 
-    // Открытая часть кольца — обычный меш со своим местом в глубине: его
-    // закрывает всё, что стоит ближе, как и любой предмет на земле.
-    this.mesh = this._ring(scene, geometry, {
+    this.mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+      color: CFG.color,
+      transparent: true,
       opacity: CFG.opacity,
-      renderOrder: 0,
-    });
-
-    // И призрак за преградой: рисуется только там, где кольцо оказалось ДАЛЬШЕ
-    // уже нарисованного, — за домом видно, что цель всё ещё на прицеле.
-    //
-    // Он намеренно непрозрачный: прозрачные объекты рисуются последними, уже
-    // после всех фигур, и кольцо проступало прямо по ногам зомби, которого само
-    // же и метит. Непрозрачный идёт в общем проходе и встаёт на свой слой —
-    // перед фигурами, но после окружения.
-    this.ghost = this._ring(scene, geometry, {
-      color: CFG.ghostColor,
-      renderOrder: THROUGH_WALLS,
-      depthFunc: THREE.GreaterDepth,
-    });
-  }
-
-  _ring(scene, geometry, { opacity, color, renderOrder, depthFunc }) {
-    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
-      color: color ?? CFG.color,
-      transparent: opacity !== undefined,
-      opacity: opacity ?? 1,
       depthWrite: false,
-      depthFunc: depthFunc ?? THREE.LessEqualDepth,
       side: THREE.DoubleSide,
       fog: false,
     }));
 
-    mesh.name = 'targetMark';
-    mesh.visible = false;
-    mesh.castShadow = false;
-    mesh.receiveShadow = false;
-    mesh.renderOrder = renderOrder;
-    scene.add(mesh);
-    return mesh;
+    this.mesh.name = 'targetMark';
+    this.mesh.visible = false;
+    this.mesh.castShadow = false;
+    this.mesh.receiveShadow = false;
+    scene.add(this.mesh);
   }
 
   /** @param {{position: THREE.Vector3, alive?: boolean} | null} target — кто на прицеле */
@@ -73,11 +43,9 @@ export class TargetMark {
     const marked = target?.alive === false ? null : target;
 
     this.mesh.visible = Boolean(marked);
-    this.ghost.visible = Boolean(marked);
     if (!marked) return;
 
     const at = marked.position;
     this.mesh.position.set(at.x, at.y + CFG.height, at.z);
-    this.ghost.position.copy(this.mesh.position);
   }
 }

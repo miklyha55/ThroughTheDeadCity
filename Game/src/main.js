@@ -5,6 +5,7 @@ import { loadGLTF } from './core/AssetLoader.js';
 import { buildWorld } from './world/World.js';
 import { DayNight } from './world/DayNight.js';
 import { Visibility } from './world/Visibility.js';
+import { SeeThrough } from './fx/SeeThrough.js';
 import { PrefabLibrary } from './world/PrefabLibrary.js';
 import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
@@ -57,6 +58,7 @@ engine.scene.add(player.root);
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 locations.splash = new Splash();
 locations.sfx = sfx;
+locations.seeThrough = new SeeThrough(engine.camera);
 
 const music = new Music();
 const params = new URLSearchParams(window.location.search);
@@ -110,6 +112,7 @@ engine.add({
     targetMark.update(player.spotted);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     visibility.update(here); // за краем экрана фигуры не рисуются вовсе
+    locations.seeThrough.update(dt, player); // заслонившее героя — просвечивает
     dayNight.update(dt); // сутки идут своим ходом: свет, небо и тени
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },

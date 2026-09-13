@@ -36,12 +36,14 @@ const round = (value) => Math.round(value * 100) / 100;
  * с единственным проёмом-выходом, расставленные пропы и точка старта.
  */
 export class Location {
-  constructor(data, prefabs, zombieLibrary, blood = null, { batched = true, sfx = null } = {}) {
+  constructor(data, prefabs, zombieLibrary, blood = null,
+    { batched = true, sfx = null, seeThrough = null } = {}) {
     this.data = data;
     this.prefabs = prefabs;
     this.zombieLibrary = zombieLibrary;
     this.blood = blood; // общая на сцену: зомби брызжут ею, когда их сносит предметом
     this.sfx = sfx;     // и голос у них тоже общий
+    this.seeThrough = seeThrough; // сквозь что смотреть, когда оно закрывает героя
     this.onBlast = null; // сцена подхватывает взрыв: вспышка, свет, тряска камеры
     // Коробки, через которые персонаж перепрыгивает: только габариты модели,
     // без её мелких деталей — зеркала и колёса прыжку не помеха.
@@ -273,8 +275,10 @@ export class Location {
     if (prefab.dynamic) {
       const body = this._makeDynamic(prefab, object);
       if (body) ({ carrier, com } = body);
-    } else {
-      this.statics.push(object); // не двигается — значит можно слить с остальными
+    } else if (!this.seeThrough?.watch(object, prefab.size)) {
+      // Крупное под наблюдением просвечивания живёт отдельным объектом: в общем
+      // меше его не погасить поодиночке. Остальное сливается, как и раньше.
+      this.statics.push(object);
     }
 
     this._markVault(prefab, object);

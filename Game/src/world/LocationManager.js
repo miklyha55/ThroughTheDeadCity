@@ -17,6 +17,7 @@ export class LocationManager {
     this.camera = null;   // ставится снаружи: её надо переносить вместе с игроком
     this.splash = null;   // заставка на время загрузки; ставится снаружи
     this.sfx = null;      // голоса зомби; тоже ставится снаружи
+    this.seeThrough = null; // просвечивание заслонивших зданий
   }
 
   /** Подменяет библиотеку префабов и пересобирает текущую локацию на свежих моделях. */
@@ -53,10 +54,11 @@ export class LocationManager {
     this.splash?.setLevel(data.name, data.number ?? 1); // узнали только теперь, из файла
 
     this.current?.dispose();
+    this.seeThrough?.clear(); // прежние здания ушли вместе с локацией
 
     const location = new Location(
       data, this.prefabs, this.zombies, this.player?.blood,
-      { batched: !this.editing, sfx: this.sfx }
+      { batched: !this.editing, sfx: this.sfx, seeThrough: this.seeThrough }
     );
     this.scene.add(location.group);
     this.current = location;
