@@ -16,6 +16,7 @@ import { Sfx } from './core/Sfx.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
 import { Dust } from './fx/Dust.js';
+import { Puffs } from './fx/Puffs.js';
 import { TargetMark } from './fx/TargetMark.js';
 import { HealthBars } from './fx/HealthBars.js';
 import { Explosions } from './fx/Explosions.js';
@@ -41,6 +42,7 @@ const playerBlood = new Blood(engine.scene, CONFIG.blood.playerColor, CONFIG.blo
 const healthBars = new HealthBars(engine.scene);
 const explosions = new Explosions(engine.scene);
 const dust = new Dust(engine.scene);
+const puffs = new Puffs(engine.scene);
 
 const sfx = new Sfx(CONFIG.sounds.files);
 
@@ -49,6 +51,7 @@ player.effects = gunEffects;
 player.blood = blood;
 player.ownBlood = playerBlood;
 player.sfx = sfx;
+player.puffs = puffs;
 engine.scene.add(player.root);
 
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
@@ -69,7 +72,10 @@ const targetMark = new TargetMark(engine.scene);
 
 engine.add({
   update(dt) {
-    if (editor?.active) return; // в правке мир замирает: двигают его, а не он сам
+    if (editor?.active) {
+      editor.update(dt); // мир замер, но камеру ещё водят стрелками
+      return;
+    }
 
     input.update();
     player.update(dt, input.move, camera.moveYaw, locations.current);
@@ -87,6 +93,7 @@ engine.add({
     playerBlood.update(dt);
     explosions.update(dt);
     dust.update(dt, player.position);
+    puffs.update(dt);
     camera.update(dt);
     targetMark.update(player.spotted);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
@@ -157,7 +164,7 @@ updateDebugView();
 if (import.meta.env.DEV) {
   // Tab — правка расстановки мышью; пока она открыта, игра стоит на паузе
   const { createEditor } = await import('./dev/editor.js');
-  editor = createEditor({ engine, locations, joystick, onToggle: () => showHud() });
+  editor = createEditor({ engine, locations, joystick, camera, onToggle: () => showHud() });
 
   const { createRebuildPanel } = await import('./dev/rebuildPanel.js');
   createRebuildPanel({
@@ -187,6 +194,7 @@ if (import.meta.env.DEV) {
       player.blood = blood;
       player.ownBlood = playerBlood;
       player.sfx = sfx;
+      player.puffs = puffs;
       player.placeAt(spot, yaw);
       engine.scene.add(player.root);
 

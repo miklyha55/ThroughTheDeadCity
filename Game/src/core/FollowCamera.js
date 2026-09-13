@@ -78,6 +78,25 @@ export class FollowCamera {
     this._shakePower = power;
   }
 
+  /**
+   * Сдвинуть взгляд по земле, не меняя ракурса. Нужно правке локации: там
+   * камера не следит за персонажем, а гуляет сама.
+   *
+   * Сдвиг задаётся в осях экрана — «вправо» значит вправо для зрителя, а не по
+   * оси мира: иначе стрелки на изометрии вели бы наискосок.
+   */
+  pan(right, forward) {
+    const angle = this.moveYaw;
+
+    // «Вправо» — векторное произведение «вперёд» на «вверх»; знаки именно такие,
+    // иначе стрелки влево и вправо меняются местами.
+    this._focus.x += Math.sin(angle) * forward - Math.cos(angle) * right;
+    this._focus.z += Math.cos(angle) * forward + Math.sin(angle) * right;
+
+    this.camera.position.copy(this._focus).add(this._offset);
+    this.camera.lookAt(this._focus);
+  }
+
   /** Направление «вперёд по камере» для управления персонажем. */
   get moveYaw() { return this.yaw + Math.PI; }
 

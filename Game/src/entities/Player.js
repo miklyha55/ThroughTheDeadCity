@@ -124,6 +124,8 @@ export class Player {
     this._hitPoint = new THREE.Vector3();
     this.effects = null; // росчерк и вспышка; ставится снаружи
     this.sfx = null;     // короткие звуки: выстрел и прочее
+    this.puffs = null;   // пыль из-под ног; ставится снаружи
+    this.stepPhase = 1;  // где мы были в прошлом кадре по циклу бега
     this.blood = null;     // зелёные брызги: его попадания по зомби
     this.ownBlood = null;  // красные: попадания по нему самому
 
@@ -239,6 +241,39 @@ export class Player {
     this.glow = light;
   }
 
+  /**
+   * Шаги: звук и пыль ровно тогда, когда нога касается земли.
+   *
+   * Момент берётся не из таймера, а из самой анимации: мы смотрим, где сейчас
+   * клип бега, и ловим переход через отметки, на которые приходятся касания. За
+   * цикл их две — левая и правая нога. Поэтому топот совпадает с ногами при
+   * любой скорости бега и не расходится с картинкой, как расходился цикл.
+   */
+  _steps(running) {
+    if (!running || this.current !== this.actions.get('Run')) {
+      this.stepPhase = 1; // встал — следующий шаг начнётся с начала цикла
+      return;
+    }
+
+    const clip = this.current.getClip();
+    const phase = (this.current.time % clip.duration) / clip.duration;
+
+    for (const at of CFG.stepPhases) {
+      // отметку прошли, если она между прошлым кадром и нынешним
+      const crossed = this.stepPhase < phase
+        ? at > this.stepPhase && at <= phase
+        : at > this.stepPhase || at <= phase; // цикл начался заново
+
+      if (!crossed) continue;
+
+      this.sfx?.play('walk', CONFIG.sounds.volume * CFG.stepVolume);
+      this.puffs?.burst(this.root.position);
+      break;
+    }
+
+    this.stepPhase = phase;
+  }
+
   /** Плавно переключает анимацию, если она ещё не играет. */
   play(name, fade = 0.2) {
     const next = this.actions.get(name);
@@ -266,12 +301,14 @@ export class Player {
     if (!this.alive) {
       this.velocity.set(0, 0, 0);
       this.spotted = null; // и никого больше не держит на прицеле
+      this.sfx?.loop('walk', false);
       this.mixer.update(dt);
       return;
     }
 
     // в полёте управление отобрано: траектория уже задана, менять её нечем
     if (this.jumping) {
+      this.sfx?.loop('walk', false); // в воздухе ногами не топают
       this._flyOver(dt, move);
       this.mixer.update(dt);
       return;
@@ -306,6 +343,8 @@ export class Player {
 
     const speed = this.velocity.length();
     this.root.position.addScaledVector(this.velocity, dt);
+
+    this._steps(speed > 0);
 
     // корпус доворачивается к направлению движения по кратчайшей дуге
     if (speed > 0) {

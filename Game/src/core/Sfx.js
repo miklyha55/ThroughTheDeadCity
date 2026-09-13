@@ -23,6 +23,8 @@ export class Sfx {
   /** @param {Record<string, string[]>} sets — имя звука → список файлов */
   constructor(sets) {
     this.voices = new Map();
+    this.loops = new Map();               // зацикленные: шаги и всё, что длится
+    this.files = new Map(Object.entries(sets));
 
     for (const [name, files] of Object.entries(sets)) {
       const variants = files.map((file) => {
@@ -44,6 +46,45 @@ export class Sfx {
 
       this.voices.set(name, variants);
     }
+  }
+
+  /**
+   * Зацикленный звук: шаги, ветер — всё, что длится, пока длится действие.
+   *
+   * Держится отдельной дорожкой, не из общего набора: её нельзя занимать и
+   * переиспользовать, она должна крутиться ровно до тех пор, пока нужна.
+   *
+   * @param {string} name — какой звук
+   * @param {boolean} playing — должен ли он сейчас звучать
+   * @param {number} [volume]
+   * @param {number} [rate] — темп: им задаётся и скорость, и высота тона
+   */
+  loop(name, playing, volume = CFG.volume, rate = 1) {
+    let track = this.loops.get(name);
+
+    if (!track) {
+      const file = this.files.get(name)?.[0];
+      if (!file) return;
+
+      track = new Audio(file);
+      track.loop = true;
+      track.preload = 'auto';
+
+      // иначе браузер выровняет высоту тона и темп будет слышен как замедление
+      track.preservesPitch = false;
+      track.mozPreservesPitch = false;
+      track.webkitPreservesPitch = false;
+
+      this.loops.set(name, track);
+    }
+
+    track.volume = Math.min(1, volume);
+    track.playbackRate = rate;
+
+    // play() может отказать, пока игрок ничего не нажимал. Ничего страшного:
+    // метод зовут каждый кадр, и следующая попытка пройдёт.
+    if (playing && track.paused) track.play().catch(() => {});
+    else if (!playing && !track.paused) track.pause();
   }
 
   /**

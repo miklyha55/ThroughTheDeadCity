@@ -109,16 +109,21 @@ export class Zombie {
   /**
    * Смерть от прилетевшего предмета: бочка или ящик, разогнанные персонажем,
    * валят наповал независимо от того, сколько у зомби оставалось здоровья.
+   *
+   * @param {THREE.Vector3} [from] — откуда прилетело: туда же летят брызги
+   * @param {number} [gore] — во сколько раз гуще кровь: разрыв взрывом не то же
+   *   самое, что удар бочкой
    * Брызги те же, что и от пули: один и тот же залп зелени.
    *
    * @param {THREE.Vector3} [from] — откуда прилетело: туда же летят капли
    */
-  crush(from = null) {
+  crush(from = null, gore = 1) {
     if (this.state === STATE.DEAD) return false;
 
     this.blood?.splash(
       _hit.copy(this.root.position).setY(this.root.position.y + CONFIG.player.hitHeight),
-      from ?? this.root.position
+      from ?? this.root.position,
+      gore
     );
 
     this.health = 0;

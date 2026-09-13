@@ -560,7 +560,7 @@ export class Location {
 
     for (const zombie of this.zombies) {
       if (!zombie.alive) continue;
-      if (zombie.position.distanceTo(at) <= CFG.radius) zombie.crush();
+      if (zombie.position.distanceTo(at) <= CFG.radius) zombie.crush(at, CFG.gore);
     }
 
     if (player?.alive && player.position.distanceTo(at) <= CFG.radius) {

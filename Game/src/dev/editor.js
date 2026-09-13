@@ -1,12 +1,17 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
+// м/с, с которой камера едет по локации от стрелок
+const PAN_SPEED = 18;
+
 /**
  * Правка расстановки прямо в игре.
  *
  * Включается клавишей Tab, дальше — мышью: щёлкнул по предмету, потянул за
  * гизмо, сохранил. Правки уезжают в тот же JSON, из которого локация и собирается, так
  * что после перезагрузки страницы всё остаётся на местах.
+ *
+ * Камера ходит по локации стрелками, игра при этом стоит.
  *
  * Двигается всё, что стоит на локации, — и поштучные пропы, и россыпь.
  *
@@ -20,7 +25,7 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
  * Пока редактор открыт, локация пересобирается без слияния статики: слитая
  * геометрия неподвижна, и тянуть в ней было бы нечего.
  */
-export function createEditor({ engine, locations, joystick, onToggle }) {
+export function createEditor({ engine, locations, joystick, camera, onToggle }) {
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const down = new THREE.Vector2();
@@ -33,6 +38,14 @@ export function createEditor({ engine, locations, joystick, onToggle }) {
   let dragging = false;
   let picked = null;
 
+  // Какие стрелки зажаты прямо сейчас. Двигаем камеру в цикле, а не по самому
+  // нажатию: автоповтор клавиатуры идёт рывками и с задержкой в полсекунды.
+  const held = new Set();
+  const ARROWS = {
+    ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+    ArrowUp: [0, 1], ArrowDown: [0, -1],
+  };
+
   const panel = document.createElement('div');
   panel.className = 'editor';
   panel.hidden = true;
@@ -41,7 +54,8 @@ export function createEditor({ engine, locations, joystick, onToggle }) {
   const status = (text) => {
     panel.textContent = active
       ? `правка: ${locations.current.data.name}\n`
-        + 'W — сдвиг · E — поворот · R — размер · S — сохранить · Tab — выйти\n'
+        + 'стрелки — камера · W — сдвиг · E — поворот · R — размер\n'
+        + 'S — сохранить · Tab — выйти\n'
         + 'сохранение переводит россыпь и зомби в поимённый список\n'
         + text
       : '';
@@ -110,7 +124,15 @@ export function createEditor({ engine, locations, joystick, onToggle }) {
     status('щёлкни по предмету');
   }
 
+  addEventListener('keyup', (event) => held.delete(event.code));
+
   addEventListener('keydown', (event) => {
+    if (active && ARROWS[event.code]) {
+      event.preventDefault(); // иначе страница поедет вместе с камерой
+      held.add(event.code);
+      return;
+    }
+
     // Tab: на маке он свободен, в отличие от F-ряда, занятого яркостью,
     // громкостью и Mission Control. Браузеру его перехватываем — иначе он
     // уведёт фокус на элементы страницы.
@@ -141,5 +163,19 @@ export function createEditor({ engine, locations, joystick, onToggle }) {
   return {
     get active() { return active; },
     get dragging() { return dragging; },
+
+    /** Пока правка открыта, игра стоит, а камера ходит по локации стрелками. */
+    update(dt) {
+      let right = 0;
+      let forward = 0;
+
+      for (const code of held) {
+        const [x, z] = ARROWS[code];
+        right += x;
+        forward += z;
+      }
+
+      if (right || forward) camera?.pan(right * PAN_SPEED * dt, forward * PAN_SPEED * dt);
+    },
   };
 }
