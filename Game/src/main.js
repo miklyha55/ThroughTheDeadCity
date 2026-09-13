@@ -12,6 +12,7 @@ import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
+import { Dust } from './fx/Dust.js';
 import { TargetMark } from './fx/TargetMark.js';
 import { HealthBars } from './fx/HealthBars.js';
 import { Explosions } from './fx/Explosions.js';
@@ -36,6 +37,7 @@ const blood = new Blood(engine.scene);
 const playerBlood = new Blood(engine.scene, CONFIG.blood.playerColor, CONFIG.blood.playerPool);
 const healthBars = new HealthBars(engine.scene);
 const explosions = new Explosions(engine.scene);
+const dust = new Dust(engine.scene);
 
 let player = new Player(gltf);
 player.effects = gunEffects;
@@ -72,6 +74,7 @@ engine.add({
     blood.update(dt);
     playerBlood.update(dt);
     explosions.update(dt);
+    dust.update(dt, player.position);
     camera.update(dt);
     targetMark.update(player.spotted);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
