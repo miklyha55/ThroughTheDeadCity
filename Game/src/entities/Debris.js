@@ -87,6 +87,11 @@ export class Debris {
   /**
    * Разогнанный предмет насмерть сбивает того, в кого прилетел.
    *
+   * Считается не полная скорость предмета, а скорость сближения — насколько
+   * быстро он идёт именно НА эту фигуру. Иначе тот, кто сам отшвырнул бочку
+   * ногой, погибал бы от неё в следующий же кадр: бочка рядом и уже разогнана,
+   * хотя летит от него прочь.
+   *
    * Проверяется до пинка: важна та скорость, с которой предмет подлетел, а не
    * та, что он получит от касания. Спящий предмет безопасен по определению, а
    * лёгкую мелочь не засчитываем совсем — жестянка, как её ни разгони, никого
@@ -95,12 +100,18 @@ export class Debris {
    */
   _crush(item, mover) {
     if (item.asleep || typeof mover.crush !== 'function') return;
-    if (item.mass < CFG.lethalMass || item.velocity.length() < CFG.lethalSpeed) return;
+    if (item.mass < CFG.lethalMass) return;
 
     const position = item.object.position;
     const dx = position.x - mover.position.x;
     const dz = position.z - mover.position.z;
-    if (Math.hypot(dx, dz) > item.radius + mover.radius) return;
+
+    const gap = Math.hypot(dx, dz);
+    if (gap > item.radius + mover.radius || gap < 1e-4) return;
+
+    // минус — потому что (dx, dz) смотрит от фигуры к предмету
+    const closing = -(item.velocity.x * dx + item.velocity.z * dz) / gap;
+    if (closing < CFG.lethalSpeed) return;
 
     mover.crush(position);
   }

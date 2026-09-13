@@ -483,22 +483,31 @@ export class Player {
     const from = this.root.position;
     const wanted = Math.atan2(target.x - from.x, target.z - from.z);
 
-    this.yaw = wanted - this._barrelOffset();
-    this.root.rotation.y = this.yaw;
+    this._setYaw(wanted - this._barrelOffset());
+  }
+
+  /** Ставит поворот корпуса разом и в поле, и в саму модель. */
+  _setYaw(yaw) {
+    this.yaw = yaw;
+    this.root.rotation.y = yaw;
+  }
+
+  /** Куда смотрит ствол в мировых осях. */
+  _barrelAngle() {
+    if (!this.gun) return this.yaw;
+
+    this.gun.updateWorldMatrix(true, false);
+    this._barrel.set(1, 0, 0).transformDirection(this.gun.matrixWorld).setY(0);
+    if (this._barrel.lengthSq() < 1e-6) return this.yaw;
+
+    this._barrel.normalize();
+    return Math.atan2(this._barrel.x, this._barrel.z);
   }
 
   /** На сколько ствол развёрнут относительно корпуса прямо сейчас. */
   _barrelOffset() {
-    if (!this.gun) return 0;
-
-    this.gun.updateWorldMatrix(true, false);
-
     // ствол идёт вдоль локальной оси X оружия, дуло в сторону +X
-    this._barrel.set(1, 0, 0).transformDirection(this.gun.matrixWorld).setY(0);
-    if (this._barrel.lengthSq() < 1e-6) return 0;
-
-    this._barrel.normalize();
-    return Math.atan2(this._barrel.x, this._barrel.z) - this.yaw;
+    return this.gun ? this._barrelAngle() - this.yaw : 0;
   }
 
   /** Достаёт ружьё в руки или убирает за спину. */
@@ -563,8 +572,23 @@ export class Player {
     if (Math.hypot(zombie.position.x - from.x, zombie.position.z - from.z) > CFG.fireRange) return;
 
     const muzzle = this._muzzlePoint();
-    const base = Math.atan2(zombie.position.x - muzzle.x, zombie.position.z - muzzle.z);
+
+    // Направление берём у самого ствола, а не считаем от дула к цели. Иначе
+    // вблизи получалась ложь: ружьё вынесено вбок почти на полметра, и линия
+    // «из дула точно в зомби» уходила заметно в сторону от того, куда ствол
+    // смотрит. Теперь пуля летит ровно вдоль него, и росчерк с ним совпадает
+    // при любой дистанции.
+    const base = this._barrelAngle();
     const middle = (CFG.pellets - 1) / 2;
+
+    // Докуда чертить пулю, никого не встретившую. На всю дальность нельзя: в упор
+    // боковые пули веера почти всегда мимо, и десятиметровые росчерки разлетались
+    // бы веером в стороны, будто персонаж палит куда попало. Тянем чуть дальше
+    // цели — тогда промах виден, но не спорит с тем, куда он на самом деле целил.
+    const range = Math.min(
+      CFG.fireRange,
+      Math.hypot(zombie.position.x - muzzle.x, zombie.position.z - muzzle.z) * CFG.missReach
+    );
 
     for (let i = 0; i < CFG.pellets; i++) {
       const angle = base + (i - middle) * CFG.spreadAngle * DEG;
@@ -582,9 +606,7 @@ export class Player {
       if (last) {
         this._hitPoint.copy(last.position).setY(last.position.y + CFG.hitHeight);
       } else {
-        this._hitPoint.set(
-          muzzle.x + dirX * CFG.fireRange, muzzle.y, muzzle.z + dirZ * CFG.fireRange
-        );
+        this._hitPoint.set(muzzle.x + dirX * range, muzzle.y, muzzle.z + dirZ * range);
       }
       this.effects?.fire(muzzle, this._hitPoint);
 
