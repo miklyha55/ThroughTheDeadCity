@@ -141,8 +141,8 @@ const FRAGMENT = /* glsl */`
     // Завихрение: перед тем как взять шум, смещаем саму точку по другому шуму.
     // Оттого струи закручиваются, а не ползут параллельными полосами.
     vec2 warp = vec2(
-      layered(p * 0.5 + vec2(0.0, time * 0.05)),
-      layered(p * 0.5 + vec2(time * 0.04, 0.0))
+      layered(p * 0.5 + vec2(0.0, time * 0.025)),
+      layered(p * 0.5 + vec2(time * 0.02, 0.0))
     ) - 0.5;
 
     float density = layered(p + warp * swirl);

@@ -613,14 +613,24 @@ export class Player {
     // ударили или он снова побежал. Тогда раньше оставался хлопок без выстрела.
     this.sfx?.play('fire', CONFIG.sounds.volume * CFG.fireVolume);
 
-    const muzzle = this._muzzlePoint();
+    // Откуда вылетает пуля.
+    //
+    // Обычно — из дула, и летит вдоль ствола: так росчерк совпадает с оружием.
+    // Но вплотную это ломается. Дуло вынесено вперёд почти на метр, и зомби,
+    // подошедший ближе этого, оказывается ПОЗАДИ дула: ствол смотрит вперёд,
+    // а цель сбоку — выстрел выглядит уходящим в никуда. В упор стреляем от
+    // груди прямо в цель: линия короткая и честная.
+    const reach = Math.hypot(zombie.position.x - from.x, zombie.position.z - from.z);
+    const pointBlank = reach < CFG.muzzleOffset * CFG.pointBlank;
 
-    // Направление берём у самого ствола, а не считаем от дула к цели. Иначе
-    // вблизи получалась ложь: ружьё вынесено вбок почти на полметра, и линия
-    // «из дула точно в зомби» уходила заметно в сторону от того, куда ствол
-    // смотрит. Теперь пуля летит ровно вдоль него, и росчерк с ним совпадает
-    // при любой дистанции.
-    const base = this._barrelAngle();
+    const muzzle = pointBlank
+      ? this._muzzle.copy(from).setY(from.y + CFG.hitHeight)
+      : this._muzzlePoint();
+
+    const base = pointBlank
+      ? Math.atan2(zombie.position.x - muzzle.x, zombie.position.z - muzzle.z)
+      : this._barrelAngle();
+
     const middle = (CFG.pellets - 1) / 2;
 
     // Докуда чертить пулю, никого не встретившую. На всю дальность нельзя: в упор
