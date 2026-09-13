@@ -14,6 +14,7 @@ export class LocationManager {
     this.loading = false;
     this.onChange = null; // вызывается после смены локации — обновить HUD и прочее
     this.editing = false; // в режиме правки статику не сливаем: её двигают мышью
+    this.splash = null;   // заставка на время загрузки; ставится снаружи
   }
 
   /** Подменяет библиотеку префабов и пересобирает текущую локацию на свежих моделях. */
@@ -33,10 +34,13 @@ export class LocationManager {
 
   async load(id) {
     this.loading = true;
+    this.splash?.show();
+
     try {
       return await this._load(id);
     } finally {
       this.loading = false;
+      await this.splash?.hide();
     }
   }
 
@@ -44,6 +48,7 @@ export class LocationManager {
     const res = await fetch(`/locations/${id}.json`);
     if (!res.ok) throw new Error(`локация «${id}» не найдена (${res.status})`);
     const data = await res.json();
+    this.splash?.setTitle(data.name); // имя знаем только теперь, из самого файла
 
     this.current?.dispose();
 

@@ -10,6 +10,7 @@ import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
+import { Splash } from './ui/Splash.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
 import { Dust } from './fx/Dust.js';
@@ -46,6 +47,7 @@ player.ownBlood = playerBlood;
 engine.scene.add(player.root);
 
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
+locations.splash = new Splash();
 const params = new URLSearchParams(window.location.search);
 await locations.load(params.get('location') ?? CONFIG.locations.first);
 
