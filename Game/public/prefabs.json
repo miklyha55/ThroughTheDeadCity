@@ -1,5 +1,5 @@
 {
-  "_": "Роли моделей из Env.blend. Правило ищется от частного к общему: overrides → groups (самый длинный подходящий префикс) → defaults. Сами модели не правятся — только то, как игра с ними обращается. Поле vault: через такой предмет персонаж перепрыгивает, если тот не выше player.vaultMaxHeight. Поле silhouette: false — за таким предметом контур фигуры не проступает (деревья, поля, мелочь: подсвечивать за ними нечего). Поле sink: на сколько утопить предмет в землю. Дорожная плитка — плита в ладонь толщиной, и без просадки в ней вязнут ноги.",
+  "_": "Роли моделей из Env.blend. Правило ищется от частного к общему: overrides → groups (самый длинный подходящий префикс) → defaults. Сами модели не правятся — только то, как игра с ними обращается. Поле vault: через такой предмет персонаж перепрыгивает, если тот не выше player.vaultMaxHeight. Поле sink: на сколько утопить предмет в землю. Дорожная плитка — плита в ладонь толщиной, и без просадки в ней вязнут ноги.",
   "defaults": {
     "solid": true,
     "dynamic": false,
@@ -23,29 +23,23 @@
       "vault": true
     },
     "Fence_": {
-      "solid": true,
-      "silhouette": false
+      "solid": true
     },
     "Tree_": {
-      "solid": true,
-      "silhouette": false
+      "solid": true
     },
     "Cactus_": {
-      "solid": true,
-      "silhouette": false
+      "solid": true
     },
     "Bush_": {
       "solid": true,
-      "minSolidHeight": 1.5,
-      "silhouette": false
+      "minSolidHeight": 1.5
     },
     "Crop_": {
-      "solid": false,
-      "silhouette": false
+      "solid": false
     },
     "Grass_": {
-      "solid": false,
-      "silhouette": false
+      "solid": false
     },
     "Road_": {
       "solid": false,
@@ -54,8 +48,7 @@
     },
     "Prop_": {
       "solid": false,
-      "dynamic": true,
-      "silhouette": false
+      "dynamic": true
     }
   },
   "overrides": {
@@ -66,8 +59,6 @@
       "solid": true,
       "dynamic": false
     },
-    "Bld_WaterTower": {
-      "silhouette": false
-    }
+    "Bld_WaterTower": {}
   }
 }

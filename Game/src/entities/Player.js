@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { batchSkinned } from '../world/batching.js';
-import { addSilhouette } from '../fx/Silhouette.js';
 import { arcPoint } from '../core/arc.js';
 
 const CFG = CONFIG.player;
@@ -55,13 +54,6 @@ export class Player {
         o.castShadow = true;
         o.receiveShadow = true;
       }
-    });
-
-    // силуэт проступает, когда персонаж уходит за дом
-    this.silhouette = addSilhouette(this.root, {
-      color: CONFIG.silhouette.playerColor,
-      opacity: CONFIG.silhouette.opacity,
-      order: CONFIG.silhouette.playerOrder, // свой контур поверх чужих
     });
 
     this._addGlow();

@@ -49,7 +49,6 @@ export class PrefabLibrary {
       solid,
       dynamic: rules.dynamic === true,
       vault: rules.vault === true,
-      silhouette: rules.silhouette !== false, // за таким предметом контур проступает
       sink: rules.sink ?? 0, // на сколько утопить: у настила это толщина полотна
       shadows: rules.shadows !== false,
       shapes: this.props.collisionShapes(name),

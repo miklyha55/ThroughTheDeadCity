@@ -17,7 +17,6 @@ export class Engine {
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = CONFIG.world.exposure;
-    this.renderer.localClippingEnabled = true; // контур обрезается по уровню земли
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();

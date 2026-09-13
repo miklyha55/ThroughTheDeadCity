@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
-import { addSilhouette } from '../fx/Silhouette.js';
 
 const CFG = CONFIG.zombies;
 
@@ -42,11 +41,6 @@ export class Zombie {
         o.castShadow = true;
         o.receiveShadow = true;
       }
-    });
-
-    this.silhouette = addSilhouette(model, {
-      color: CONFIG.silhouette.zombieColor,
-      opacity: CONFIG.silhouette.opacity,
     });
 
     this.mixer = new THREE.AnimationMixer(model);

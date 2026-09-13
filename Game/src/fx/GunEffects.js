@@ -3,11 +3,6 @@ import { CONFIG } from '../config.js';
 
 const CFG = CONFIG.gunEffects;
 
-// Тот же слой, на котором живут контуры фигур: выстрел видно сквозь дом ровно
-// так же, как и стрелявшего, — иначе из-за угла светился бы силуэт без единого
-// росчерка, будто он палит вхолостую.
-const THROUGH_WALLS_ORDER = 3;
-
 const _side = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0);
 const _toss = new THREE.Vector3();
@@ -35,12 +30,10 @@ export class GunEffects {
         opacity: 0,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        depthTest: false, // росчерк виден и сквозь стену, как контур фигуры
       });
       const mesh = new THREE.Mesh(tracerGeometry, material);
       mesh.visible = false;
       mesh.frustumCulled = false;
-      mesh.renderOrder = THROUGH_WALLS_ORDER;
       scene.add(mesh);
       this.tracers.push({ mesh, life: 0 });
     }
@@ -54,12 +47,10 @@ export class GunEffects {
         opacity: 0,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        depthTest: false, // вспышка у дула — вместе с росчерком
       });
       const mesh = new THREE.Mesh(flashGeometry, material);
       mesh.visible = false;
       mesh.frustumCulled = false;
-      mesh.renderOrder = THROUGH_WALLS_ORDER;
       scene.add(mesh);
       this.flashes.push({ mesh, life: 0 });
     }
