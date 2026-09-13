@@ -3,6 +3,7 @@ import { Input } from './core/Input.js';
 import { FollowCamera } from './core/FollowCamera.js';
 import { loadGLTF } from './core/AssetLoader.js';
 import { buildWorld } from './world/World.js';
+import { DayNight } from './world/DayNight.js';
 import { PrefabLibrary } from './world/PrefabLibrary.js';
 import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
@@ -19,7 +20,9 @@ import { CONFIG } from './config.js';
 const engine = new Engine(document.getElementById('app'));
 const hud = document.getElementById('hud');
 
-const { sun } = buildWorld(engine.scene, engine.renderer);
+const world = buildWorld(engine.scene, engine.renderer);
+const { sun } = world;
+const dayNight = new DayNight({ scene: engine.scene, ...world });
 
 let [gltf, prefabs, zombies] = await Promise.all([
   loadGLTF(CONFIG.player.modelUrl),
@@ -73,6 +76,7 @@ engine.add({
     silhouettes.update(here, player); // после камеры: луч к ней считается по её позе
     targetMark.update(player.spotted);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
+    dayNight.update(dt); // сутки идут своим ходом: свет, небо и тени
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
   },
 });

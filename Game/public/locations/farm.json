@@ -30,8 +30,7 @@
       "at": [
         -13,
         -13
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Bld_Farmhouse",
@@ -54,32 +53,28 @@
       "at": [
         -17,
         15
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Crop_Corn",
       "at": [
         -16,
         2
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Crop_Wheat",
       "at": [
         -16,
         10
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Crop_Pumpkin",
       "at": [
         16,
         -2
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Heavy_Tractor",
@@ -124,18 +119,16 @@
     {
       "prop": "Prop_Barrel",
       "at": [
-        -3.1,
+        -4.43,
         10.4
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Prop_Tires",
       "at": [
         9,
         4
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Prop_Barricade",
@@ -158,16 +151,14 @@
       "at": [
         5.6,
         -19.5
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Tree_Oak",
       "at": [
         -20,
         -4
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Tree_Dead",
@@ -182,121 +173,1226 @@
       "at": [
         11,
         -3
-      ],
-      "rotation": 0
+      ]
     },
     {
       "prop": "Bush_Hedge",
       "at": [
         -19,
         20
-      ],
-      "rotation": 0
-    }
-  ],
-  "scatter": [
-    {
-      "seed": 7,
-      "props": [
-        "Grass_Clump",
-        "Bush_Sage",
-        "Bush_Tumbleweed"
-      ],
-      "count": 44,
-      "area": [
-        -21,
-        -21,
-        21,
-        21
-      ],
-      "scale": [
-        0.7,
-        1.5
       ]
     },
     {
-      "seed": 21,
-      "props": [
-        "Prop_Cone",
-        "Prop_Tires"
+      "prop": "Grass_Clump",
+      "at": [
+        8.36,
+        0.9
       ],
-      "count": 14,
-      "area": [
-        -18,
-        -18,
-        18,
-        18
-      ],
-      "scale": [
-        0.8,
-        1.2
-      ],
-      "stack": {
-        "only": [
-          "Prop_Tires"
-        ],
-        "layers": [
-          2,
-          4
-        ],
-        "step": 0.19,
-        "jitter": 0.13,
-        "tilt": 14
-      },
-      "clearance": 0.55
+      "rotation": 146,
+      "scale": 1.07
     },
     {
-      "seed": 33,
-      "props": [
-        "Prop_Barrel",
-        "Prop_Crate",
-        "Prop_Jerrycan",
-        "Prop_Pallet"
+      "prop": "Grass_Clump",
+      "at": [
+        2.24,
+        9.65
       ],
-      "count": 22,
-      "area": [
-        -19,
-        -19,
-        19,
-        19
+      "rotation": 92.8,
+      "scale": 0.82
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        0.77,
+        -12.72
       ],
-      "scale": [
-        0.85,
-        1.15
+      "rotation": 132.5,
+      "scale": 0.93
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        -8.55,
+        20.07
       ],
-      "clearance": 0.5
+      "rotation": 89.1,
+      "scale": 1.4
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        -8.78,
+        2.01
+      ],
+      "rotation": 274.3,
+      "scale": 0.76
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        2.26,
+        5.11
+      ],
+      "rotation": 244.8,
+      "scale": 1.47
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        17.69,
+        13.76
+      ],
+      "rotation": 14.4,
+      "scale": 0.84
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        -3.14,
+        -20.15
+      ],
+      "rotation": 31.7,
+      "scale": 1.31
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        -3.08,
+        -1.32
+      ],
+      "rotation": 340.6,
+      "scale": 1.26
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -7.11,
+        -6.03
+      ],
+      "rotation": 50,
+      "scale": 0.81
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        5.55,
+        -6.86
+      ],
+      "rotation": 15.7,
+      "scale": 1.25
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        2.01,
+        13.72
+      ],
+      "rotation": 235.9,
+      "scale": 1.44
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        1.26,
+        6.26
+      ],
+      "rotation": 320.8,
+      "scale": 1.47
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        3.96,
+        19.48
+      ],
+      "rotation": 348.3,
+      "scale": 1.14
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -20.76,
+        0.68
+      ],
+      "rotation": 118.1,
+      "scale": 1.28
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        10.73,
+        20.03
+      ],
+      "rotation": 200.7,
+      "scale": 1.36
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        5.98,
+        10.02
+      ],
+      "rotation": 198.6,
+      "scale": 0.95
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        -20.61,
+        -19.99
+      ],
+      "rotation": 339.6,
+      "scale": 1.37
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        -20.4,
+        4.99
+      ],
+      "rotation": 214.2,
+      "scale": 1.27
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -9.32,
+        20.42
+      ],
+      "rotation": 234,
+      "scale": 1.34
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        20.76,
+        0.29
+      ],
+      "rotation": 204.1,
+      "scale": 0.83
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        6.66,
+        20.59
+      ],
+      "rotation": 219.4,
+      "scale": 1.29
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -0.45,
+        -11.35
+      ],
+      "rotation": 210.2,
+      "scale": 1.34
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -0.94,
+        1.08
+      ],
+      "rotation": 64.9,
+      "scale": 0.9
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        -0.94,
+        -13.82
+      ],
+      "rotation": 1.2,
+      "scale": 0.84
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        -16.5,
+        15.8
+      ],
+      "rotation": 353.8,
+      "scale": 0.75
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        -3.99,
+        -0.04
+      ],
+      "rotation": 263.6,
+      "scale": 0.99
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        12.24,
+        8.85
+      ],
+      "rotation": 288,
+      "scale": 1.12
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -8.71,
+        1.14
+      ],
+      "rotation": 279.5,
+      "scale": 0.76
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        13.73,
+        13.75
+      ],
+      "rotation": 278.9,
+      "scale": 1.04
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        17.65,
+        -10.44
+      ],
+      "rotation": 130.1,
+      "scale": 1.08
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -4.03,
+        19.93
+      ],
+      "rotation": 198.5,
+      "scale": 1.05
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        1.56,
+        -8.68
+      ],
+      "rotation": 318.3,
+      "scale": 1.16
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -2.65,
+        8.3
+      ],
+      "rotation": 335.2,
+      "scale": 1.14
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        7.71,
+        9.75
+      ],
+      "rotation": 347.3,
+      "scale": 0.95
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        13.81,
+        19.44
+      ],
+      "rotation": 81.5,
+      "scale": 1.48
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        1.61,
+        -4.57
+      ],
+      "rotation": 256.9,
+      "scale": 1.31
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        9.47,
+        5.1
+      ],
+      "rotation": 213.9,
+      "scale": 0.92
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -0.73,
+        -15.13
+      ],
+      "rotation": 260.1,
+      "scale": 1.07
+    },
+    {
+      "prop": "Bush_Sage",
+      "at": [
+        2.15,
+        16.3
+      ],
+      "rotation": 343.1,
+      "scale": 0.82
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        -8.95,
+        1
+      ],
+      "rotation": 141.4,
+      "scale": 1.43
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        1.26,
+        17.13
+      ],
+      "rotation": 100.3,
+      "scale": 1.09
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        19.72,
+        14.4
+      ],
+      "rotation": 1,
+      "scale": 0.83
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        17.3,
+        -9.61
+      ],
+      "rotation": 212.1,
+      "scale": 0.91
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -1.91,
+        -7.8
+      ],
+      "rotation": 42.3
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -11.24,
+        -5.86
+      ],
+      "rotation": -30.2
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -11.32,
+        -5.76
+      ],
+      "rotation": 83.2,
+      "y": 0.19
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -11.16,
+        -5.67
+      ],
+      "rotation": -36.6,
+      "y": 0.38
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -4.26,
+        -6.79
+      ],
+      "rotation": -48.8
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        13.13,
+        15.17
+      ],
+      "rotation": -73.9
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -1.03,
+        -15.85
+      ],
+      "rotation": 36.6
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -10.28,
+        5.72
+      ],
+      "rotation": -56.9
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        3.67,
+        9.07
+      ],
+      "rotation": 81.7
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        14.44,
+        16.96
+      ],
+      "rotation": 88
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        11.57,
+        7.99
+      ],
+      "rotation": 32.1
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -9.01,
+        -4.36
+      ],
+      "rotation": 58.3
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -3.05,
+        8.39
+      ],
+      "rotation": 58.9
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        12.05,
+        2.66
+      ],
+      "rotation": -66
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        12.12,
+        2.82
+      ],
+      "rotation": 84.1,
+      "y": 0.19
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        12.09,
+        2.77
+      ],
+      "rotation": 12.1,
+      "y": 0.38
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        12.12,
+        2.76
+      ],
+      "rotation": -86.8,
+      "y": 0.57
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -9.22,
+        5.53
+      ],
+      "rotation": -13.4
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -9.38,
+        5.51
+      ],
+      "rotation": -24.6,
+      "y": 0.19
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        13.39,
+        17.21
+      ],
+      "rotation": -42.1
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        17.58,
+        -6.75
+      ],
+      "rotation": -69
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        2.66,
+        -14.17
+      ],
+      "rotation": 29
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        -10.23,
+        8.75
+      ],
+      "rotation": -22.7
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        12.63,
+        6.55
+      ],
+      "rotation": 28.3
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        7.55,
+        -5.43
+      ],
+      "rotation": -37
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -3.48,
+        -10.11
+      ],
+      "rotation": -6.5
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        15.68,
+        14.74
+      ],
+      "rotation": -31.9
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        -4.3,
+        -8.2
+      ],
+      "rotation": 30.9
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        5.14,
+        -0.12
+      ],
+      "rotation": 80.8
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        9.37,
+        14.43
+      ],
+      "rotation": -90
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        18.86,
+        -16.76
+      ],
+      "rotation": -21.9
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        14.4,
+        -16
+      ],
+      "rotation": 17.6
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        13.02,
+        7.37
+      ],
+      "rotation": -87.5
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        12.61,
+        18.61
+      ],
+      "rotation": 76
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        1,
+        -1.1
+      ],
+      "rotation": -57.2
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        13.97,
+        -18.39
+      ],
+      "rotation": 30.9
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        17.22,
+        17.23
+      ],
+      "rotation": 87.1
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        3.92,
+        -18.14
+      ],
+      "rotation": 68.2
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        -6.2,
+        11.97
+      ],
+      "rotation": 50.7
+    },
+    {
+      "prop": "Prop_Crate",
+      "at": [
+        -4.95,
+        17.69
+      ],
+      "rotation": 66.6
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -4.25,
+        -2.24
+      ],
+      "rotation": 39.9
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        -3.28,
+        -2.82
+      ],
+      "rotation": -27.8
     }
   ],
-  "hordes": [
+  "zombies": [
     {
-      "seed": 7,
-      "kinds": [
-        "zombie1",
-        "zombie2"
+      "kind": "zombie2",
+      "at": [
+        -4.86,
+        -18.39
       ],
-      "count": 48,
-      "area": [
-        -19.0,
-        -19.0,
-        19.0,
-        19.0
-      ],
-      "spacing": 0.9
+      "rotation": 214.2
     },
     {
-      "seed": 41,
-      "kinds": [
-        "zombie1",
-        "zombie2"
+      "kind": "zombie2",
+      "at": [
+        2.15,
+        -17.25
       ],
-      "count": 48,
-      "area": [
-        -17.0,
-        -21.0,
-        17.0,
-        -9.0
+      "rotation": 234
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        5.97,
+        -14.85
       ],
-      "spacing": 0.6
+      "rotation": 357.9
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        11.15,
+        -17.76
+      ],
+      "rotation": 75.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        16.19,
+        -16.17
+      ],
+      "rotation": 90.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -5.89,
+        -9.08
+      ],
+      "rotation": 190.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -0.96,
+        -10.89
+      ],
+      "rotation": 243.3
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        3.27,
+        -12.3
+      ],
+      "rotation": 37.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -17.92,
+        -5.19
+      ],
+      "rotation": 237.4
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -12.69,
+        -5.78
+      ],
+      "rotation": 256.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -6.62,
+        -5.46
+      ],
+      "rotation": 307.7
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        0.15,
+        -3.5
+      ],
+      "rotation": 173.4
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        3.44,
+        -4.55
+      ],
+      "rotation": 77.7
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        10.04,
+        -5.27
+      ],
+      "rotation": 105.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -8.75,
+        2
+      ],
+      "rotation": 311.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -4.58,
+        0.89
+      ],
+      "rotation": 109.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -0.69,
+        1.14
+      ],
+      "rotation": 207.2
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        6.14,
+        1.76
+      ],
+      "rotation": 5.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        8.9,
+        -0.42
+      ],
+      "rotation": 243.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -9.2,
+        6.89
+      ],
+      "rotation": 19.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -7.2,
+        5.32
+      ],
+      "rotation": 41
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        0.14,
+        4.39
+      ],
+      "rotation": 340.4
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        6.89,
+        6.33
+      ],
+      "rotation": 161.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        10.45,
+        3.52
+      ],
+      "rotation": 281
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        11.19,
+        9.75
+      ],
+      "rotation": 94.6
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -17.27,
+        15.75
+      ],
+      "rotation": 182.6
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -12.13,
+        16.89
+      ],
+      "rotation": 353.9
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        11.99,
+        14.81
+      ],
+      "rotation": 174.3
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -14.79,
+        -19.48
+      ],
+      "rotation": 194.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -12.77,
+        -18.51
+      ],
+      "rotation": 20.7
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -9.16,
+        -19.91
+      ],
+      "rotation": 344.4
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -7.73,
+        -20.07
+      ],
+      "rotation": 291.5
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -4.15,
+        -20.07
+      ],
+      "rotation": 256.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -2.13,
+        -19.35
+      ],
+      "rotation": 142.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        2.03,
+        -19.76
+      ],
+      "rotation": 34.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        4.48,
+        -20
+      ],
+      "rotation": 102.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        8.04,
+        -19.19
+      ],
+      "rotation": 74.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        9.59,
+        -18.95
+      ],
+      "rotation": 138.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        12.26,
+        -18.72
+      ],
+      "rotation": 219.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        15.07,
+        -19.46
+      ],
+      "rotation": 331
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -6.18,
+        -15.74
+      ],
+      "rotation": 294
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -3.28,
+        -17.55
+      ],
+      "rotation": 177.7
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -2.04,
+        -16.83
+      ],
+      "rotation": 107.1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        0.64,
+        -17.09
+      ],
+      "rotation": 35.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        5.16,
+        -16.06
+      ],
+      "rotation": 230.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        6.01,
+        -17.61
+      ],
+      "rotation": 4.7
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        9.73,
+        -17.54
+      ],
+      "rotation": 233.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        13.01,
+        -16.69
+      ],
+      "rotation": 56.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        15.74,
+        -17.44
+      ],
+      "rotation": 112.7
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -1.22,
+        -12.68
+      ],
+      "rotation": 25.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        1.39,
+        -12.63
+      ],
+      "rotation": 74
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        4.05,
+        -14.08
+      ],
+      "rotation": 79.2
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        7.07,
+        -13.06
+      ],
+      "rotation": 18.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -5.96,
+        -10.62
+      ],
+      "rotation": 154.1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -4.73,
+        -9.78
+      ],
+      "rotation": 275.1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -2.31,
+        -10.67
+      ],
+      "rotation": 140.3
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        2.08,
+        -10.87
+      ],
+      "rotation": 267.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        5.32,
+        -9.41
+      ],
+      "rotation": 27.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        6.81,
+        -11.33
+      ],
+      "rotation": 317.8
     }
   ]
 }

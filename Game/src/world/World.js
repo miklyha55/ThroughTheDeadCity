@@ -16,7 +16,8 @@ export function buildWorld(scene, renderer) {
   scene.environmentIntensity = CFG.envIntensity;
   pmrem.dispose();
 
-  scene.add(new THREE.HemisphereLight(CFG.skyColor, CFG.groundColor, CFG.hemiIntensity));
+  const hemi = new THREE.HemisphereLight(CFG.skyColor, CFG.groundColor, CFG.hemiIntensity);
+  scene.add(hemi);
 
   const sun = new THREE.DirectionalLight(CFG.sunColor, CFG.sunIntensity);
   const sunOffset = new THREE.Vector3(...CFG.sunOffset);
@@ -50,5 +51,7 @@ export function buildWorld(scene, renderer) {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  return { sun };
+  // Смену суток крутит DayNight: ему нужны сам свет, полусфера и цвет неба,
+  // который делят фон и туман.
+  return { sun, hemi, sky, sunOffset };
 }

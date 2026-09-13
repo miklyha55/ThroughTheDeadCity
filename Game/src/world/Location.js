@@ -174,10 +174,10 @@ export class Location {
       obj.rotation.y = (entry.rotation ?? 0) * DEG;
       if (entry.scale) obj.scale.setScalar(entry.scale);
       this.group.add(obj);
-      this._place(entry.prop, obj);
+      const { carrier, com } = this._place(entry.prop, obj);
 
       // связь со строкой в JSON: по ней редактор сохраняет сдвинутое обратно
-      this.placed.push({ object: obj, entry });
+      this.placed.push({ object: carrier, com, entry });
     }
 
     // разбросанная мелочь: трава, кусты, мусор — задаётся не поштучно, а зоной
@@ -225,12 +225,12 @@ export class Location {
 
           obj.scale.setScalar(minScale + rand() * (maxScale - minScale));
           this.group.add(obj);
-          this._place(name, obj);
+          const { carrier, com } = this._place(name, obj, layer === 0);
 
-          // Россыпь тоже можно двигать в редакторе. Строки в JSON у неё нет —
-          // она родилась из зоны и семени, — поэтому при сохранении вся зона
-          // «запекается»: каждый предмет становится отдельной записью.
-          this.placed.push({ object: obj, entry: { prop: name }, scattered: true });
+          // Россыпь тоже двигается мышью, а при сохранении запекается в обычные
+          // записи: зона задаёт не места, а правило, по которому они каждый раз
+          // разыгрываются заново.
+          this.placed.push({ object: carrier, com, entry: { prop: name } });
         }
       }
     }
@@ -319,6 +319,8 @@ export class Location {
   _addZombie(kind, x, z, yaw, phase) {
     const zombie = this.zombieLibrary.create(kind);
     if (!zombie) return;
+
+    zombie.kind = kind; // чтобы редактор знал, кого записывать в файл
 
     const { idleLength, speedSpread, spacing } = CONFIG.zombies;
 
@@ -445,10 +447,18 @@ export class Location {
     }
     if (markOccupied) this.occupied.add(object, prefab.shapes);
 
-    if (prefab.dynamic) this._makeDynamic(prefab, object);
-    else this.statics.push(object); // не двигается — значит можно слить с остальными
+    let carrier = object; // кого двигать, чтобы поехал сам предмет
+    let com = null;       // и на сколько начало предмета смещено от начала модели
+
+    if (prefab.dynamic) {
+      const body = this._makeDynamic(prefab, object);
+      if (body) ({ carrier, com } = body);
+    } else {
+      this.statics.push(object); // не двигается — значит можно слить с остальными
+    }
 
     this._markVault(prefab, object);
+    return { carrier, com };
   }
 
   /**
@@ -506,6 +516,11 @@ export class Location {
       boxMax: body.boxMax.clone().multiply(scale),
       volume: body.volume * scale.x * scale.y * scale.z,
     }, GROUND_Y, CONFIG.explosion.props.includes(prefab.name));
+
+    // По сцене такой предмет носит контейнер, а модель сидит внутри со сдвигом
+    // в центр масс. Редактору нужен контейнер: двигая модель, он возил бы её
+    // внутри неподвижной физики.
+    return { carrier: pivot, com };
   }
 
   /**
@@ -606,21 +621,34 @@ export class Location {
    * руками, а не мышью.
    */
   snapshot() {
-    const props = this.placed.map(({ object, entry }) => {
-      const saved = {
-        prop: entry.prop,
-        at: [round(object.position.x), round(object.position.z)],
-      };
+    const props = this.placed.map(({ object, com, entry }) => {
+      // У физического предмета начало координат сидит в центре масс, а в файле
+      // хранится точка, из которой его ставят. Сдвиг снимаем обратно — иначе вся
+      // мелочь съезжает в центр карты и уходит под землю.
+      const x = object.position.x - (com?.x ?? 0);
+      const y = object.position.y - (com?.y ?? 0);
+      const z = object.position.z - (com?.z ?? 0);
+
+      const saved = { prop: entry.prop, at: [round(x), round(z)] };
 
       const yaw = Math.round((object.rotation.y / DEG) * 10) / 10;
       if (yaw) saved.rotation = yaw;
-      if (Math.abs(object.position.y) > 1e-3) saved.y = round(object.position.y);
+      if (Math.abs(y) > 1e-3) saved.y = round(y);
       if (Math.abs(object.scale.x - 1) > 1e-3) saved.scale = round(object.scale.x);
       return saved;
     });
 
-    const data = { ...this.data, props };
+    // Зомби сохраняем там, где они стоят сейчас, — по одной записи на каждого.
+    const zombies = this.zombies.map((zombie) => ({
+      kind: zombie.kind,
+      at: [round(zombie.position.x), round(zombie.position.z)],
+      rotation: Math.round((zombie.yaw / DEG) * 10) / 10,
+    }));
+
+    // Оба процедурных раздела уходят: и россыпь, и орды теперь лежат поимённо.
+    const data = { ...this.data, props, zombies };
     delete data.scatter;
+    delete data.hordes;
     return data;
   }
 
