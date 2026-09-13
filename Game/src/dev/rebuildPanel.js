@@ -1,5 +1,8 @@
 /**
- * Панель разработчика: кнопка пересборки моделей из Env.blend.
+ * Панель разработчика: кнопка пересборки ресурсов.
+ *
+ * Модели уезжают из .blend через Blender, музыка и заставки просто копируются
+ * из соседних папок проекта в public — туда, откуда их берёт игра.
  *
  * Нажатие запускает на dev-сервере Blender без интерфейса с тем же скриптом
  * экспорта, что и вручную, а затем подхватывает свежий props.glb и заново
@@ -13,7 +16,7 @@ export function createRebuildPanel({ onRebuilt }) {
 
   const button = document.createElement('button');
   button.className = 'devpanel__button';
-  button.textContent = 'Обновить модели';
+  button.textContent = 'Обновить';
 
   const status = document.createElement('div');
   status.className = 'devpanel__status';

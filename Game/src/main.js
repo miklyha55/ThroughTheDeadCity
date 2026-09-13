@@ -11,6 +11,8 @@ import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
+import { Music } from './core/Music.js';
+import { Sfx } from './core/Sfx.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
 import { Dust } from './fx/Dust.js';
@@ -40,14 +42,21 @@ const healthBars = new HealthBars(engine.scene);
 const explosions = new Explosions(engine.scene);
 const dust = new Dust(engine.scene);
 
+const sfx = new Sfx(CONFIG.sounds.files);
+
 let player = new Player(gltf);
 player.effects = gunEffects;
 player.blood = blood;
 player.ownBlood = playerBlood;
+player.sfx = sfx;
 engine.scene.add(player.root);
 
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 locations.splash = new Splash();
+
+// Музыка принадлежит игре, а не уровню: заводится один раз и играет по кругу,
+// пока открыта вкладка. Перезагрузка локации её не трогает.
+new Music();
 const params = new URLSearchParams(window.location.search);
 await locations.load(params.get('location') ?? CONFIG.locations.first);
 
@@ -169,6 +178,7 @@ if (import.meta.env.DEV) {
       player.effects = gunEffects;
       player.blood = blood;
       player.ownBlood = playerBlood;
+      player.sfx = sfx;
       player.placeAt(spot, yaw);
       engine.scene.add(player.root);
 

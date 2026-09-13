@@ -123,6 +123,7 @@ export class Player {
     this._muzzle = new THREE.Vector3();
     this._hitPoint = new THREE.Vector3();
     this.effects = null; // росчерк и вспышка; ставится снаружи
+    this.sfx = null;     // короткие звуки: выстрел и прочее
     this.blood = null;     // зелёные брызги: его попадания по зомби
     this.ownBlood = null;  // красные: попадания по нему самому
 
@@ -401,6 +402,7 @@ export class Player {
     }
 
     // цель есть и перезарядка кончилась — стреляем
+    this.sfx?.play('fire');
     this.play('Shoot', 0.08);
     this.current.reset().play();
     this.current.timeScale = CFG.shootSpeed;

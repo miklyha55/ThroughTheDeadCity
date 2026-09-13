@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { spawn } from 'node:child_process';
 import { basename, resolve } from 'node:path';
-import { writeFile } from 'node:fs/promises';
+import { cp, mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
@@ -11,6 +11,18 @@ const BLENDER = process.env.BLENDER_PATH ?? '/Applications/Blender.app/Contents/
  * Что пересобирает кнопка «Обновить модели»: каждый .blend проекта своим скриптом.
  * Порядок неважен, файлы независимы.
  */
+/**
+ * Что просто копируется как есть: звук и заставки лежат рядом с проектом, а игра
+ * берёт их из public — туда ходит сборщик, а не диск.
+ *
+ * Папки копируются целиком и рекурсивно: добавили в Audio новый хрип — он
+ * приедет в игру сам, править этот список не нужно.
+ */
+const ASSETS = [
+  { from: 'Audio', to: 'public/assets/audio', what: 'звук' },
+  { from: 'Splash', to: 'public/assets/splash', what: 'заставки' },
+];
+
 const EXPORTS = [
   { blend: 'Env.blend', script: 'tools/export_props.py', what: 'окружение' },
   { blend: 'Player/Player.blend', script: 'tools/export_player.py', what: 'персонаж' },
@@ -56,6 +68,26 @@ function blenderExport() {
         const started = Date.now();
         const lines = [];
         let ok = true;
+
+        // Сначала то, что просто копируется: это быстро, и если файла нет,
+        // лучше сказать сразу, а не после трёх минут работы Blender.
+        for (const asset of ASSETS) {
+          const source = resolve(PROJECT_ROOT, asset.from);
+          if (!existsSync(source)) {
+            lines.push(`${asset.what}: нет папки ${asset.from}`);
+            continue;
+          }
+
+          const target = resolve(import.meta.dirname, asset.to);
+          await mkdir(target, { recursive: true });
+
+          // Служебные файлы системы в игру не нужны, всё остальное — как есть.
+          await cp(source, target, {
+            recursive: true,
+            filter: (path) => !basename(path).startsWith('.'),
+          });
+          lines.push(`${asset.what}: обновлён`);
+        }
 
         // последовательно, а не разом: четыре Blender'а сразу только мешают друг другу
         for (const task of EXPORTS) {
