@@ -71,52 +71,6 @@ export class Obstacles {
     return false;
   }
 
-  /**
-   * Загораживает ли что-нибудь точку от камеры.
-   *
-   * Луч идёт от точки к камере: по земле смещается на `ux, uz`, а на каждый метр
-   * этого смещения поднимается на `slope`. Преграда засчитывается, только если в
-   * месте встречи она выше самого луча, — то есть действительно накрывает точку,
-   * а не проходит под ней.
-   *
-   * @param {number} px @param {number} py @param {number} pz — сама точка
-   * @param {number} ux @param {number} uz — направление к камере по земле, единичное
-   * @param {number} slope — подъём луча на метр пути по земле
-   * @param {number} maxDist — дальше по земле не смотрим
-   */
-  blocksView(px, py, pz, ux, uz, slope, maxDist) {
-    for (const item of this.items) {
-      if (item.top <= py) continue; // ниже точки — закрыть её нечем
-
-      const along = (item.cx - px) * ux + (item.cz - pz) * uz;
-      if (along < -item.reach || along > maxDist + item.reach) continue;
-
-      const t = Math.max(0, Math.min(maxDist, along));
-      if (Math.hypot(item.cx - (px + ux * t), item.cz - (pz + uz * t)) > item.reach) continue;
-
-      const { points } = item;
-      const count = points.length / 2;
-
-      for (let i = 0; i < count; i++) {
-        const ax = points[i * 2];
-        const az = points[i * 2 + 1];
-        const j = (i + 1) % count;
-        const ex = points[j * 2] - ax;
-        const ez = points[j * 2 + 1] - az;
-
-        const denom = ux * ez - uz * ex;
-        if (Math.abs(denom) < 1e-9) continue;
-
-        const hit = ((ax - px) * ez - (az - pz) * ex) / denom;   // сколько по лучу
-        const edge = ((ax - px) * uz - (az - pz) * ux) / denom;  // где по ребру
-
-        if (hit < 0 || hit > maxDist || edge < 0 || edge > 1) continue;
-        if (item.top > py + hit * slope) return true;
-      }
-    }
-    return false;
-  }
-
   /** Задевает ли круг хоть один контур — нужно, чтобы не ставить пропы внутрь других моделей. */
   hits(x, z, radius) {
     for (const item of this.items) {

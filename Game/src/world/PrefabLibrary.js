@@ -52,8 +52,6 @@ export class PrefabLibrary {
       shadows: rules.shadows !== false,
       shapes: this.props.collisionShapes(name),
       sightShapes: this.props.sightShapes(name),
-      coverShapes: this.props.coverShapes(name),
-      coverTops: this.props.coverTops(name),
       body: this.props.body(name),
     };
   }

@@ -12,7 +12,6 @@ import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
-import { SilhouetteWatch } from './fx/SilhouetteWatch.js';
 import { TargetMark } from './fx/TargetMark.js';
 import { HealthBars } from './fx/HealthBars.js';
 import { Explosions } from './fx/Explosions.js';
@@ -52,7 +51,6 @@ let editor = null; // правка расстановки: появляется 
 const joystick = new Joystick();
 const input = new Input(joystick);
 const camera = new FollowCamera(engine.camera, player);
-const silhouettes = new SilhouetteWatch(engine.camera);
 const targetMark = new TargetMark(engine.scene);
 
 engine.add({
@@ -75,7 +73,6 @@ engine.add({
     playerBlood.update(dt);
     explosions.update(dt);
     camera.update(dt);
-    silhouettes.update(here, player); // после камеры: луч к ней считается по её позе
     targetMark.update(player.spotted);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     visibility.update(here); // за краем экрана фигуры не рисуются вовсе
