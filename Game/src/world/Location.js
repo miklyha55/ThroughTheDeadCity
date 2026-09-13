@@ -18,12 +18,15 @@ const SIDES = {
 const DEG = Math.PI / 180;
 const GROUND_Y = 0.02; // площадка лежит чуть выше подложки мира
 
+/** Округление до сантиметра: в файле не нужны хвосты из пятнадцати знаков. */
+const round = (value) => Math.round(value * 100) / 100;
+
 /**
  * Локация, собранная по JSON-описанию: площадка, глухой забор по периметру
  * с единственным проёмом-выходом, расставленные пропы и точка старта.
  */
 export class Location {
-  constructor(data, prefabs, zombieLibrary, blood = null) {
+  constructor(data, prefabs, zombieLibrary, blood = null, { batched = true } = {}) {
     this.data = data;
     this.prefabs = prefabs;
     this.zombieLibrary = zombieLibrary;
@@ -48,6 +51,9 @@ export class Location {
     // проступает силуэт — за кустом или легковушкой подсвечивать нечего.
     this.cover = new Obstacles();
     this.debris = new Debris(this);
+    // Поштучно расставленные пропы и их строки из JSON. Нужны редактору: россыпь
+    // он не трогает — она задана зоной и семенем, двигать её поштучно нечего.
+    this.placed = [];
 
     const [w, d] = data.size;
     this.width = w;
@@ -69,7 +75,7 @@ export class Location {
     this.nav.build(this.obstacles, CONFIG.zombies.radius);
 
     this._buildZombies();
-    this._batchStatics();
+    if (batched) this._batchStatics();
   }
 
   /** Границы, за которые персонажу нельзя выходить (проём в заборе учитывается отдельно). */
@@ -169,6 +175,9 @@ export class Location {
       if (entry.scale) obj.scale.setScalar(entry.scale);
       this.group.add(obj);
       this._place(entry.prop, obj);
+
+      // связь со строкой в JSON: по ней редактор сохраняет сдвинутое обратно
+      this.placed.push({ object: obj, entry });
     }
 
     // разбросанная мелочь: трава, кусты, мусор — задаётся не поштучно, а зоной
@@ -216,7 +225,12 @@ export class Location {
 
           obj.scale.setScalar(minScale + rand() * (maxScale - minScale));
           this.group.add(obj);
-          this._place(name, obj, layer === 0);
+          this._place(name, obj);
+
+          // Россыпь тоже можно двигать в редакторе. Строки в JSON у неё нет —
+          // она родилась из зоны и семени, — поэтому при сохранении вся зона
+          // «запекается»: каждый предмет становится отдельной записью.
+          this.placed.push({ object: obj, entry: { prop: name }, scattered: true });
         }
       }
     }
@@ -578,6 +592,36 @@ export class Location {
     const lz = -dx * sin + dz * cos;
 
     return Math.abs(lx) <= box.halfW && Math.abs(lz) <= box.halfD;
+  }
+
+  /**
+   * Расстановка в том виде, в каком она ляжет в JSON.
+   *
+   * Читается прямо со сцены, поэтому что подвинул в редакторе — то и сохранится.
+   * Россыпь при этом запекается: её предметы становятся обычными записями, а
+   * зоны из файла уходят. Иначе правку было бы не сохранить — зона задаёт не
+   * места, а правило, по которому они разыгрываются заново при каждой загрузке.
+   *
+   * Остальные разделы (забор, орды зомби, выход) остаются как были: их правят
+   * руками, а не мышью.
+   */
+  snapshot() {
+    const props = this.placed.map(({ object, entry }) => {
+      const saved = {
+        prop: entry.prop,
+        at: [round(object.position.x), round(object.position.z)],
+      };
+
+      const yaw = Math.round((object.rotation.y / DEG) * 10) / 10;
+      if (yaw) saved.rotation = yaw;
+      if (Math.abs(object.position.y) > 1e-3) saved.y = round(object.position.y);
+      if (Math.abs(object.scale.x - 1) > 1e-3) saved.scale = round(object.scale.x);
+      return saved;
+    });
+
+    const data = { ...this.data, props };
+    delete data.scatter;
+    return data;
   }
 
   /** Дошёл ли персонаж до выхода — то есть пересёк линию забора в створе проёма. */

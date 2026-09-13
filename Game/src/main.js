@@ -43,6 +43,7 @@ const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 const params = new URLSearchParams(window.location.search);
 await locations.load(params.get('location') ?? CONFIG.locations.first);
 
+let editor = null; // правка расстановки: появляется только на dev-сервере
 const joystick = new Joystick();
 const input = new Input(joystick);
 const camera = new FollowCamera(engine.camera, player);
@@ -51,6 +52,8 @@ const targetMark = new TargetMark(engine.scene);
 
 engine.add({
   update(dt) {
+    if (editor?.active) return; // в правке мир замирает: двигают его, а не он сам
+
     input.update();
     player.update(dt, input.move, camera.moveYaw, locations.current);
     const here = locations.current;
@@ -85,7 +88,9 @@ async function updateDebugView() {
 
 function showHud() {
   hud.hidden = false;
-  hud.textContent = locations.current.data.name;
+  hud.textContent = editor?.active
+    ? `${locations.current.data.name} · правка`
+    : locations.current.data.name;
 }
 
 // ?debug=input — видно, что приходит со стика и куда едет персонаж
@@ -124,6 +129,10 @@ showHud();
 updateDebugView();
 
 if (import.meta.env.DEV) {
+  // Tab — правка расстановки мышью; пока она открыта, игра стоит на паузе
+  const { createEditor } = await import('./dev/editor.js');
+  editor = createEditor({ engine, locations, joystick, onToggle: () => showHud() });
+
   const { createRebuildPanel } = await import('./dev/rebuildPanel.js');
   createRebuildPanel({
     onRebuilt: async () => {

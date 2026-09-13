@@ -13,6 +13,7 @@ export class LocationManager {
     this.current = null;
     this.loading = false;
     this.onChange = null; // вызывается после смены локации — обновить HUD и прочее
+    this.editing = false; // в режиме правки статику не сливаем: её двигают мышью
   }
 
   /** Подменяет библиотеку префабов и пересобирает текущую локацию на свежих моделях. */
@@ -46,7 +47,9 @@ export class LocationManager {
 
     this.current?.dispose();
 
-    const location = new Location(data, this.prefabs, this.zombies, this.player?.blood);
+    const location = new Location(
+      data, this.prefabs, this.zombies, this.player?.blood, { batched: !this.editing }
+    );
     this.scene.add(location.group);
     this.current = location;
 

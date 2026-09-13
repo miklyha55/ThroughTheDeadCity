@@ -85,6 +85,15 @@
       .devpanel__status[data-kind="fail"] { color: #e59a9a; }
       .devpanel__status[data-kind="busy"] { color: #e8d08f; }
 
+      .editor {
+        position: fixed; left: 12px; bottom: 12px; z-index: 40;
+        padding: 8px 12px; border-radius: 8px;
+        background: rgba(20,26,32,0.78); border: 1px solid rgba(255,255,255,0.3);
+        color: #e8eef4; white-space: pre;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        pointer-events: none; backdrop-filter: blur(3px);
+      }
+
       #hud {
         position: fixed; left: 12px; top: 10px;
         font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;

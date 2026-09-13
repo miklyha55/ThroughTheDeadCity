@@ -46,8 +46,18 @@ export class Joystick {
     });
   }
 
+  /**
+   * Выключить стик целиком — например, на время правки локации: там по сцене
+   * щёлкают мышью, и ловить эти щелчки как управление персонажем ни к чему.
+   */
+  setEnabled(enabled) {
+    this.enabled = enabled;
+    this.zone.style.pointerEvents = enabled ? '' : 'none';
+    if (!enabled) this._release();
+  }
+
   _onDown = (e) => {
-    if (this.active) return;
+    if (this.active || this.enabled === false) return;
     this.active = true;
     this._pointerId = e.pointerId;
 

@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import { spawn } from 'node:child_process';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
+import { writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const BLENDER = process.env.BLENDER_PATH ?? '/Applications/Blender.app/Contents/MacOS/Blender';
@@ -91,8 +93,49 @@ function blenderExport() {
   };
 }
 
+/**
+ * Сохранение расстановки из встроенного редактора: JSON локации переписывается
+ * прямо в public/locations. Только для dev-сервера — в игре редактора нет.
+ */
+function locationSaver() {
+  return {
+    name: 'location-saver',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/api/save-location', async (req, res) => {
+        res.setHeader('content-type', 'application/json');
+
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ ok: false, error: 'POST' }));
+          return;
+        }
+
+        try {
+          const chunks = [];
+          for await (const chunk of req) chunks.push(chunk);
+          const { id, data } = JSON.parse(Buffer.concat(chunks).toString());
+
+          // Имя приходит из браузера, поэтому доверять ему нельзя: берём только
+          // само имя файла и сохраняем лишь поверх локации, которая уже есть.
+          const name = basename(String(id ?? '')).replace(/[^\w-]/g, '');
+          const file = resolve(import.meta.dirname, 'public/locations', `${name}.json`);
+          if (!name || !existsSync(file)) throw new Error(`нет такой локации: ${id}`);
+          await writeFile(file, JSON.stringify(data, null, 2) + '\n');
+
+          res.statusCode = 200;
+          res.end(JSON.stringify({ ok: true, file: `${name}.json` }));
+        } catch (error) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ ok: false, error: error.message }));
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [blenderExport()],
+  plugins: [blenderExport(), locationSaver()],
   server: {
     port: 5173,
     open: false,
