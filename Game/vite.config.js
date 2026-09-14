@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 import { spawn } from 'node:child_process';
-import { basename, resolve } from 'node:path';
-import { cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
+import { basename, resolve, join } from 'node:path';
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const BLENDER = process.env.BLENDER_PATH ?? '/Applications/Blender.app/Contents/MacOS/Blender';
@@ -183,8 +184,82 @@ function locationSaver() {
   };
 }
 
+
+/** Все файлы папки, вместе с вложенными. */
+async function listFiles(dir) {
+  const out = [];
+  for (const item of await readdir(dir, { withFileTypes: true })) {
+    if (item.name.startsWith('.')) continue;
+    const full = resolve(dir, item.name);
+    out.push(...(item.isDirectory() ? await listFiles(full) : [full]));
+  }
+  return out.sort();
+}
+
+/**
+ * Отпечаток сборки: по нему игра и узнаёт, что на сервере лежит уже не она.
+ *
+ * Кладётся отдельным файлом рядом с игрой, а не внутрь кода. Внутрь нельзя:
+ * отпечаток считается по готовой сборке, а сборка к тому времени уже собрана —
+ * записать его в саму себя означало бы изменить то, по чему он и считался.
+ *
+ * Игре знать собственный отпечаток и не нужно. Она читает этот файл на старте,
+ * запоминает, что там лежало, и потом лишь сверяется: разошлось — значит вышла
+ * новая сборка.
+ *
+ * Считается по СОДЕРЖИМОМУ всех файлов, а не по их именам. Имена кода Vite и так
+ * меняет при каждой правке, а вот модели, звук и уровни лежат под постоянными
+ * именами — по именам их подмену было бы не заметить.
+ */
+function versionStamp() {
+  const NAME = 'version.json';
+
+  return {
+    name: 'version-stamp',
+
+    // Сборка: отпечаток по всему, что легло в dist.
+    async closeBundle() {
+      const dir = resolve(import.meta.dirname, 'dist');
+      if (!existsSync(dir)) return;
+
+      const hash = createHash('sha1');
+      for (const file of await listFiles(dir)) {
+        if (basename(file) === NAME) continue; // себя в расчёт не берём
+        hash.update(file.slice(dir.length));
+        hash.update(await readFile(file));
+      }
+
+      const build = hash.digest('hex').slice(0, 12);
+      await writeFile(join(dir, NAME), JSON.stringify({ build }) + '\n');
+      console.log(`отпечаток сборки: ${build}`);
+    },
+
+    // Разработка: файла на диске нет, отвечаем на лету. По времени правки и
+    // размеру, а не по содержимому — читать мегабайты на каждый опрос незачем.
+    configureServer(server) {
+      server.middlewares.use(`/${NAME}`, async (req, res) => {
+        const корни = ['src', 'public', 'index.html'].map((p) => resolve(import.meta.dirname, p));
+        const hash = createHash('sha1');
+
+        for (const корень of корни) {
+          if (!existsSync(корень)) continue;
+          const файлы = (await stat(корень)).isDirectory() ? await listFiles(корень) : [корень];
+          for (const file of файлы) {
+            const s = await stat(file);
+            hash.update(`${file}:${s.size}:${s.mtimeMs}`);
+          }
+        }
+
+        res.setHeader('content-type', 'application/json');
+        res.setHeader('cache-control', 'no-store');
+        res.end(JSON.stringify({ build: hash.digest('hex').slice(0, 12) }));
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [blenderExport(), locationSaver()],
+  plugins: [blenderExport(), locationSaver(), versionStamp()],
   server: {
     port: 5173,
     open: false,
