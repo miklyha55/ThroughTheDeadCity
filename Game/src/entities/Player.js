@@ -4,6 +4,9 @@ import { batchSkinned } from '../world/batching.js';
 import { arcPoint } from '../core/arc.js';
 
 const CFG = CONFIG.player;
+
+// пустой ввод: им подменяется стик, когда управление отобрано
+const ZERO_MOVE = { x: 0, y: 0 };
 const DEG = Math.PI / 180;
 
 /**
@@ -129,6 +132,7 @@ export class Player {
     this.shootPlaying = 0; // сколько ещё идёт клип выстрела
     this.reloading = 0;    // пауза между выстрелами: в неё зомби и подходят
     this.jumpTime = 0;     // сколько уже длится прыжок, с; ноль — значит стоит на земле
+    this.frozen = false;   // управление отобрано снаружи: звучит вступление
     this._jumpFrom = new THREE.Vector3();
     this._jumpTo = new THREE.Vector3();
 
@@ -328,12 +332,16 @@ export class Player {
     this._forward.set(Math.sin(cameraYaw), 0, Math.cos(cameraYaw));
     this._right.set(-this._forward.z, 0, this._forward.x);
 
+    // Управление могут отобрать снаружи — пока звучит вступление. Ввод при этом
+    // до персонажа не доходит вовсе: он не идёт и не стреляет, а стоит и слушает.
+    const stick = this.frozen ? ZERO_MOVE : move;
+
     // Стик задаёт только направление: длина отклонения на скорость не влияет,
     // иначе на промежуточных положениях ручки персонаж плёлся бы медленнее.
     this._desired
       .set(0, 0, 0)
-      .addScaledVector(this._forward, move.y)
-      .addScaledVector(this._right, move.x);
+      .addScaledVector(this._forward, stick.y)
+      .addScaledVector(this._right, stick.x);
 
     if (this._desired.lengthSq() > 0) this._desired.normalize().multiplyScalar(CFG.runSpeed);
 
@@ -370,7 +378,7 @@ export class Player {
     // Стрелять можно только стоя. Проверяем сам ввод, а не скорость: на кадре
     // отпускания стика скорость ещё старая, и выстрел терялся бы до следующего.
     const standing = this._desired.lengthSq() === 0;
-    const canShoot = standing && location && !this.helpless;
+    const canShoot = standing && location && !this.helpless && !this.frozen;
     const shooting = canShoot ? this._aimAndFire(dt, location) : this._holdFire();
 
     // ружьё либо в руках, либо за спиной — одновременно видно только одно

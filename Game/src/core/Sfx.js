@@ -25,6 +25,7 @@ export class Sfx {
     this.voices = new Map();
     this.loops = new Map();               // зацикленные: шаги и всё, что длится
     this.files = new Map(Object.entries(sets));
+    this.echoes = new Set();              // отложенные отзвуки: их тоже надо уметь отменить
 
     for (const [name, files] of Object.entries(sets)) {
       const variants = files.map((file) => {
@@ -106,7 +107,39 @@ export class Sfx {
     if (Math.random() > CFG.echoChance) return;
 
     const delay = CFG.echoDelay + Math.random() * CFG.echoSpread;
-    setTimeout(() => this._once(name, volume * CFG.echoVolume, CFG.echoPitch), delay);
+    const timer = setTimeout(() => {
+      this.echoes.delete(timer);
+      this._once(name, volume * CFG.echoVolume, CFG.echoPitch);
+    }, delay);
+    this.echoes.add(timer);
+  }
+
+  /**
+   * Оборвать всё, что сейчас звучит.
+   *
+   * Нужно на смене локации: под заставкой мир исчезает целиком, а звук о нём
+   * ничего не знает и продолжает топать и хрипеть — шаги особенно, они зациклены
+   * и сами не кончатся. Отзвуки выстрелов гасятся вместе с остальным: они ждут
+   * своего часа по таймеру и иначе прилетели бы уже в новый уровень.
+   */
+  silence() {
+    for (const timer of this.echoes) clearTimeout(timer);
+    this.echoes.clear();
+
+    for (const track of this.loops.values()) {
+      track.pause();
+      track.currentTime = 0;
+    }
+
+    for (const variants of this.voices.values()) {
+      for (const { pool } of variants) {
+        for (const audio of pool) {
+          if (audio.paused) continue;
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      }
+    }
   }
 
   /** Одно срабатывание: свободная дорожка, своя высота тона и громкость. */

@@ -33,7 +33,7 @@ const _where = new THREE.Vector3();
  * Пока редактор открыт, локация пересобирается без слияния статики: слитая
  * геометрия неподвижна, и тянуть в ней было бы нечего.
  */
-export function createEditor({ engine, locations, joystick, camera, onToggle }) {
+export function createEditor({ engine, locations, joystick, camera, onToggle, onPick }) {
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const down = new THREE.Vector2();
@@ -96,6 +96,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle }) 
       gizmo.detach();
       picked = null;
       await locations.load(to);
+      onPick?.(to); // сюда игра и вернётся после перезагрузки
       status('щёлкни по предмету');
     });
 

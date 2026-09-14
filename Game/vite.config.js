@@ -21,6 +21,7 @@ const BLENDER = process.env.BLENDER_PATH ?? '/Applications/Blender.app/Contents/
 const ASSETS = [
   { from: 'Audio', to: 'public/assets/audio', what: 'звук' },
   { from: 'Splash', to: 'public/assets/splash', what: 'заставки' },
+  { from: 'Ui', to: 'public/assets/ui', what: 'картинки интерфейса' },
 ];
 
 const EXPORTS = [

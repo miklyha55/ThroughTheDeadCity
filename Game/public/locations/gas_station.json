@@ -1045,8 +1045,8 @@
     {
       "kind": "zombie1",
       "at": [
-        -33.91,
-        1.65
+        -35.81,
+        -6.69
       ],
       "rotation": 352.5
     },
@@ -1289,6 +1289,222 @@
         -12.2
       ],
       "rotation": 307.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        31.15,
+        -5.9
+      ],
+      "rotation": 205.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        47.42,
+        -23.47
+      ],
+      "rotation": 294.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        35.12,
+        -13.13
+      ],
+      "rotation": 22.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        39.22,
+        -17.53
+      ],
+      "rotation": 38.0
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        42.24,
+        -21.94
+      ],
+      "rotation": 170.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        32.04,
+        -8.76
+      ],
+      "rotation": 72.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        45.79,
+        -16.63
+      ],
+      "rotation": 326.0
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        49.04,
+        -20.14
+      ],
+      "rotation": 21.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        53.31,
+        -12.95
+      ],
+      "rotation": 263.1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        47.43,
+        -7.42
+      ],
+      "rotation": 337.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        40.83,
+        -7.76
+      ],
+      "rotation": 190.6
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        43.77,
+        -9.24
+      ],
+      "rotation": 350.9
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        51.68,
+        -7.48
+      ],
+      "rotation": 253.1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        38.91,
+        3.96
+      ],
+      "rotation": 131.4
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        33.11,
+        -18.87
+      ],
+      "rotation": 254.7
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        45.63,
+        -5.11
+      ],
+      "rotation": 130.0
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        26.78,
+        -8.79
+      ],
+      "rotation": 115.9
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        11.21,
+        -5.04
+      ],
+      "rotation": 45.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -34.4,
+        -13.08
+      ],
+      "rotation": 41.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        13.76,
+        -13.15
+      ],
+      "rotation": 316.1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        17.84,
+        -16.7
+      ],
+      "rotation": 191.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        14.33,
+        -20.56
+      ],
+      "rotation": 222.3
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        2.89,
+        -3.27
+      ],
+      "rotation": 197.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        24.32,
+        -13.65
+      ],
+      "rotation": 29.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -27.92,
+        -9.11
+      ],
+      "rotation": 127.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -7.24,
+        -18.9
+      ],
+      "rotation": 146.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        8.93,
+        -8.29
+      ],
+      "rotation": 147.4
     }
   ]
 }

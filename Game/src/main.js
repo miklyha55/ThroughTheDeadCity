@@ -13,6 +13,8 @@ import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
 import { Music } from './core/Music.js';
+import { StartMessage } from './core/StartMessage.js';
+import { Radio } from './ui/Radio.js';
 import { Sfx } from './core/Sfx.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
@@ -61,16 +63,26 @@ locations.sfx = sfx;
 locations.seeThrough = new SeeThrough(engine.camera);
 
 const music = new Music();
+const startMessage = new StartMessage(); // вступление на первом уровне: пока говорит — персонаж стоит
+const radio = new Radio(); // и рация в углу: видно, откуда голос и почему нельзя идти
 const params = new URLSearchParams(window.location.search);
 
 /**
  * Какой уровень открыть и где его запомнить.
  *
- * В разработке игра возвращается туда, где её закрыли: правишь локацию, жмёшь
- * перезагрузку — и снова на ней, а не в начале цепочки. В собранной игре этого
- * нет: там уровни идут по порядку, и прыгать в середину незачем.
+ * В разработке игра возвращается на тот уровень, который выбрали стрелками в
+ * панели: правишь локацию, жмёшь перезагрузку — и снова на ней, а не в начале
+ * цепочки. В собранной игре этого нет: там уровни идут по порядку, и прыгать в
+ * середину незачем.
  *
- * Адрес сильнее памяти: `?location=` открывает то, что в нём написано.
+ * Запоминается именно выбор в панели, а не всякая загрузка. Иначе достаточно
+ * было один раз дойти до выхода — и переход на следующий уровень молча
+ * переписывал бы выбранный, так что после перезагрузки игра открывалась совсем
+ * не там, куда её ставили.
+ *
+ * Адрес сильнее памяти: `?location=` открывает то, что в нём написано. Поэтому
+ * панель его за собой и правит — иначе забытый в строке адреса параметр
+ * перебивал бы выбор при каждой перезагрузке.
  */
 const LAST_LEVEL = 'dev:location';
 const remembered = import.meta.env.DEV ? localStorage.getItem(LAST_LEVEL) : null;
@@ -91,7 +103,13 @@ engine.add({
       return;
     }
 
+    // Под заставкой мир замер: старый уровень уже снят со сцены, а бежать по
+    // нему и топать персонаж иначе продолжал бы до самой загрузки нового.
+    if (locations.loading) return;
+
     input.update();
+    player.frozen = startMessage.locked; // пока звучит вступление, он только слушает
+    radio.toggle(player.frozen);         // рация висит ровно столько же
     player.update(dt, input.move, camera.moveYaw, locations.current);
     const here = locations.current;
     if (here.reachedExit(player.position)) {
@@ -194,17 +212,30 @@ locations.onChange = (location) => {
   showHud();
   updateDebugView();
   music.play(location.data.number ?? 1); // у каждого уровня своя дорожка
-
-  if (import.meta.env.DEV) localStorage.setItem(LAST_LEVEL, location.data.id);
+  startMessage.arm(location.data.number ?? 1); // и вступление, если уровень первый
 };
 showHud();
 updateDebugView();
 music.play(locations.current.data.number ?? 1); // первый уровень: onChange к нему ещё не привязан
+startMessage.arm(locations.current.data.number ?? 1); // замок стоит сразу, до первого касания
 
 if (import.meta.env.DEV) {
   // Tab — правка расстановки мышью; пока она открыта, игра стоит на паузе
   const { createEditor } = await import('./dev/editor.js');
-  editor = createEditor({ engine, locations, joystick, camera, onToggle: () => showHud() });
+  editor = createEditor({
+    engine, locations, joystick, camera,
+    onToggle: () => showHud(),
+    onPick: (id) => {
+      // выбор стрелками и есть то, что игра вспомнит после перезагрузки
+      localStorage.setItem(LAST_LEVEL, id);
+
+      // и адрес приводим к нему же: иначе оставшийся в строке ?location=
+      // перебил бы выбор, и панель выглядела бы сломанной
+      const url = new URL(window.location.href);
+      url.searchParams.set('location', id);
+      history.replaceState(null, '', url);
+    },
+  });
 
   const { createRebuildPanel } = await import('./dev/rebuildPanel.js');
   createRebuildPanel({
@@ -254,7 +285,7 @@ if (import.meta.env.DEV) {
   });
 
   window.__game = {
-    engine, player, camera, input, joystick, prefabs, zombies, locations,
+    engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage,
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),
   };

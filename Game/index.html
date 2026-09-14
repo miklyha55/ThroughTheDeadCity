@@ -146,6 +146,29 @@
         transition: width 120ms linear;
       }
 
+      /* Рация: видна, пока по ней говорят. Появляется и уходит прозрачностью,
+         а не показом — резкое включение в углу читается как сбой, а не как
+         вызов на связь. Покачивается, чтобы не выглядеть наклейкой на экране. */
+      .radio {
+        position: fixed; left: 16px; bottom: 16px; z-index: 50;
+        width: min(32vh, 230px); height: auto;
+        opacity: 0; pointer-events: none;
+        transition: opacity 450ms ease;
+        filter: drop-shadow(0 6px 14px rgba(0,0,0,0.55));
+        transform-origin: 50% 90%;
+      }
+      .radio--on { opacity: 1; animation: radio-bounce 820ms ease-in-out infinite alternate; }
+
+      @keyframes radio-bounce {
+        from { transform: translateY(0) rotate(-2deg); }
+        to   { transform: translateY(-9px) rotate(2deg); }
+      }
+
+      /* Кому движение мешает — рация просто висит на месте. */
+      @media (prefers-reduced-motion: reduce) {
+        .radio--on { animation: none; }
+      }
+
       #hud {
         position: fixed; left: 12px; top: 10px;
         font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;

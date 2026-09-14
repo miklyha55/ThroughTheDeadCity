@@ -37,6 +37,7 @@ export class LocationManager {
 
   async load(id) {
     this.loading = true;
+    this.sfx?.silence(); // старый уровень уходит — его шаги и хрипы уходят с ним
     this.splash?.show();
 
     try {
