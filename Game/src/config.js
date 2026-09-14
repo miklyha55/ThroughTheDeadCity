@@ -49,6 +49,7 @@ export const CONFIG = {
     throwHold: [0, 0, 0],   // где предмет сидит в руке относительно сокета, м
     throwGrace: 0.5,        // с, сколько брошенный предмет не замечает самого метателя
     throwVolume: 0.7,       // громкость замаха, доля от общей
+    dieVolume: 1,           // предсмертный крик: громче всего, это конец попытки
 
     lives: 1,               // сколько ударов держит персонаж: один удар — и всё
     restartAfter: 1,        // с после смерти, прежде чем нажатие начнёт уровень заново
@@ -368,6 +369,7 @@ export const CONFIG = {
       fire: ['/assets/audio/fire.mp3'],
       walk: ['/assets/audio/walk.mp3'],
       throw: ['/assets/audio/throw.mp3'],
+      playerDie: ['/assets/audio/player_die.mp3'],
       zombieAlert: [
         '/assets/audio/zombie/zombie-speak-1.mp3',
         '/assets/audio/zombie/zombie-speak-2.mp3',

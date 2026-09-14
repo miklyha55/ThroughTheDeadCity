@@ -371,6 +371,11 @@ export class Player {
   _die() {
     this._drop();
     this.velocity.set(0, 0, 0);
+
+    // Крик идёт вместе с началом падения. Расстоянием он не приглушается, в
+    // отличие от голосов зомби: это свой персонаж, он всегда в двух шагах.
+    this.sfx?.play('playerDie', CONFIG.sounds.volume * CFG.dieVolume);
+
     this.play('Death', 0.15);
     this.current.reset().play();
     this.current.timeScale = 1;
