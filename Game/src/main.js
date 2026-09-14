@@ -20,6 +20,7 @@ import { StartMessage } from './core/StartMessage.js';
 import { Transmission } from './ui/Transmission.js';
 import { Radio } from './ui/Radio.js';
 import { Ammo } from './ui/Ammo.js';
+import { Stats } from './ui/Stats.js';
 import { Ending } from './ui/Ending.js';
 import { BattleFog } from './fx/BattleFog.js';
 import { Sfx } from './core/Sfx.js';
@@ -132,11 +133,16 @@ const { sun } = world;
 const dayNight = new DayNight({ scene: engine.scene, ...world });
 const visibility = new Visibility(engine.camera);
 
+const sfx = new Sfx(CONFIG.sounds.files);
+
 let [gltf, prefabs, zombies] = await Promise.all([
   loadGLTF(CONFIG.player.modelUrl),
   PrefabLibrary.load(CONFIG.props.libraryUrl, CONFIG.props.prefabsUrl),
   ZombieLibrary.load(CONFIG.zombies.sources),
   preload(extras), // заставки, звуки и картинки — вместе с моделями, а не после
+  // Звуки разбираются в память здесь же: на телефоне отложенная загрузка
+  // означала тишину первые полминуты боя.
+  sfx.load(),
 ]);
 
 const gunEffects = new GunEffects(engine.scene);
@@ -146,10 +152,11 @@ const healthBars = new HealthBars(engine.scene);
 const explosions = new Explosions(engine.scene);
 const dust = new Dust(engine.scene);
 const puffs = new Puffs(engine.scene);
-
-const sfx = new Sfx(CONFIG.sounds.files);
-
 const ammo = new Ammo(CONFIG.player.magazine); // патроны вверху по центру
+
+// Счётчик кадров: в разработке всегда, в собранной игре — по `?fps` в адресе.
+// Игроку он не нужен, а на телефоне без него просадку не поймать.
+const stats = (import.meta.env.DEV || params.has('fps')) ? new Stats() : null;
 
 let player = new Player(gltf);
 player.effects = gunEffects;
@@ -216,6 +223,7 @@ locations.camera = camera; // при смене уровня камера вст
 
 engine.add({
   update(dt) {
+    stats?.update(engine.renderer); // считаем кадры раньше всего: они идут всегда
     if (editor?.active) {
       editor.update(dt); // мир замер, но камеру ещё водят стрелками
       return;
@@ -250,11 +258,11 @@ engine.add({
     puffs.update(dt);
     camera.update(dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
-    visibility.update(here); // за краем экрана фигуры не рисуются вовсе
+    visibility.update(here, player); // в тумане и за краем экрана не рисуем вовсе
     locations.seeThrough.update(dt, player); // заслонившее героя — просвечивает
     dayNight.update(dt); // сутки идут своим ходом: свет, небо и тени
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
-    fog.update(engine.camera, player); // за героем остаётся прорезанная дорожка
+    fog.update(engine.camera, player, dt); // за героем остаётся прорезанная дорожка
   },
 });
 

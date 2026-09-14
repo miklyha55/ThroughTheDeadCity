@@ -40,13 +40,19 @@ ${NOISE_GLSL}
     float open = texture2D(mask, uv).r;
     float alpha = 1.0 - open;
 
-    // Край рвём шумом — ровная граница читается как дырка в картинке, а не как
-    // темнота. В глубине тумана шум не нужен: там должно быть глухо.
-    vec2 p = ground * scale * 0.1 + vec2(time * speed, time * speed * 0.6);
-    float edge = 1.0 - abs(alpha * 2.0 - 1.0); // сильнее всего на границе
-    alpha = clamp(alpha + (layered(p) - 0.5) * ragged * edge, 0.0, 1.0);
+    // Открытое бросаем сразу: это большая часть кадра, и считать для неё нечего.
+    if (alpha <= 0.004) discard;
 
-    if (alpha <= 0.002) discard;
+    // Шум нужен только на границе: в глубине тумана должно быть глухо. Раньше он
+    // считался по всему экрану — три обращения к шуму на каждую точку там, где
+    // ответ всё равно единица. На телефоне это и стоило дороже всего.
+    if (alpha < 0.996) {
+      vec2 p = ground * scale * 0.1 + vec2(time * speed, time * speed * 0.6);
+      float edge = 1.0 - abs(alpha * 2.0 - 1.0); // сильнее всего на границе
+      alpha = clamp(alpha + (layered(p) - 0.5) * ragged * edge, 0.0, 1.0);
+      if (alpha <= 0.004) discard;
+    }
+
     gl_FragColor = vec4(color, alpha * opacity);
   }
 `;
@@ -76,12 +82,14 @@ const _ndc = new THREE.Vector2();
 export class BattleFog extends ScreenShader {
   constructor(container = document.body) {
     super(container, 'fog', FRAGMENT,
-      ['mask', 'origin', 'alongX', 'alongY', 'field', 'color', 'opacity', 'scale', 'speed', 'ragged']);
+      ['mask', 'origin', 'alongX', 'alongY', 'field', 'color', 'opacity', 'scale', 'speed', 'ragged'],
+      CFG.pixelRatio);
 
     this.canvas2d = document.createElement('canvas');
     this.paint = this.canvas2d.getContext('2d', { willReadFrequently: false });
     this.field = { width: 0, depth: 0 };
     this.dirty = false;
+    this._sinceUpload = 0; // сколько прошло с прошлой заливки в видеопамять
     this._was = new THREE.Vector2(Infinity, Infinity);
 
     if (!this.ready) return;
@@ -121,6 +129,7 @@ export class BattleFog extends ScreenShader {
 
     this._was.set(Infinity, Infinity);
     this.dirty = true;
+    this._sinceUpload = CFG.uploadEvery; // первая маска уровня уезжает сразу
     this.set('field', width, depth);
   }
 
@@ -160,14 +169,20 @@ export class BattleFog extends ScreenShader {
    * @param {THREE.OrthographicCamera} camera
    * @param {{position: THREE.Vector3}} player
    */
-  update(camera, player) {
+  update(camera, player, dt = 1 / 60) {
     if (!this.ready || !this.field.width) return;
 
     this._carve(player.position);
 
-    if (this.dirty) {
+    // Заливка маски в видеопамять — самое дорогое здесь, особенно на телефоне:
+    // браузеру приходится снимать весь холст целиком. Делаем это не на каждом
+    // шаге кисти, а несколько раз в секунду: на глаз разницы нет, потому что
+    // край тумана и без того размыт на несколько метров.
+    this._sinceUpload += dt;
+    if (this.dirty && this._sinceUpload >= CFG.uploadEvery) {
       this.image('mask', this.canvas2d);
       this.dirty = false;
+      this._sinceUpload = 0;
     }
     this._project(camera);
   }

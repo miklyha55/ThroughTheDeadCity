@@ -176,6 +176,10 @@ export class Location {
   _merge(objects, renderOrder) {
     if (objects.length === 0) return null;
 
+    // Сливаем всё разом, а не по клеткам сетки. Резать пробовали: отсекается
+    // лучше, но материалы дробятся вместе с геометрией, и вызовов отрисовки
+    // становится больше, чем экономится треугольников. На этой застройке
+    // выходило 168 вызовов против 136 при той же картинке.
     const batched = batchStatic(objects);
     for (const object of objects) object.removeFromParent();
     objects.length = 0;
@@ -184,6 +188,7 @@ export class Location {
     this.group.add(batched);
     return batched;
   }
+
 
   /** Зомби: поведение и анимации. Вызывается каждый кадр из игрового цикла. */
   update(dt, player) {
@@ -580,6 +585,12 @@ export class Location {
 
   dispose() {
     this.group.removeFromParent();
+
+    // Зомби живут не дольше своей локации. Снять их со сцены мало: у каждого
+    // свой скелет, а под скелет отведена текстура в видеопамяти, и без этого
+    // она остаётся там навсегда — с каждым перезапуском уровня всё больше.
+    for (const zombie of this.zombies) zombie.dispose();
+    this.zombies.length = 0;
 
     // слитая геометрия принадлежит локации — её больше никто не переиспользует
     this._batched?.traverse((o) => o.isMesh && o.geometry.dispose());

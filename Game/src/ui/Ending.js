@@ -19,8 +19,10 @@ export class Ending {
     this.root.className = 'ending';
     container.appendChild(this.root);
 
-    // Песок живёт внутри экрана: показали финал — он пошёл, убрали — замер.
-    this.dust = new ScreenDust(this.root);
+    // Песок заводится только вместе с финалом. Контекстов WebGL у вкладки
+    // немного, и на телефоне лишний отбирают у сцены — а до финала он не нужен
+    // ни разу.
+    this.dust = null;
 
     this._paint();
 
@@ -32,6 +34,8 @@ export class Ending {
 
     this.shown = true;
     this.root.classList.add('ending--on');
+
+    this.dust = this.dust ?? new ScreenDust(this.root);
     this.dust.start();
   }
 
@@ -60,6 +64,6 @@ export class Ending {
 
     this.shown = false;
     this.root.classList.remove('ending--on');
-    this.dust.stop();
+    this.dust?.stop();
   }
 }

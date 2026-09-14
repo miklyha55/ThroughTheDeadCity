@@ -45,7 +45,13 @@ export class SeeThrough {
     const wide = Math.max(size.x, size.z) * scale >= CFG.minWidth;
     if (!tall || !wide) return false;
 
-    const item = { object, fade: 1 };
+    // Габариты берём сразу и навсегда: дом не двигается, а по ним потом решают,
+    // попал ли он в кадр. По одной точке в основании так решать нельзя — камера
+    // смотрит под углом, и крыша уезжает на экране заметно выше.
+    const bounds = new THREE.Box3().setFromObject(object);
+    const sphere = bounds.getBoundingSphere(new THREE.Sphere());
+
+    const item = { object, fade: 1, sphere };
     object.traverse((mesh) => {
       if (!mesh.isMesh) return;
 

@@ -5,10 +5,14 @@ const CFG = CONFIG.sounds;
 /**
  * Короткие звуки: выстрелы, удары, хрипы.
  *
- * На каждый звук держится небольшой набор готовых дорожек. Играть одну и ту же
- * повторно нельзя: второй выстрел оборвал бы первый на середине, а перезапуск с
- * нуля слышен как щелчок. Поэтому берётся первая свободная, а если все заняты —
- * самая старая: она и так почти доиграла.
+ * Держатся не на элементах `<audio>`, а на Web Audio: каждый файл один раз
+ * разбирается в память, и дальше любое срабатывание — это запуск готового куска,
+ * без обращения к диску и без раскодирования на ходу.
+ *
+ * Разница не косметическая. На элементах выходило по нескольку штук на каждый
+ * звук — под шесть десятков на игру, — и телефон грузил их лениво, по одному и
+ * только после касания: первые выстрелы уходили в тишину, а звук появлялся
+ * через десяток убитых зомби. Вдобавок каждый запуск подтормаживал кадр.
  *
  * Если у звука несколько файлов, каждый раз берётся случайный — так десять
  * одинаковых хрипов подряд не звучат одинаково.
@@ -16,44 +20,58 @@ const CFG = CONFIG.sounds;
  * Но и одного файла хватает, чтобы не надоесть: у каждого срабатывания слегка
  * гуляет высота тона и громкость. Ухо такие мелкие отличия по отдельности не
  * замечает, а вот точную копию подряд — замечает сразу и начинает раздражаться.
- * Высота меняется через скорость воспроизведения, поэтому браузеру приходится
- * запретить «выравнивание тона»: иначе он старательно вернёт всё как было.
  */
 export class Sfx {
   /** @param {Record<string, string[]>} sets — имя звука → список файлов */
   constructor(sets) {
-    this.voices = new Map();
-    this.loops = new Map();               // зацикленные: шаги и всё, что длится
     this.files = new Map(Object.entries(sets));
-    this.echoes = new Set();              // отложенные отзвуки: их тоже надо уметь отменить
+    this.banks = new Map();   // имя → массив разобранных кусков
+    this.loops = new Map();   // зацикленные: их надо уметь остановить поимённо
+    this.playing = new Set(); // всё, что звучит прямо сейчас
+    this.echoes = new Set();  // отложенные отзвуки: их тоже надо уметь отменить
 
-    for (const [name, files] of Object.entries(sets)) {
-      const variants = files.map((file) => {
-        const pool = [];
-        for (let i = 0; i < CFG.pool; i++) {
-          const audio = new Audio(file);
-          audio.preload = 'auto';
-          audio.volume = CFG.volume;
+    const Ctx = window.AudioContext ?? window.webkitAudioContext;
+    this.ctx = Ctx ? new Ctx() : null;
 
-          // иначе браузер сохранит высоту тона при смене скорости
-          audio.preservesPitch = false;
-          audio.mozPreservesPitch = false;
-          audio.webkitPreservesPitch = false;
+    if (!this.ctx) return; // без Web Audio просто обойдёмся без звука
 
-          pool.push(audio);
-        }
-        return { pool, next: 0 };
-      });
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 1;
+    this.master.connect(this.ctx.destination);
 
-      this.voices.set(name, variants);
+    // Браузер не даёт звучать, пока игрок ничего не нажал. Ждём первого
+    // касания и будим звук — до тех пор он просто молчит.
+    const wake = () => this.ctx.resume().catch(() => {});
+    for (const event of ['pointerdown', 'touchstart', 'keydown']) {
+      addEventListener(event, wake, { once: true });
     }
   }
 
   /**
-   * Зацикленный звук: шаги, ветер — всё, что длится, пока длится действие.
+   * Разобрать все файлы в память. Зовётся на загрузке, вместе с моделями.
    *
-   * Держится отдельной дорожкой, не из общего набора: её нельзя занимать и
-   * переиспользовать, она должна крутиться ровно до тех пор, пока нужна.
+   * Сбой одного звука не держит остальные: не разобрался — значит его не будет,
+   * но игра начнётся и всё прочее зазвучит.
+   */
+  async load() {
+    if (!this.ctx) return;
+
+    await Promise.all([...this.files].map(async ([name, files]) => {
+      const bank = await Promise.all(files.map(async (url) => {
+        try {
+          const res = await fetch(url);
+          return await this.ctx.decodeAudioData(await res.arrayBuffer());
+        } catch {
+          return null;
+        }
+      }));
+
+      this.banks.set(name, bank.filter(Boolean));
+    }));
+  }
+
+  /**
+   * Зацикленный звук: шаги, ветер — всё, что длится, пока длится действие.
    *
    * @param {string} name — какой звук
    * @param {boolean} playing — должен ли он сейчас звучать
@@ -61,49 +79,43 @@ export class Sfx {
    * @param {number} [rate] — темп: им задаётся и скорость, и высота тона
    */
   loop(name, playing, loudness = 1, rate = 1) {
-    let track = this.loops.get(name);
+    if (!this.ctx) return;
 
-    if (!track) {
-      const file = this.files.get(name)?.[0];
-      if (!file) return;
-
-      track = new Audio(file);
-      track.loop = true;
-      track.preload = 'auto';
-
-      // иначе браузер выровняет высоту тона и темп будет слышен как замедление
-      track.preservesPitch = false;
-      track.mozPreservesPitch = false;
-      track.webkitPreservesPitch = false;
-
-      this.loops.set(name, track);
+    const going = this.loops.get(name);
+    if (!playing) {
+      if (going) {
+        this._drop(going);
+        this.loops.delete(name);
+      }
+      return;
     }
 
-    track.volume = Math.min(1, CFG.volume * loudness);
-    track.playbackRate = rate;
+    if (going) {
+      going.source.playbackRate.value = rate;
+      going.gain.gain.value = Math.min(1, CFG.volume * loudness);
+      return;
+    }
 
-    // play() может отказать, пока игрок ничего не нажимал. Ничего страшного:
-    // метод зовут каждый кадр, и следующая попытка пройдёт.
-    if (playing && track.paused) track.play().catch(() => {});
-    else if (!playing && !track.paused) track.pause();
+    const voice = this._voice(name, loudness, rate, true);
+    if (voice) this.loops.set(name, voice);
   }
 
   /**
    * Громкость задаётся долей от общей, а не абсолютом: общую крутят в одном
-   * месте, и все звуки едут за ней вместе. Раньше её домножал каждый вызов, и
-   * стоило про неё забыть — звук выбивался из общего строя.
+   * месте, и все звуки едут за ней вместе.
    *
    * @param {string} name — какой звук
    * @param {number} [loudness] — доля от общей громкости
    * @param {number} [layers] — сколько дорожек пустить разом
    * @param {number} [pitch] — сдвиг высоты тона: ниже единицы — ниже и глуше
    *
-   * Громкость одной дорожки браузер ограничивает единицей, и поднять звук выше
-   * этого потолка нечем. Поэтому по-настоящему громкое — взрыв — пускается в
-   * несколько дорожек сразу: они складываются по амплитуде, а лёгкий разброс
-   * высоты между ними делает звук ещё и плотнее, а не просто громче.
+   * По-настоящему громкое — взрыв — пускается в несколько дорожек сразу: они
+   * складываются по амплитуде, а лёгкий разброс высоты между ними делает звук
+   * плотнее, а не просто громче.
    */
   play(name, loudness = 1, layers = 1, pitch = 1) {
+    if (!this.ctx) return;
+
     for (let i = 0; i < layers; i++) this._once(name, loudness, pitch);
 
     // Отзвук: тот же выстрел, но тише, глуше и с небольшим опозданием — будто
@@ -123,44 +135,57 @@ export class Sfx {
    * Оборвать всё, что сейчас звучит.
    *
    * Нужно на смене локации: под заставкой мир исчезает целиком, а звук о нём
-   * ничего не знает и продолжает топать и хрипеть — шаги особенно, они зациклены
-   * и сами не кончатся. Отзвуки выстрелов гасятся вместе с остальным: они ждут
-   * своего часа по таймеру и иначе прилетели бы уже в новый уровень.
+   * ничего не знает и продолжает топать и хрипеть. Отзвуки выстрелов гасятся
+   * вместе с остальным: они ждут своего часа по таймеру и иначе прилетели бы
+   * уже в новый уровень.
    */
   silence() {
     for (const timer of this.echoes) clearTimeout(timer);
     this.echoes.clear();
 
-    for (const track of this.loops.values()) {
-      track.pause();
-      track.currentTime = 0;
-    }
-
-    for (const variants of this.voices.values()) {
-      for (const { pool } of variants) {
-        for (const audio of pool) {
-          if (audio.paused) continue;
-          audio.pause();
-          audio.currentTime = 0;
-        }
-      }
-    }
+    for (const voice of [...this.playing]) this._drop(voice);
+    this.loops.clear();
   }
 
-  /** Одно срабатывание: свободная дорожка, своя высота тона и громкость. */
+  /** Одно срабатывание: случайный файл, своя высота тона и громкость. */
   _once(name, loudness, pitchShift = 1) {
-    const variants = this.voices.get(name);
-    if (!variants?.length) return;
-
-    const variant = variants[Math.floor(Math.random() * variants.length)];
-    const audio = variant.pool[variant.next];
-    variant.next = (variant.next + 1) % variant.pool.length;
-
     const spread = (range) => 1 + (Math.random() - 0.5) * 2 * range;
+    this._voice(name, loudness * spread(CFG.loudnessSpread), spread(CFG.pitchSpread) * pitchShift);
+  }
 
-    audio.currentTime = 0;
-    audio.volume = Math.min(1, CFG.volume * loudness * spread(CFG.loudnessSpread));
-    audio.playbackRate = spread(CFG.pitchSpread) * pitchShift;
-    audio.play().catch(() => {}); // до первого касания браузер звук не пустит
+  /** Завести голос: источник, своя громкость, свой темп. */
+  _voice(name, loudness, rate, loop = false) {
+    const bank = this.banks.get(name);
+    if (!bank?.length) return null;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = bank[Math.floor(Math.random() * bank.length)];
+    source.loop = loop;
+    source.playbackRate.value = rate;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = Math.min(1, CFG.volume * loudness);
+
+    source.connect(gain).connect(this.master);
+
+    const voice = { source, gain };
+    this.playing.add(voice);
+    source.onended = () => this.playing.delete(voice);
+
+    source.start();
+    return voice;
+  }
+
+  /** Оборвать голос и отпустить его узлы. */
+  _drop(voice) {
+    this.playing.delete(voice);
+    voice.source.onended = null;
+    try {
+      voice.source.stop();
+    } catch {
+      // уже кончился сам — останавливать нечего
+    }
+    voice.source.disconnect();
+    voice.gain.disconnect();
   }
 }

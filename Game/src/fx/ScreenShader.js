@@ -28,12 +28,28 @@ export class ScreenShader {
    * @param {string} fragment — тело шейдера; ему доступны vUv, time и aspect
    * @param {string[]} uniforms — какие ещё значения он читает
    */
-  constructor(container, className, fragment, uniforms = []) {
+  constructor(container, className, fragment, uniforms = [], maxRatio = 2) {
     this.canvas = document.createElement('canvas');
     this.canvas.className = className;
     container.appendChild(this.canvas);
 
-    this.gl = this.canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false });
+    this.maxRatio = maxRatio;
+    this.gl = this.canvas.getContext('webgl', {
+      alpha: true,
+      premultipliedAlpha: false,
+      antialias: false,        // слой мягкий, сглаживать в нём нечего
+      depth: false,            // глубины у плоского прохода нет
+      powerPreference: 'low-power',
+    });
+
+    // Контекстов WebGL у вкладки немного, и на телефоне их отбирают первыми.
+    // Потеряли — гасим слой совсем: лучше играть без него, чем смотреть в чёрное.
+    this.canvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      this.stop();
+      this.canvas.style.display = 'none';
+      this.gl = null;
+    });
     this.running = false;
     this._frame = 0;
     this._started = 0;
@@ -143,7 +159,8 @@ export class ScreenShader {
   _fit() {
     if (!this.gl) return;
 
-    const dpr = Math.min(devicePixelRatio || 1, 2); // на ретине вчетверо больше точек — незачем
+    // Плотность точек своя у каждого слоя: мягкой маске хватает и половины.
+    const dpr = Math.min(devicePixelRatio || 1, this.maxRatio);
     const w = Math.max(1, Math.round(innerWidth * dpr));
     const h = Math.max(1, Math.round(innerHeight * dpr));
 
@@ -157,7 +174,7 @@ export class ScreenShader {
   }
 
   _tick() {
-    if (!this.running) return;
+    if (!this.running || !this.gl) return;
 
     const gl = this.gl;
     this.set('time', (performance.now() - this._started) / 1000);
