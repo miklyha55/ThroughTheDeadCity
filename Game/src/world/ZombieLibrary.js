@@ -42,6 +42,6 @@ export class ZombieLibrary {
       console.warn(`[zombies] нет вида «${name}»`);
       return null;
     }
-    return new Zombie(cloneSkinned(kind.scene), kind.animations);
+    return new Zombie(cloneSkinned(kind.scene), kind.animations, name);
   }
 }

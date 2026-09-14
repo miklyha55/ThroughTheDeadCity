@@ -3,7 +3,6 @@ import { CONFIG } from '../config.js';
 import { flatDistance } from '../core/ground.js';
 
 const CFG = CONFIG.healthBar;
-const MAX_HEALTH = CONFIG.zombies.health;
 
 // Полоска — два прямоугольника, подложка и заливка, по два треугольника в каждом.
 const VERTS_PER_BAR = 12;
@@ -70,13 +69,15 @@ export class HealthBars {
     for (const zombie of location.zombies) {
       if (vertex / VERTS_PER_BAR >= this.capacity) break;
 
-      // целым и мёртвым полоска не нужна
-      if (!zombie.alive || zombie.health >= MAX_HEALTH) continue;
+      // Целым и мёртвым полоска не нужна. Полный запас у каждого свой: живучесть
+      // зависит от вида, и общий потолок показывал бы слабого вечно раненым,
+      // ещё до первой пули.
+      if (!zombie.alive || zombie.health >= zombie.maxHealth) continue;
 
       const at = zombie.position;
       if (flatDistance(at, player.position) > CFG.drawRange) continue;
 
-      const share = Math.max(0, Math.min(1, zombie.health / MAX_HEALTH));
+      const share = Math.max(0, Math.min(1, zombie.health / zombie.maxHealth));
       _center.set(at.x, at.y + CFG.offset, at.z);
 
       _color.set(CFG.backColor);

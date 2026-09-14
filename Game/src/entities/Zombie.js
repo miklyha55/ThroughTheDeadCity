@@ -34,9 +34,11 @@ export class Zombie extends Figure {
   /**
    * @param {THREE.Object3D} model — клон скина со своим скелетом
    * @param {THREE.AnimationClip[]} clips — общие клипы библиотеки
+   * @param {string} [kind] — какого он вида: от этого зависит живучесть
    */
-  constructor(model, clips) {
+  constructor(model, clips, kind = '') {
     super(model, clips, 0.25);
+    this.kind = kind;
 
     this.once(['Headbutt', 'Death', 'ReactionHit']);
 
@@ -46,7 +48,9 @@ export class Zombie extends Figure {
     this.hurtLength = this.lengthOf('ReactionHit', CFG.hurtSpeed);
     this.deathLength = this.lengthOf('Death');
 
-    this.health = CFG.health;
+    // Живучесть своя у каждого вида, если задана: одни крепче, другие слабее.
+    this.health = CFG.healthByKind?.[kind] ?? CFG.health;
+    this.maxHealth = this.health;
     this.deadTime = 0;
     this.hurtTime = 0;
     this.removed = false; // локация уберёт такого из списка
