@@ -196,70 +196,92 @@ async function listFiles(dir) {
   return out.sort();
 }
 
-/**
- * Отпечаток сборки: по нему игра и узнаёт, что на сервере лежит уже не она.
- *
- * Кладётся отдельным файлом рядом с игрой, а не внутрь кода. Внутрь нельзя:
- * отпечаток считается по готовой сборке, а сборка к тому времени уже собрана —
- * записать его в саму себя означало бы изменить то, по чему он и считался.
- *
- * Игре знать собственный отпечаток и не нужно. Она читает этот файл на старте,
- * запоминает, что там лежало, и потом лишь сверяется: разошлось — значит вышла
- * новая сборка.
- *
- * Считается по СОДЕРЖИМОМУ всех файлов, а не по их именам. Имена кода Vite и так
- * меняет при каждой правке, а вот модели, звук и уровни лежат под постоянными
- * именами — по именам их подмену было бы не заметить.
- */
-function versionStamp() {
-  const NAME = 'version.json';
+const VERSION_FILE = 'version.json';
 
+/**
+ * Отпечаток игры — по её ИСХОДНИКАМ, а не по собранным файлам.
+ *
+ * Это принципиально. Отпечаток нужно знать самой игре: только зная, что она
+ * такое, она может понять, что на сервере лежит уже не она. Отпечаток готовой
+ * сборки внутрь неё не положить — запись изменит то, по чему он считался. А вот
+ * отпечаток исходников известен ДО сборки, и его можно и вписать в код, и
+ * положить рядом файлом. Оба совпадут.
+ *
+ * Считается по содержимому всего мелкого — кода, разметки, уровней, реестра — и
+ * по именам с размерами для тяжёлого: моделей, звука, картинок. Читать на каждый
+ * запрос три десятка мегабайт незачем, а размер у изменившейся модели меняется
+ * практически всегда.
+ */
+async function sourceStamp() {
+  const корни = ['src', 'public', 'index.html'].map((p) => resolve(import.meta.dirname, p));
+  const hash = createHash('sha1');
+
+  for (const корень of корни) {
+    if (!existsSync(корень)) continue;
+
+    const файлы = (await stat(корень)).isDirectory() ? await listFiles(корень) : [корень];
+    for (const file of файлы) {
+      if (basename(file) === VERSION_FILE) continue; // себя в расчёт не берём
+
+      const короткий = file.slice(resolve(import.meta.dirname).length);
+      hash.update(короткий);
+
+      // мелкое — по содержимому, тяжёлое — по размеру
+      if (/\.(js|json|html|css|glsl)$/i.test(file)) hash.update(await readFile(file));
+      else hash.update(String((await stat(file)).size));
+    }
+  }
+  return hash.digest('hex').slice(0, 12);
+}
+
+/**
+ * Игра узнаёт о новой версии, сверяя свой отпечаток с тем, что лежит на сервере.
+ *
+ * Отпечаток попадает в два места сразу: внутрь кода (через `define`) и в файл
+ * рядом с игрой. Пока они совпадают — версия та же.
+ *
+ * Раньше игра своего отпечатка не знала и запоминала тот, что прочла при
+ * открытии. Из этого выходило две беды. Открыв игру уже ПОСЛЕ выкладки, игрок
+ * не видел кнопки никогда: расходиться было нечему. А если страница пришла из
+ * кэша, то есть игрок и правда сидел на старой, то в память ложился уже новый
+ * отпечаток — и старая версия считала себя свежей.
+ */
+function versionStamp(stamp) {
   return {
     name: 'version-stamp',
 
-    // Сборка: отпечаток по всему, что легло в dist.
+    // Сборка: кладём рядом с игрой тот же отпечаток, что вписан внутрь неё.
     async closeBundle() {
       const dir = resolve(import.meta.dirname, 'dist');
       if (!existsSync(dir)) return;
 
-      const hash = createHash('sha1');
-      for (const file of await listFiles(dir)) {
-        if (basename(file) === NAME) continue; // себя в расчёт не берём
-        hash.update(file.slice(dir.length));
-        hash.update(await readFile(file));
-      }
-
-      const build = hash.digest('hex').slice(0, 12);
-      await writeFile(join(dir, NAME), JSON.stringify({ build }) + '\n');
-      console.log(`отпечаток сборки: ${build}`);
+      await writeFile(join(dir, VERSION_FILE), JSON.stringify({ build: stamp }) + '\n');
+      console.log(`отпечаток сборки: ${stamp}`);
     },
 
-    // Разработка: файла на диске нет, отвечаем на лету. По времени правки и
-    // размеру, а не по содержимому — читать мегабайты на каждый опрос незачем.
+    // Разработка: файла на диске нет, считаем на лету. Правка любого исходника
+    // меняет отпечаток, а в коде остаётся тот, что был на запуске сервера, —
+    // так кнопку видно сразу, не выкладывая ничего.
     configureServer(server) {
-      server.middlewares.use(`/${NAME}`, async (req, res) => {
-        const корни = ['src', 'public', 'index.html'].map((p) => resolve(import.meta.dirname, p));
-        const hash = createHash('sha1');
-
-        for (const корень of корни) {
-          if (!existsSync(корень)) continue;
-          const файлы = (await stat(корень)).isDirectory() ? await listFiles(корень) : [корень];
-          for (const file of файлы) {
-            const s = await stat(file);
-            hash.update(`${file}:${s.size}:${s.mtimeMs}`);
-          }
-        }
-
+      server.middlewares.use(`/${VERSION_FILE}`, async (req, res) => {
         res.setHeader('content-type', 'application/json');
         res.setHeader('cache-control', 'no-store');
-        res.end(JSON.stringify({ build: hash.digest('hex').slice(0, 12) }));
+        res.end(JSON.stringify({ build: await sourceStamp() }));
       });
     },
   };
 }
 
+const STAMP = await sourceStamp();
+
 export default defineConfig({
-  plugins: [blenderExport(), locationSaver(), versionStamp()],
+  plugins: [blenderExport(), locationSaver(), versionStamp(STAMP)],
+
+  // Отпечаток вписывается прямо в код: так игра знает, что она такое, и может
+  // сверить себя с тем, что лежит на сервере.
+  define: {
+    __BUILD__: JSON.stringify(STAMP),
+  },
   server: {
     port: 5173,
     open: false,
