@@ -112,7 +112,7 @@ engine.add({
     dust.update(dt, player.position);
     puffs.update(dt);
     camera.update(dt);
-    targetMark.update(player.spotted);
+    targetMark.update(player.spotted, dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     visibility.update(here); // за краем экрана фигуры не рисуются вовсе
     locations.seeThrough.update(dt, player); // заслонившее героя — просвечивает
