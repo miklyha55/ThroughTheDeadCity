@@ -15,6 +15,7 @@ import { Splash } from './ui/Splash.js';
 import { Music } from './core/Music.js';
 import { StartMessage } from './core/StartMessage.js';
 import { Radio } from './ui/Radio.js';
+import { Ending } from './ui/Ending.js';
 import { Sfx } from './core/Sfx.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
@@ -70,6 +71,24 @@ const startMessage = new StartMessage(); // вступление на перво
 const NO_INTRO = 'dev:noIntro';
 if (import.meta.env.DEV) startMessage.muted = localStorage.getItem(NO_INTRO) === '1';
 const radio = new Radio(); // и рация в углу: видно, откуда голос и почему нельзя идти
+const ending = new Ending(); // экран, которым игра кончается
+
+/**
+ * Игра пройдена: последний уровень выпустил персонажа наружу.
+ *
+ * Мир останавливается целиком — не только управление. Иначе за картинкой
+ * продолжали бы бегать зомби, топать шаги и хрипеть голоса, и финал звучал бы
+ * как продолжение боя. Остаётся одна музыка, зациклённая, как и на уровнях.
+ */
+let finished = false;
+locations.onFinish = () => {
+  if (finished) return;
+
+  finished = true;
+  sfx.silence();                    // мир замер — его звуки замолкают вместе с ним
+  music.play(CONFIG.ending.track);
+  ending.show();
+};
 const params = new URLSearchParams(window.location.search);
 
 /**
@@ -108,9 +127,10 @@ engine.add({
       return;
     }
 
-    // Под заставкой мир замер: старый уровень уже снят со сцены, а бежать по
-    // нему и топать персонаж иначе продолжал бы до самой загрузки нового.
-    if (locations.loading) return;
+    // Под заставкой и на финальном экране мир замер: там либо старый уровень уже
+    // снят со сцены, либо игра кончилась, а бежать по ним персонаж иначе
+    // продолжал бы как ни в чём не бывало.
+    if (locations.loading || finished) return;
 
     input.update();
     player.frozen = startMessage.locked; // пока звучит вступление, он только слушает
@@ -189,7 +209,7 @@ function wireBlasts(location) {
     // Дальний взрыв слышно тише: иначе бочка на том конце площадки грохочет
     // так же, как та, что рванула под ногами.
     const near = Math.max(0, 1 - at.distanceTo(player.position) / CFG.hearing);
-    if (near > 0) sfx.play('explosion', CONFIG.sounds.volume * CFG.volume * near, CFG.layers);
+    if (near > 0) sfx.play('explosion', CFG.volume * near, CFG.layers);
   };
 }
 wireBlasts(locations.current);

@@ -59,8 +59,19 @@ export class SeeThrough {
     return true;
   }
 
-  /** Забыть всё: локация сменилась. */
+  /**
+   * Забыть всё: локация сменилась.
+   *
+   * Копии материалов принадлежат этой локации и больше никому не нужны. За ними
+   * стоит собранная шейдерная программа, и если их не выбросить, каждый заход на
+   * уровень оставлял бы по копии на каждый меш каждого дома.
+   */
   clear() {
+    for (const item of this.items) {
+      item.object.traverse((mesh) => {
+        if (mesh.isMesh && mesh.material?.userData.fade) mesh.material.dispose();
+      });
+    }
     this.items.length = 0;
     this.blocking.clear();
   }

@@ -16,6 +16,7 @@ export class LocationManager {
     this.editing = false; // в режиме правки статику не сливаем: её двигают мышью
     this.camera = null;   // ставится снаружи: её надо переносить вместе с игроком
     this.splash = null;   // заставка на время загрузки; ставится снаружи
+    this.onFinish = null; // цепочка кончилась: игра пройдена
     this.sfx = null;      // голоса зомби; тоже ставится снаружи
     this.seeThrough = null; // просвечивание заслонивших зданий
   }
@@ -29,9 +30,19 @@ export class LocationManager {
   /** Следующая локация по цепочке, куда ведёт выход текущей. */
   get nextId() { return this.current?.data.next ?? null; }
 
-  /** Переход через выход: срабатывает один раз, пока предыдущая загрузка не закончилась. */
+  /**
+   * Переход через выход: срабатывает один раз, пока предыдущая загрузка не закончилась.
+   *
+   * За последним уровнем следующего нет — там кончается не цепочка, а игра,
+   * поэтому пустой `next` это не тупик, а сигнал наружу.
+   */
   advance() {
-    if (this.loading || !this.nextId) return;
+    if (this.loading) return;
+
+    if (!this.nextId) {
+      this.onFinish?.();
+      return;
+    }
     this.load(this.nextId);
   }
 

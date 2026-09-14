@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import { CONFIG } from '../config.js';
 
 // м/с, с которой камера едет по локации от WASD и стрелок вверх-вниз
 const PAN_SPEED = 18;
@@ -131,10 +132,19 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
 
   let chain = [];
 
-  /** Собирает цепочку уровней, идя по ссылкам `next`, пока не замкнётся круг. */
+  /**
+   * Собирает цепочку уровней, идя по ссылкам `next` от самого первого.
+   *
+   * Именно от первого, а не от того, где стоим: за последним уровнем следующего
+   * нет — там финал, — и цепочка, построенная с него, состояла бы из него одного.
+   * Стрелки тогда никуда не ведут, и до начала игры из панели не добраться.
+   *
+   * Уровень, открытый в обход цепочки (через `?location=`), дописывается в конец:
+   * иначе он выпал бы из переключения вместе со всем, что правили именно на нём.
+   */
   async function readChain() {
     const list = [];
-    let id = locations.current.data.id;
+    let id = CONFIG.locations.first;
 
     while (id && !list.includes(id)) {
       list.push(id);
@@ -143,6 +153,10 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
       if (!res.ok) break;
       id = (await res.json()).next;
     }
+
+    const here = locations.current.data.id;
+    if (!list.includes(here)) list.push(here);
+
     chain = list;
   }
 

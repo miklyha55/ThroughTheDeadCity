@@ -120,6 +120,30 @@
       }
       .editor__toggle input { cursor: pointer; }
 
+      /* Финальный экран: кроет всё, включая заставку, и не отдаёт управление. */
+      .ending {
+        position: fixed; inset: 0; z-index: 80;
+        background: #0b0e12 center / cover no-repeat;
+        opacity: 0; pointer-events: none;
+        transition: opacity 900ms ease;
+      }
+      .ending--on {
+        opacity: 1; pointer-events: auto;
+        animation: ending-breath 11s ease-in-out infinite alternate;
+      }
+
+      /* Медленное дыхание кадра: картинка неподвижна ровно настолько, чтобы
+         казаться живой, а не зациклённой. Масштаб только вверх от единицы —
+         иначе из-под кадра полезли бы края. */
+      @keyframes ending-breath {
+        from { transform: scale(1); }
+        to   { transform: scale(1.07); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .ending--on { animation: none; }
+      }
+
       .splash {
         position: fixed; inset: 0; z-index: 60;
         display: flex; flex-direction: column;

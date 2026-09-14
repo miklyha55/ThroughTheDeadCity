@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { Figure } from './Figure.js';
 
 const CFG = CONFIG.zombies;
 
@@ -29,38 +30,21 @@ const _toPoint = new THREE.Vector3();
  * Зомби: замечает персонажа в радиусе, медленно идёт к нему и бьёт вблизи.
  * Пока персонаж далеко, зомби стоит и дышит — так толпа не съедает кадр.
  */
-export class Zombie {
+export class Zombie extends Figure {
   /**
    * @param {THREE.Object3D} model — клон скина со своим скелетом
    * @param {THREE.AnimationClip[]} clips — общие клипы библиотеки
    */
   constructor(model, clips) {
-    this.root = model;
-    this.root.traverse((o) => {
-      if (o.isMesh) {
-        o.castShadow = true;
-        o.receiveShadow = true;
-      }
-    });
+    super(model, clips, 0.25);
 
-    this.mixer = new THREE.AnimationMixer(model);
-    this.actions = new Map();
-    for (const clip of clips) {
-      if (clip.name.startsWith('Armature|')) continue; // служебный клип из mixamo-экспорта
-      this.actions.set(clip.name, this.mixer.clipAction(clip));
-    }
+    this.once(['Headbutt', 'Death', 'ReactionHit']);
 
-    for (const once of ['Headbutt', 'Death', 'ReactionHit']) {
-      const action = this.actions.get(once);
-      if (!action) continue;
-      action.setLoop(THREE.LoopOnce, 1);
-      action.clampWhenFinished = true;
-    }
     // клип играется быстрее, значит и замах длится меньше реального времени
-    this.attackLength = (this.actions.get('Headbutt')?.getClip().duration ?? 1) / CFG.attackSpeed;
+    this.attackLength = this.lengthOf('Headbutt', CFG.attackSpeed);
     // сколько длится рывок: столько же, сколько играет сам клип
-    this.hurtLength = (this.actions.get('ReactionHit')?.getClip().duration ?? 1) / CFG.hurtSpeed;
-    this.deathLength = this.actions.get('Death')?.getClip().duration ?? 1;
+    this.hurtLength = this.lengthOf('ReactionHit', CFG.hurtSpeed);
+    this.deathLength = this.lengthOf('Death');
 
     this.health = CFG.health;
     this.deadTime = 0;
@@ -84,7 +68,6 @@ export class Zombie {
     this.play('Idle', 0);
   }
 
-  get position() { return this.root.position; }
 
   get alive() { return this.state !== STATE.DEAD; }
 
@@ -104,12 +87,11 @@ export class Zombie {
    * Смерть от прилетевшего предмета: бочка или ящик, разогнанные персонажем,
    * валят наповал независимо от того, сколько у зомби оставалось здоровья.
    *
-   * @param {THREE.Vector3} [from] — откуда прилетело: туда же летят брызги
-   * @param {number} [gore] — во сколько раз гуще кровь: разрыв взрывом не то же
-   *   самое, что удар бочкой
    * Брызги те же, что и от пули: один и тот же залп зелени.
    *
    * @param {THREE.Vector3} [from] — откуда прилетело: туда же летят капли
+   * @param {number} [gore] — во сколько раз гуще кровь: разрыв взрывом не то же
+   *   самое, что удар бочкой
    */
   crush(from = null, gore = 1) {
     if (this.state === STATE.DEAD) return false;
@@ -149,14 +131,6 @@ export class Zombie {
     // restart: попадание дёргает зомби заново, даже если он уже в этом состоянии
     this._enter(STATE.HURT, true);
     return false;
-  }
-
-  play(name, fade = 0.25) {
-    const next = this.actions.get(name);
-    if (!next || next === this.current) return;
-    next.reset().setEffectiveWeight(1).fadeIn(fade).play();
-    if (this.current) this.current.fadeOut(fade);
-    this.current = next;
   }
 
   /**
@@ -249,7 +223,7 @@ export class Zombie {
     if (away >= CFG.voiceRange) return;
 
     const near = 1 - away / CFG.voiceRange;
-    this.sfx.play(sound, CONFIG.sounds.volume * loudness * near, 1, pitch);
+    this.sfx.play(sound, loudness * near, 1, pitch);
   }
 
   /** Расстояние до персонажа по земле: высота не в счёт. */
@@ -292,26 +266,19 @@ export class Zombie {
       case STATE.ATTACK:
         this.attackTime = 0;
         this.hitDone = false;
-        this.play('Headbutt', 0.12);
-        this.current.reset().play();
-        this.current.timeScale = CFG.attackSpeed;
+        this.restart('Headbutt', 0.12, CFG.attackSpeed);
         break;
 
       case STATE.HURT:
         this.hurtTime = 0;
-        // Клип ставим принудительно: play() сам по себе не перезапустит тот же,
-        // и вторая пуля подряд не была бы видна.
-        this.play('ReactionHit', CFG.hurtFade);
-        this.current.reset().play();
-        this.current.timeScale = CFG.hurtSpeed;
+        // Клип перезапускаем принудительно: вторая пуля подряд иначе не видна.
+        this.restart('ReactionHit', CFG.hurtFade, CFG.hurtSpeed);
         break;
 
       case STATE.DEAD:
         this.deadTime = 0;
         this._voice('zombieDead', CFG.deathVolume, 1, CFG.deathPitch); // хрип слышно всегда
-        this.play('Death', 0.15);
-        this.current.reset().play();
-        this.current.timeScale = 1;
+        this.restart('Death', 0.15);
         break;
     }
   }

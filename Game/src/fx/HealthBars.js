@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { flatDistance } from '../core/ground.js';
 
 const CFG = CONFIG.healthBar;
 const MAX_HEALTH = CONFIG.zombies.health;
@@ -73,7 +74,7 @@ export class HealthBars {
       if (!zombie.alive || zombie.health >= MAX_HEALTH) continue;
 
       const at = zombie.position;
-      if (Math.hypot(at.x - player.position.x, at.z - player.position.z) > CFG.drawRange) continue;
+      if (flatDistance(at, player.position) > CFG.drawRange) continue;
 
       const share = Math.max(0, Math.min(1, zombie.health / MAX_HEALTH));
       _center.set(at.x, at.y + CFG.offset, at.z);

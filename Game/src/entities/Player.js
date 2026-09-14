@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { flatDistance } from '../core/ground.js';
 import { batchSkinned } from '../world/batching.js';
+import { Figure } from './Figure.js';
 import { arcPoint } from '../core/arc.js';
 
 const CFG = CONFIG.player;
@@ -48,74 +50,32 @@ function jumpPhases(clip) {
 }
 
 /** Персонаж: модель, миксер анимаций и движение по земле. */
-export class Player {
+export class Player extends Figure {
   constructor(gltf) {
     // семнадцать материалов персонажа сводятся к нескольким — по блеску и металлу
-    this.root = batchSkinned(gltf.scene);
-    this.root.traverse((o) => {
-      if (o.isMesh) {
-        o.castShadow = true;
-        o.receiveShadow = true;
-      }
-    });
+    super(batchSkinned(gltf.scene), gltf.animations, 0.2);
 
     this._addGlow();
 
-    this.mixer = new THREE.AnimationMixer(this.root);
-    this.actions = new Map();
-    for (const clip of gltf.animations) {
-      if (clip.name.startsWith('Armature|')) continue; // служебный клип из mixamo-экспорта
-      this.actions.set(clip.name, this.mixer.clipAction(clip));
-    }
+    this.once(['Death', 'ReactionHit', 'Shoot', 'Throw', 'Jump']);
 
-    const death = this.actions.get('Death');
-    if (death) {
-      death.setLoop(THREE.LoopOnce, 1);
-      death.clampWhenFinished = true;
-    }
-
-    const reaction = this.actions.get('ReactionHit');
-    this.reactionLength = CFG.reactionFor;
-    if (reaction) {
-      reaction.setLoop(THREE.LoopOnce, 1);
-      reaction.clampWhenFinished = true;
-      // клип длинный, а нужен короткий рывок — играем его быстрее
-      this.reactionLength = reaction.getClip().duration / CFG.reactionSpeed;
-    }
+    // клип длинный, а нужен короткий рывок — играем его быстрее
+    this.reactionLength = this.lengthOf('ReactionHit', CFG.reactionSpeed, CFG.reactionFor);
+    this.shootLength = this.lengthOf('Shoot');
+    // клип играется быстрее, значит и замах длится меньше своей записи
+    this.throwLength = this.lengthOf('Throw', CFG.throwSpeed, 0);
 
     this.velocity = new THREE.Vector3();
     this.yaw = 0;
-    this.current = null;
 
-    const shoot = this.actions.get('Shoot');
-    if (shoot) {
-      shoot.setLoop(THREE.LoopOnce, 1);
-      shoot.clampWhenFinished = true;
-      this.shootLength = shoot.getClip().duration;
-    }
-
-    const toss = this.actions.get('Throw');
-    this.throwLength = 0;
-    if (toss) {
-      toss.setLoop(THREE.LoopOnce, 1);
-      toss.clampWhenFinished = true;
-      // клип играется быстрее, значит и замах длится меньше своей записи
-      this.throwLength = toss.getClip().duration / CFG.throwSpeed;
-    }
-
+    // Полёт начинается вместе с клипом, поэтому фаза отрыва не нужна: важно
+    // только, где в анимации он касается земли — там дуга и кончается. Момент
+    // касания берём с небольшим опережением: по клипу нога встаёт чуть раньше,
+    // чем бёдра опускаются до исходной высоты.
     const jump = this.actions.get('Jump');
-    this.jumpLanding = 0.6;   // когда в клипе он касается земли, с
-    if (jump) {
-      jump.setLoop(THREE.LoopOnce, 1);
-      jump.clampWhenFinished = true;
-
-      // Полёт начинается вместе с клипом, поэтому фаза отрыва не нужна: важно
-      // только, где в анимации он касается земли — там дуга и кончается. Момент
-      // касания берём с небольшим опережением: по клипу нога встаёт чуть раньше,
-      // чем бёдра опускаются до исходной высоты.
-      const landing = jumpPhases(jump.getClip()).landing * CFG.jumpLandShare;
-      this.jumpLanding = landing / CFG.jumpSpeed;
-    }
+    this.jumpLanding = jump
+      ? (jumpPhases(jump.getClip()).landing * CFG.jumpLandShare) / CFG.jumpSpeed
+      : 0.6; // клипа нет — считаем, что он касается земли примерно здесь
 
     this.lives = CFG.lives;
 
@@ -158,7 +118,6 @@ export class Player {
     this._right = new THREE.Vector3();
   }
 
-  get position() { return this.root.position; }
 
   get alive() { return this.lives > 0; }
 
@@ -207,11 +166,9 @@ export class Player {
     this.velocity.set(0, 0, 0);
     this._holdFire();
 
-    // Клип ставим принудительно: play() не перезапустит тот же самый, и второй
-    // удар подряд не был бы виден — персонаж досматривал бы первую реакцию.
-    this.play('ReactionHit', 0.08);
-    this.current.reset().play();
-    this.current.timeScale = CFG.reactionSpeed;
+    // Клип перезапускаем принудительно: второй удар подряд иначе не виден —
+    // персонаж досматривал бы первую реакцию.
+    this.restart('ReactionHit', 0.08, CFG.reactionSpeed);
   }
 
   /**
@@ -229,9 +186,7 @@ export class Player {
     this.jumpTime = 0;
     this._holdFire();
     this._holdGun(false);
-    this.play('Idle', 0);
-    this.current.reset().play();
-    this.current.timeScale = 1;
+    this.restart('Idle', 0);
   }
 
   /**
@@ -260,11 +215,7 @@ export class Player {
     // число: у самой границы выстрела бросок не долетал бы, и на краю прицела
     // персонаж вместо стрельбы принимался бы возиться с ящиком.
     const reach = CFG.fireRange * CFG.throwRange;
-    const away = Math.hypot(
-      target.position.x - this.root.position.x,
-      target.position.z - this.root.position.z
-    );
-    if (away > reach) return false;
+    if (flatDistance(target.position, this.root.position) > reach) return false;
 
     debris.hold(item);
 
@@ -281,9 +232,7 @@ export class Player {
     this._holdGun(false); // руки заняты предметом — ружьё за спиной
     this.velocity.set(0, 0, 0);
 
-    this.play('Throw', 0.1);
-    this.current.reset().play();
-    this.current.timeScale = CFG.throwSpeed;
+    this.restart('Throw', 0.1, CFG.throwSpeed);
     return true;
   }
 
@@ -327,7 +276,7 @@ export class Player {
 
     // Звук — здесь, вместе с самим вылетом, а не при начале замаха: до этого
     // момента бросок ещё можно оборвать, и раньше остался бы хэканье без броска.
-    this.sfx?.play('throw', CONFIG.sounds.volume * CFG.throwVolume);
+    this.sfx?.play('throw', CFG.throwVolume);
 
     // Цель могли убить, пока шёл замах, — тогда предмет уходит просто вперёд.
     let dirX = Math.sin(this.yaw);
@@ -374,11 +323,9 @@ export class Player {
 
     // Крик идёт вместе с началом падения. Расстоянием он не приглушается, в
     // отличие от голосов зомби: это свой персонаж, он всегда в двух шагах.
-    this.sfx?.play('playerDie', CONFIG.sounds.volume * CFG.dieVolume);
+    this.sfx?.play('playerDie', CFG.dieVolume);
 
-    this.play('Death', 0.15);
-    this.current.reset().play();
-    this.current.timeScale = 1;
+    this.restart('Death', 0.15);
   }
 
   /** Ставит персонажа в точку старта локации, гася движение. */
@@ -436,7 +383,7 @@ export class Player {
 
       if (!crossed) continue;
 
-      this.sfx?.play('walk', CONFIG.sounds.volume * CFG.stepVolume);
+      this.sfx?.play('walk', CFG.stepVolume);
       this.puffs?.burst(this.root.position);
       break;
     }
@@ -445,23 +392,10 @@ export class Player {
   }
 
   /** Плавно переключает анимацию, если она ещё не играет. */
-  play(name, fade = 0.2) {
-    const next = this.actions.get(name);
-    if (!next || next === this.current) return;
-    next.reset().setEffectiveWeight(1).fadeIn(fade).play();
-    if (this.current) this.current.fadeOut(fade);
-    this.current = next;
-  }
-
   /**
    * @param {number} dt
    * @param {THREE.Vector2} move — ввод: x вбок, y вперёд, длина 0..1
    * @param {number} cameraYaw — направление камеры, чтобы «вперёд» было от камеры
-   */
-  /**
-   * @param {number} dt
-   * @param {THREE.Vector2} move — ввод: x вбок, y вперёд, длина 0..1
-   * @param {number} cameraYaw — направление камеры
    * @param {import('../world/Location.js').Location} [location] — цели и препятствия
    */
   update(dt, move, cameraYaw, location) {
@@ -625,9 +559,7 @@ export class Player {
     }
 
     // цель есть и перезарядка кончилась — стреляем
-    this.play('Shoot', 0.08);
-    this.current.reset().play();
-    this.current.timeScale = CFG.shootSpeed;
+    this.restart('Shoot', 0.08, CFG.shootSpeed);
 
     this.shotPending = CFG.shotDelay;
     this.shootPlaying = this.shootLength / CFG.shootSpeed;
@@ -663,11 +595,9 @@ export class Player {
 
     // Звук — вместе с отрывом от земли: дальше прыжок уже не отменить, и он
     // всегда совпадёт с началом клипа, как бы тот ни был ускорен.
-    this.sfx?.play('jump', CONFIG.sounds.volume * CFG.jumpVolume);
+    this.sfx?.play('jump', CFG.jumpVolume);
 
-    this.play('Jump', 0.08);
-    this.current.reset().play();
-    this.current.timeScale = CFG.jumpSpeed;
+    this.restart('Jump', 0.08, CFG.jumpSpeed);
     return true;
   }
 
@@ -748,7 +678,6 @@ export class Player {
     if (this.gunOnBack) this.gunOnBack.visible = !inHands;
   }
 
-  /** Сбрасывает прицел, когда персонаж побежал. */
   /**
    * Сбрасывает всё, что связано со стрельбой: прицел, недоигранный клип и паузу.
    *
@@ -776,7 +705,7 @@ export class Player {
     for (const zombie of location.zombies) {
       if (!zombie.alive) continue;
 
-      const distance = Math.hypot(zombie.position.x - from.x, zombie.position.z - from.z);
+      const distance = flatDistance(zombie.position, from);
       if (distance >= bestDistance) continue;
 
       // сквозь дом или машину не стреляем
@@ -801,12 +730,12 @@ export class Player {
     if (!zombie || !zombie.alive) return;
 
     const from = this.root.position;
-    if (Math.hypot(zombie.position.x - from.x, zombie.position.z - from.z) > CFG.fireRange) return;
+    if (flatDistance(zombie.position, from) > CFG.fireRange) return;
 
     // Звук — здесь, вместе с самой пулей, а не при запуске анимации. Между ними
     // проходит `shotDelay`, и за это время выстрел могут отменить: персонажа
     // ударили или он снова побежал. Тогда раньше оставался хлопок без выстрела.
-    this.sfx?.play('fire', CONFIG.sounds.volume * CFG.fireVolume);
+    this.sfx?.play('fire', CFG.fireVolume);
 
     // Откуда вылетает пуля.
     //
@@ -815,7 +744,7 @@ export class Player {
     // подошедший ближе этого, оказывается ПОЗАДИ дула: ствол смотрит вперёд,
     // а цель сбоку — выстрел выглядит уходящим в никуда. В упор стреляем от
     // груди прямо в цель: линия короткая и честная.
-    const reach = Math.hypot(zombie.position.x - from.x, zombie.position.z - from.z);
+    const reach = flatDistance(zombie.position, from);
     const pointBlank = reach < CFG.muzzleOffset * CFG.pointBlank;
 
     const muzzle = pointBlank
@@ -838,7 +767,7 @@ export class Player {
     // цели — тогда промах виден, но не спорит с тем, куда он на самом деле целил.
     const range = Math.min(
       CFG.fireRange,
-      Math.hypot(zombie.position.x - muzzle.x, zombie.position.z - muzzle.z) * CFG.missReach
+      flatDistance(zombie.position, muzzle) * CFG.missReach
     );
 
     for (let i = 0; i < CFG.pellets; i++) {
@@ -860,7 +789,7 @@ export class Player {
       // Докуда пуля вообще долетела: до того, в кого попала, иначе — сколько
       // прочертила. Дальше этого она никого и ничего задеть не может.
       const flight = victim
-        ? Math.hypot(victim.position.x - muzzle.x, victim.position.z - muzzle.z)
+        ? flatDistance(victim.position, muzzle)
         : range;
 
       // Бочка на пути детонирует. Ищем её только в пределах полёта: раньше

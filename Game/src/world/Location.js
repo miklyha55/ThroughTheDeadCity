@@ -5,6 +5,7 @@ import { batchStatic } from './batching.js';
 import { NavGrid } from './NavGrid.js';
 import { createBorderFog } from './BorderFog.js';
 import { CONFIG } from '../config.js';
+import { flatDistance } from '../core/ground.js';
 
 const DEG = Math.PI / 180;
 
@@ -77,7 +78,8 @@ export class Location {
     this.spawnYaw = (data.spawn.rotation ?? 0) * DEG;
 
     this._buildGround();
-    this.group.add(createBorderFog(w, d)); // за забором мир тонет во мгле
+    this.fog = createBorderFog(w, d); // за забором мир тонет во мгле
+    this.group.add(this.fog);
     this._buildProps();
 
     // сетка проходимости снимается с готовых препятствий: локация дальше не меняется
@@ -202,8 +204,6 @@ export class Location {
     // предметы разлетаются и от зомби: толпа проходит — ящики расходятся
     this._movers.length = 0;
     this._movers.push(player);
-    // Персонажа взрыв не трогает: он сам его и устроил, а погибать от того, во
-    // что стрелял, — наказание не за ошибку, а за приём.
     for (const zombie of this.zombies) {
       if (zombie.alive) this._movers.push(zombie);
     }
@@ -228,8 +228,6 @@ export class Location {
     const gap = CONFIG.zombies.bodyRadius + CONFIG.player.radius;
     const position = player.position;
 
-    // Персонажа взрыв не трогает: он сам его и устроил, а погибать от того, во
-    // что стрелял, — наказание не за ошибку, а за приём.
     for (const zombie of this.zombies) {
       if (!zombie.alive) continue; // через труп можно перешагнуть
 
@@ -250,8 +248,6 @@ export class Location {
   _someoneNear(player) {
     const range = CONFIG.zombies.loseRadius;
 
-    // Персонажа взрыв не трогает: он сам его и устроил, а погибать от того, во
-    // что стрелял, — наказание не за ошибку, а за приём.
     for (const zombie of this.zombies) {
       const dx = zombie.position.x - player.position.x;
       const dz = zombie.position.z - player.position.z;
@@ -545,7 +541,7 @@ export class Location {
     // Считаем по самой метке: её и двигают в редакторе.
     const mark = this.data.exitAt && this.exitMark;
     if (mark) {
-      return Math.hypot(p.x - mark.position.x, p.z - mark.position.z) <= mark.scale.x;
+      return flatDistance(p, mark.position) <= mark.scale.x;
     }
 
     const e = this.exit;
@@ -587,9 +583,15 @@ export class Location {
 
     // слитая геометрия принадлежит локации — её больше никто не переиспользует
     this._batched?.traverse((o) => o.isMesh && o.geometry.dispose());
-    // геометрия и материалы общие с библиотекой — освобождаем только то, что создано локацией
-    this.ground.geometry.dispose();
-    this.ground.material.dispose();
+
+    // Освобождаем только то, что создала сама локация: пол и метку выхода.
+    // Геометрия и материалы пропов общие с библиотекой — их трогать нельзя,
+    // иначе следующая локация соберётся из уже выброшенного.
+    for (const own of [this.ground, this.exitMark, this.fog]) {
+      if (!own) continue;
+      own.geometry.dispose();
+      own.material.dispose();
+    }
   }
 }
 

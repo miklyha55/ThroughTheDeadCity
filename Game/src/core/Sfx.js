@@ -57,10 +57,10 @@ export class Sfx {
    *
    * @param {string} name — какой звук
    * @param {boolean} playing — должен ли он сейчас звучать
-   * @param {number} [volume]
+   * @param {number} [loudness] — доля от общей громкости
    * @param {number} [rate] — темп: им задаётся и скорость, и высота тона
    */
-  loop(name, playing, volume = CFG.volume, rate = 1) {
+  loop(name, playing, loudness = 1, rate = 1) {
     let track = this.loops.get(name);
 
     if (!track) {
@@ -79,7 +79,7 @@ export class Sfx {
       this.loops.set(name, track);
     }
 
-    track.volume = Math.min(1, volume);
+    track.volume = Math.min(1, CFG.volume * loudness);
     track.playbackRate = rate;
 
     // play() может отказать, пока игрок ничего не нажимал. Ничего страшного:
@@ -89,8 +89,12 @@ export class Sfx {
   }
 
   /**
+   * Громкость задаётся долей от общей, а не абсолютом: общую крутят в одном
+   * месте, и все звуки едут за ней вместе. Раньше её домножал каждый вызов, и
+   * стоило про неё забыть — звук выбивался из общего строя.
+   *
    * @param {string} name — какой звук
-   * @param {number} [volume] — своя громкость, если нужна тише общей
+   * @param {number} [loudness] — доля от общей громкости
    * @param {number} [layers] — сколько дорожек пустить разом
    * @param {number} [pitch] — сдвиг высоты тона: ниже единицы — ниже и глуше
    *
@@ -99,8 +103,8 @@ export class Sfx {
    * несколько дорожек сразу: они складываются по амплитуде, а лёгкий разброс
    * высоты между ними делает звук ещё и плотнее, а не просто громче.
    */
-  play(name, volume = CFG.volume, layers = 1, pitch = 1) {
-    for (let i = 0; i < layers; i++) this._once(name, volume, pitch);
+  play(name, loudness = 1, layers = 1, pitch = 1) {
+    for (let i = 0; i < layers; i++) this._once(name, loudness, pitch);
 
     // Отзвук: тот же выстрел, но тише, глуше и с небольшим опозданием — будто
     // отразился от стен. Приходит он не всегда и каждый раз через разное время,
@@ -110,7 +114,7 @@ export class Sfx {
     const delay = CFG.echoDelay + Math.random() * CFG.echoSpread;
     const timer = setTimeout(() => {
       this.echoes.delete(timer);
-      this._once(name, volume * CFG.echoVolume, CFG.echoPitch * pitch);
+      this._once(name, loudness * CFG.echoVolume, CFG.echoPitch * pitch);
     }, delay);
     this.echoes.add(timer);
   }
@@ -144,7 +148,7 @@ export class Sfx {
   }
 
   /** Одно срабатывание: свободная дорожка, своя высота тона и громкость. */
-  _once(name, volume, pitchShift = 1) {
+  _once(name, loudness, pitchShift = 1) {
     const variants = this.voices.get(name);
     if (!variants?.length) return;
 
@@ -155,7 +159,7 @@ export class Sfx {
     const spread = (range) => 1 + (Math.random() - 0.5) * 2 * range;
 
     audio.currentTime = 0;
-    audio.volume = Math.min(1, volume * spread(CFG.loudnessSpread));
+    audio.volume = Math.min(1, CFG.volume * loudness * spread(CFG.loudnessSpread));
     audio.playbackRate = spread(CFG.pitchSpread) * pitchShift;
     audio.play().catch(() => {}); // до первого касания браузер звук не пустит
   }

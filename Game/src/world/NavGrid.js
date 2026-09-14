@@ -15,8 +15,6 @@ export class NavGrid {
    * @param {number} width — размер площадки по X, м
    * @param {number} depth — размер площадки по Z, м
    * @param {number} cell — сторона клетки, м
-   */
-  /**
    * @param {number} maxRange — насколько далеко от цели считать волну, м.
    *   Дальше она не нужна: зомби за этой чертой всё равно стоят на месте.
    */

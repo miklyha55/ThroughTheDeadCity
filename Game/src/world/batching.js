@@ -170,15 +170,6 @@ export function batchSkinned(root, cache = materialCache) {
 }
 
 /**
- * Сливает статичную геометрию локации в несколько больших мешей — по одному
- * на группу материалов. Объекты после этого перестают существовать по отдельности,
- * поэтому сюда идёт только то, что никогда не двигается.
- *
- * @param {THREE.Object3D[]} objects — размещённые пропы
- * @param {Map} cache — общий кэш материалов
- * @returns {THREE.Group} группа слитых мешей
- */
-/**
  * Сводит один проп в единый меш.
  *
  * Модель из Blender приходит десятком кусков — корпус, крышка, обручи, — и
@@ -231,6 +222,15 @@ export function batchParts(root, cache = materialCache) {
   return root;
 }
 
+/**
+ * Сливает статичную геометрию локации в несколько больших мешей — по одному
+ * на группу материалов. Объекты после этого перестают существовать по отдельности,
+ * поэтому сюда идёт только то, что никогда не двигается.
+ *
+ * @param {THREE.Object3D[]} objects — размещённые пропы
+ * @param {Map} cache — общий кэш материалов
+ * @returns {THREE.Group} группа слитых мешей
+ */
 export function batchStatic(objects, cache = materialCache) {
   const groups = new Map();
   const keep = ['position', 'normal', 'color'];
