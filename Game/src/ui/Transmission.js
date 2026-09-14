@@ -38,6 +38,37 @@ export class Transmission {
     this.audio = null;
     this._frame = 0;
     this._shown = '';
+    this._width = 0;
+
+    addEventListener('resize', () => this._reserve());
+  }
+
+  /**
+   * Занять место под самую длинную реплику.
+   *
+   * Реплики разной длины занимают разное число строк, и на каждой смене блок
+   * менял бы высоту — а он прижат к низу экрана, и вместе с высотой прыгал бы
+   * весь текст. Померив все заранее, держим одну высоту на всю речь.
+   *
+   * Мерить приходится вживую: сколько строк займёт фраза, зависит от ширины
+   * экрана и шрифта, и посчитать это по числу букв нельзя.
+   */
+  _reserve() {
+    if (!CFG.lines?.length || this._width === innerWidth) return;
+    this._width = innerWidth;
+
+    const keep = [this.typed.textContent, this.rest.textContent];
+    this.line.style.minHeight = '';
+
+    let tallest = 0;
+    for (const text of CFG.lines) {
+      this.typed.textContent = text;
+      this.rest.textContent = '';
+      tallest = Math.max(tallest, this.line.getBoundingClientRect().height);
+    }
+
+    [this.typed.textContent, this.rest.textContent] = keep;
+    this.line.style.minHeight = `${Math.ceil(tallest)}px`;
   }
 
   /**
@@ -49,6 +80,7 @@ export class Transmission {
 
     this.audio = audio;
     this.root.classList.add('radiotext--on');
+    this._reserve();
     this._tick();
   }
 
@@ -95,7 +127,9 @@ export class Transmission {
       this.plan = this._schedule(audio.duration);
     }
 
-    const now = audio.currentTime;
+    // Текст идёт чуть впереди звука: пока глаз добежит до конца строки, ухо
+    // как раз её услышит. Ноль в ноль читается как задержка.
+    const now = audio.currentTime + CFG.advance;
     const line = this.plan.findLast((l) => now >= l.from) ?? this.plan[0];
 
     const share = line.to > line.from ? (now - line.from) / (line.to - line.from) : 1;
