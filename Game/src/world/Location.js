@@ -55,15 +55,12 @@ export class Location {
     this.group = new THREE.Group();
     this.group.name = `location:${data.id}`;
     this.obstacles = new Obstacles();
-    // Контуры ВСЕХ моделей, включая проходимые: по ним проверяем, что россыпь
-    // не встанет внутрь дома, машины или другой мелочи.
-    this.occupied = new Obstacles();
     // Только то, что выше пояса: дом, машина, контейнер. За такими персонаж
     // пропадает из виду, а за бочкой или паллетой — нет.
     this.sight = new Obstacles();
     this.debris = new Debris(this);
-    // Поштучно расставленные пропы и их строки из JSON. Нужны редактору: россыпь
-    // он не трогает — она задана зоной и семенем, двигать её поштучно нечего.
+    // Поштучно расставленные пропы и их строки из JSON: связь объекта на сцене
+    // со строкой файла нужна редактору, чтобы вернуть сдвинутое обратно в JSON.
     this.placed = [];
 
     const [w, d] = data.size;
@@ -88,11 +85,6 @@ export class Location {
     this._buildZombies();
     this._buildExitMark();
     if (batched) this._batchStatics();
-  }
-
-  /** Границы, за которые персонажу нельзя выходить (проём в заборе учитывается отдельно). */
-  get bounds() {
-    return { minX: -this.width / 2, maxX: this.width / 2, minZ: -this.depth / 2, maxZ: this.depth / 2 };
   }
 
   _buildGround() {
@@ -140,7 +132,7 @@ export class Location {
 
     zombie.kind = kind; // чтобы редактор знал, кого записывать в файл
 
-    const { idleLength, speedSpread, spacing } = CONFIG.zombies;
+    const { speedSpread } = CONFIG.zombies;
 
     zombie.blood = this.blood;
     zombie.sfx = this.sfx;
@@ -149,16 +141,12 @@ export class Location {
     zombie.yaw = yaw;
     zombie.home.set(x, 0, z);   // вокруг этого места он и будет бродить
     zombie.waypoint.copy(zombie.home);
-    // фаза и темп у каждого свои, иначе толпа дышит как один механизм
-    zombie.desync(phase * idleLength, 1 - speedSpread / 2 + phase * speedSpread);
+    // фаза и темп у каждого свои, иначе толпа дышит как один механизм.
+    // Фаза — доля клипа: его длину зомби берёт из самой анимации.
+    zombie.desync(phase, 1 - speedSpread / 2 + phase * speedSpread);
 
     this.group.add(zombie.root);
     this.zombies.push(zombie);
-
-    // место под зомби считается занятым: соседи и россыпь сюда не встанут
-    this.occupied.add(zombie.root, [
-      [[-spacing, -spacing], [spacing, -spacing], [spacing, spacing], [-spacing, spacing]],
-    ]);
   }
 
   /**
@@ -262,11 +250,11 @@ export class Location {
   }
 
   /**
-   * Регистрирует поставленный объект: препятствие, занятое место, физическое тело.
+   * Регистрирует поставленный объект: препятствие, физическое тело, помеха обзору.
    * Чем объект является, решает его префаб, а не имя модели, — поэтому одна и та же
    * вещь ведёт себя одинаково на любой локации.
    */
-  _place(name, object, markOccupied = true) {
+  _place(name, object) {
     const prefab = this.prefabs.get(name);
     if (!prefab) return;
 
@@ -274,7 +262,6 @@ export class Location {
       this.obstacles.add(object, prefab.shapes);
       this.sight.add(object, prefab.sightShapes);
     }
-    if (markOccupied) this.occupied.add(object, prefab.shapes);
 
     let carrier = object; // кого двигать, чтобы поехал сам предмет
     let com = null;       // и на сколько начало предмета смещено от начала модели
@@ -446,12 +433,9 @@ export class Location {
    * Расстановка в том виде, в каком она ляжет в JSON.
    *
    * Читается прямо со сцены, поэтому что подвинул в редакторе — то и сохранится.
-   * Россыпь при этом запекается: её предметы становятся обычными записями, а
-   * зоны из файла уходят. Иначе правку было бы не сохранить — зона задаёт не
-   * места, а правило, по которому они разыгрываются заново при каждой загрузке.
-   *
-   * Остальные разделы (забор, орды зомби, выход) остаются как были: их правят
-   * руками, а не мышью.
+   * Пропы, зомби, точка старта, высота пола и круг выхода пишутся поимённо, с
+   * координатами: в файле нет ничего, что разыгрывалось бы заново при загрузке,
+   * поэтому сохранённое и увиденное всегда совпадают.
    */
   snapshot(player = null) {
     const props = this.placed.map(({ object, com, entry }) => {
@@ -517,13 +501,10 @@ export class Location {
    */
   _buildExitMark() {
     const spot = this.data.exitAt;
-    const at = spot
-      ? new THREE.Vector3(spot[0], 0, spot[1])
-      : this.exit?.position?.clone();
+    if (!spot) return;
 
-    if (!at) return;
-
-    const radius = spot?.[2] ?? (this.exit ? this.exit.width / 2 : 3);
+    const at = new THREE.Vector3(spot[0], 0, spot[1]);
+    const radius = spot[2] ?? 3;
     const mark = new THREE.Mesh(
       new THREE.CylinderGeometry(1, 1, 0.1, 24),
       new THREE.MeshBasicMaterial({ color: 0xffd27f, transparent: true, opacity: 0.35 })
@@ -539,46 +520,34 @@ export class Location {
     this.exitMark = mark;
   }
 
-  /** Дошёл ли персонаж до выхода — то есть пересёк линию забора в створе проёма. */
+  /**
+   * Дошёл ли персонаж до выхода.
+   *
+   * Выход — круг: у извилистой улицы «сторона света» смысла не имеет, есть
+   * просто место, куда надо дойти. Считаем по самой метке, её и двигают в
+   * редакторе, так что радиус триггера всегда совпадает с тем, что видно.
+   */
   reachedExit(p) {
-    // Выход кругом — для локаций без прямоугольного забора: у извилистой улицы
-    // «сторона света» смысла не имеет, есть просто место, куда надо дойти.
-    // Считаем по самой метке: её и двигают в редакторе.
-    const mark = this.data.exitAt && this.exitMark;
-    if (mark) {
-      return flatDistance(p, mark.position) <= mark.scale.x;
-    }
+    if (!this.exitMark) return false;
 
-    const e = this.exit;
-    if (!e) return false;
-    const half = e.width / 2;
-    switch (e.side) {
-      case 'north': return p.z < -this.depth / 2 && Math.abs(p.x - e.position.x) < half;
-      case 'south': return p.z > this.depth / 2 && Math.abs(p.x - e.position.x) < half;
-      case 'west': return p.x < -this.width / 2 && Math.abs(p.z - e.position.z) < half;
-      case 'east': return p.x > this.width / 2 && Math.abs(p.z - e.position.z) < half;
-      default: return false;
-    }
+    return flatDistance(p, this.exitMark.position) <= this.exitMark.scale.x;
   }
 
   /**
-   * Не пускает за забор: держит точку внутри площадки, но пропускает через проём.
+   * Не пускает за край площадки: держит точку внутри прямоугольника.
+   *
+   * Проёма в этой рамке нет и не нужно: наружу выводит не дыра в заборе, а
+   * круг выхода, и стоит он внутри площадки.
+   *
    * @param {THREE.Vector3} p — правится на месте
    */
   clampPosition(p) {
     const m = 0.6; // отступ от забора, чтобы персонаж не влезал в столбы
     const halfW = this.width / 2 - m;
     const halfD = this.depth / 2 - m;
-    const e = this.exit;
 
-    // в створе проёма своя стена не ограничивает — только через него и можно выйти
-    const openX = e && Math.abs(p.x - e.position.x) < e.width / 2 - m;
-    const openZ = e && Math.abs(p.z - e.position.z) < e.width / 2 - m;
-
-    if (!(e?.side === 'west' && openZ)) p.x = Math.max(p.x, -halfW);
-    if (!(e?.side === 'east' && openZ)) p.x = Math.min(p.x, halfW);
-    if (!(e?.side === 'north' && openX)) p.z = Math.max(p.z, -halfD);
-    if (!(e?.side === 'south' && openX)) p.z = Math.min(p.z, halfD);
+    p.x = Math.min(Math.max(p.x, -halfW), halfW);
+    p.z = Math.min(Math.max(p.z, -halfD), halfD);
 
     return p;
   }

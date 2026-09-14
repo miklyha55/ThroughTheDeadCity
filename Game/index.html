@@ -168,6 +168,44 @@
       }
       .editor__toggle input { cursor: pointer; }
 
+      /* Ворота: чёрный экран с одной кнопкой, с которого всё начинается.
+         Лежат поверх экрана загрузки: тот уже показывает свои реплики под ними,
+         но увидеть его игрок должен только после нажатия. */
+      .gate {
+        position: fixed; inset: 0; z-index: 95;
+        display: flex; align-items: center; justify-content: center;
+        background: #05070a;
+      }
+      .gate[hidden] { display: none; }
+
+      .gate__play {
+        font: 600 17px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.16em; text-transform: uppercase;
+        color: #e8d08f;
+        padding: 17px 46px;
+        border-radius: 99px;
+        border: 1px solid rgba(232, 208, 143, 0.5);
+        background: rgba(232, 208, 143, 0.06);
+        cursor: pointer;
+        /* Серую вспышку по тапу гасим: на чёрном экране она читается как сбой. */
+        -webkit-tap-highlight-color: transparent;
+        transition: background 160ms ease, transform 120ms ease;
+      }
+      .gate__play:hover { background: rgba(232, 208, 143, 0.14); }
+      .gate__play:active { transform: scale(0.96); }
+
+      /* Мягкое дыхание: на пустом чёрном экране неподвижная кнопка читается как
+         картинка, а не как то, на что надо нажать. */
+      @keyframes gate-breath {
+        from { box-shadow: 0 0 0 0 rgba(232, 208, 143, 0.28); }
+        to   { box-shadow: 0 0 0 14px rgba(232, 208, 143, 0); }
+      }
+      .gate__play { animation: gate-breath 2200ms ease-out infinite; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .gate__play { animation: none; }
+      }
+
       /* Загрузка самой игры: голый чёрный экран, реплика и полоса под ней.
          Ни картинок, ни рамок — до заставки уровня показывать ещё нечего. */
       .boot {

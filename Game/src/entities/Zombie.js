@@ -138,14 +138,38 @@ export class Zombie extends Figure {
   }
 
   /**
+   * Темп покоя: у каждого свой, иначе толпа дышит в такт.
+   *
+   * Отдельным геттером, а не чтением поля, ради проверки на мусор. Раньше здесь
+   * стояло `this.idleSpeed ?? 1`, и оно не спасало: `??` подставляет запасное
+   * значение только вместо `null` и `undefined`, а NaN проходит насквозь и
+   * останавливает клип.
+   */
+  get restSpeed() {
+    return Number.isFinite(this.idleSpeed) ? this.idleSpeed : 1;
+  }
+
+  /**
    * Сдвигает анимацию по фазе и темпу.
    * Без этого толпа дышит синхронно, как один механизм.
+   *
+   * Фаза задаётся долей клипа, а не секундами: свою длину `AnimationAction`
+   * знает сам, через `getClip().duration`, и держать её второй раз в настройках
+   * незачем. Вторая копия и подвела — её оттуда убрали, а расчёт остался, и
+   * каждый зомби получал NaN во времени и в темпе. Клип покоя с таким темпом не
+   * идёт вовсе: вся толпа стояла неподвижно.
+   *
+   * @param {number} share — доля клипа, 0..1
+   * @param {number} speed — темп покоя
    */
-  desync(offset, speed) {
+  desync(share, speed) {
     if (!this.current) return;
-    this.current.time = offset;
-    this.current.timeScale = speed;
-    this.idleSpeed = speed;
+
+    const phase = Number.isFinite(share) ? share : 0;
+    this.idleSpeed = Number.isFinite(speed) ? speed : 1;
+
+    this.current.time = this.current.getClip().duration * phase;
+    this.current.setEffectiveTimeScale(this.restSpeed);
   }
 
   /**
@@ -251,20 +275,20 @@ export class Zombie extends Figure {
       case STATE.PATROL:
         this.play('Run', 0.3);
         // бредёт заметно медленнее, чем гонится: темп клипа под шаг
-        this.current.timeScale = CFG.patrolSpeed / CFG.runClipSpeed;
+        this.current.setEffectiveTimeScale(CFG.patrolSpeed / CFG.runClipSpeed);
         break;
 
       case STATE.IDLE:
         this.waitTime = CFG.waitMin + Math.random() * (CFG.waitMax - CFG.waitMin);
         this.play('Idle', 0.3);
-        this.current.timeScale = this.idleSpeed ?? 1;
+        this.current.setEffectiveTimeScale(this.restSpeed);
         break;
 
       case STATE.CHASE:
         this.chaseMoving = true;
         this.play('Run', 0.25);
         // темп клипа под шаг: зомби бредёт, а не бежит
-        this.current.timeScale = CFG.speed / CFG.runClipSpeed;
+        this.current.setEffectiveTimeScale(CFG.speed / CFG.runClipSpeed);
         break;
 
       case STATE.ATTACK:
@@ -488,10 +512,10 @@ export class Zombie extends Figure {
 
     if (moving) {
       this.play('Run', 0.2);
-      this.current.timeScale = CFG.speed / CFG.runClipSpeed;
+      this.current.setEffectiveTimeScale(CFG.speed / CFG.runClipSpeed);
     } else {
       this.play('Idle', 0.2);
-      this.current.timeScale = this.idleSpeed ?? 1;
+      this.current.setEffectiveTimeScale(this.restSpeed);
     }
   }
 

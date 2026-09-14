@@ -15,9 +15,8 @@ export class Obstacles {
   /**
    * @param {THREE.Object3D} object — уже размещённый проп
    * @param {Array<Array<[number, number]>>} shapes — контуры в локальных осях пропа
-   * @param {number[]} [tops] — высота каждого контура, если она нужна для проверок
    */
-  add(object, shapes, tops) {
+  add(object, shapes) {
     if (!shapes?.length) return;
 
     const yaw = object.rotation.y;
@@ -51,7 +50,7 @@ export class Obstacles {
         reach = Math.max(reach, Math.hypot(points[i] - cx, points[i + 1] - cz));
       }
 
-      this.items.push({ points, cx, cz, reach, top: tops?.[index] ?? Infinity });
+      this.items.push({ points, cx, cz, reach });
     }
   }
 

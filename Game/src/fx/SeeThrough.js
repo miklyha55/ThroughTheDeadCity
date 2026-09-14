@@ -25,7 +25,6 @@ export class SeeThrough {
   constructor(camera) {
     this.camera = camera;
     this.raycaster = new THREE.Raycaster();
-    this.raycaster.firstHitOnly = false;
 
     this.items = [];        // за кем следим: { object, fade }
     this.blocking = new Set();

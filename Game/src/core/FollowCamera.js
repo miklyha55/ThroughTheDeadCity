@@ -26,37 +26,19 @@ export class FollowCamera {
     this.orbit = 0; // доворот вокруг цели: копится, пока персонаж мёртв
 
     this._focus = new THREE.Vector3().copy(target.position).setY(CFG.lookAtHeight);
-    this.camera.position.copy(this._focus).add(this._offset);
 
-    // Погиб — камера идёт по кругу, не отводя от него взгляда. Ракурс при этом
-    // остаётся тем же: меняется только сторона, с которой мы смотрим.
-    if (this.target.alive === false) {
-      this.orbit += CFG.orbitSpeed * dt;
-      this._setAngle(this.yaw + this.orbit);
-      this.camera.position.copy(this._focus).add(this._offset);
-    }
-
-    // Тряска смещает саму камеру, а не точку интереса: кадр дёргается, но
-    // продолжает смотреть туда же, и после затухания встаёт ровно как был.
-    if (this._shake > 0) {
-      this._shake = Math.max(0, this._shake - dt);
-
-      const left = this._shake / this._shakeFor;
-      const amount = this._shakePower * left * left; // к концу затихает мягко
-
-      this.camera.position.x += (Math.random() - 0.5) * 2 * amount;
-      this.camera.position.y += (Math.random() - 0.5) * 2 * amount;
-      this.camera.position.z += (Math.random() - 0.5) * 2 * amount;
-
-      if (this._shake === 0) this._shakePower = 0;
-    }
-
-    this.camera.lookAt(this._focus);
-
+    // Всё, что читает кадр, заводится до первого кадра. `shake` может прийти
+    // раньше, чем `update` случится впервые — например от бочки, рванувшей на
+    // загрузке уровня, — и читать ей тогда было бы нечего.
     this._desiredFocus = new THREE.Vector3();
     this._shake = 0;      // сколько тряски осталось, с
     this._shakeFor = 1;   // за сколько она затухает
     this._shakePower = 0; // и с какой амплитуды начиналась
+
+    // Дальше камеру ведёт только `update`: облёт погибшего и тряска живут там.
+    // Здесь их не повторяем — кадра ещё не было, и вычитать из него нечего.
+    this.camera.position.copy(this._focus).add(this._offset);
+    this.camera.lookAt(this._focus);
   }
 
   /**

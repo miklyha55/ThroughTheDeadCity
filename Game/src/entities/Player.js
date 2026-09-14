@@ -430,7 +430,6 @@ export class Player extends Figure {
     if (!this.alive) {
       this.velocity.set(0, 0, 0);
       this.spotted = null; // и никого больше не держит на прицеле
-      this.sfx?.loop('walk', false);
       this.mixer.update(dt);
       return;
     }
@@ -446,7 +445,6 @@ export class Player extends Figure {
 
     // в полёте управление отобрано: траектория уже задана, менять её нечем
     if (this.jumping) {
-      this.sfx?.loop('walk', false); // в воздухе ногами не топают
       this._flyOver(dt, move);
       this.mixer.update(dt);
       return;

@@ -13,9 +13,11 @@ import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
 import { Boot } from './ui/Boot.js';
+import { Gate } from './ui/Gate.js';
 import { readChain } from './world/chain.js';
 import { asset } from './core/paths.js';
 import { Music } from './core/Music.js';
+import { attachListener, unlockAudio, wakeAudio } from './core/audio.js';
 import { StartMessage } from './core/StartMessage.js';
 import { Transmission } from './ui/Transmission.js';
 import { Radio } from './ui/Radio.js';
@@ -34,6 +36,12 @@ import { CONFIG } from './config.js';
 
 const engine = new Engine(document.getElementById('app'));
 const hud = document.getElementById('hud');
+
+// Весь звук игры висит на одном слушателе, и слушатель — на камере, как
+// предписано three. Подписка на первое касание ставится сразу: разбудить звук
+// можно только из жеста, а жест может случиться уже на экране загрузки.
+attachListener(engine.camera);
+unlockAudio();
 
 const params = new URLSearchParams(window.location.search);
 
@@ -61,10 +69,20 @@ const LAST_LEVEL = 'dev:location';
 const remembered = import.meta.env.DEV ? localStorage.getItem(LAST_LEVEL) : null;
 const firstLevel = params.get('location') ?? remembered ?? CONFIG.locations.first;
 
-// Первым делом — экран загрузки самой игры: модели весят мегабайты, и это время
-// игрок иначе смотрит в пустоту. Заставка уровня придёт уже после него.
+// Первое, что видит игрок, — чёрный экран с кнопкой. Нужен он ради звука:
+// браузер выпускает звук только после действия игрока, и чем раньше это
+// действие случится, тем больше времени у телефона поднять звуковую сессию.
+// Раньше первым касанием был хват за стик, и на выстрел этого запаса не хватало.
+//
+// Ждать нажатия игра не заставляет: загрузка идёт под воротами, и к моменту
+// нажатия половина её обычно уже позади.
+const gate = new Gate();
+gate.show();
+const pressed = gate.press(wakeAudio);
+
+// Экран загрузки с репликами — следом за воротами: модели весят мегабайты, и
+// это время игрок иначе смотрит в пустоту. Заставка уровня придёт уже после.
 const boot = new Boot();
-boot.show();
 
 /**
  * Всё, что игре понадобится: заставки, музыка, звуки, картинки, уровни.
@@ -135,7 +153,7 @@ const visibility = new Visibility(engine.camera);
 
 const sfx = new Sfx(CONFIG.sounds.files);
 
-let [gltf, prefabs, zombies] = await Promise.all([
+const loading = Promise.all([
   loadGLTF(CONFIG.player.modelUrl),
   PrefabLibrary.load(CONFIG.props.libraryUrl, CONFIG.props.prefabsUrl),
   ZombieLibrary.load(CONFIG.zombies.sources),
@@ -144,6 +162,14 @@ let [gltf, prefabs, zombies] = await Promise.all([
   // означала тишину первые полминуты боя.
   sfx.load(),
 ]);
+
+// Дальше — только после нажатия. Загрузка к этому моменту идёт уже давно, так
+// что ворота уходят сразу, а экран с репликами показывает остаток пути.
+await pressed;
+boot.show();
+gate.hide(); // сперва подставляем следующий экран, потом убираем этот
+
+let [gltf, prefabs, zombies] = await loading;
 
 const gunEffects = new GunEffects(engine.scene);
 const blood = new Blood(engine.scene);
@@ -258,7 +284,7 @@ engine.add({
     puffs.update(dt);
     camera.update(dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
-    visibility.update(here, player); // в тумане и за краем экрана не рисуем вовсе
+    visibility.update(here); // ушедшее за край экрана не рисуем вовсе
     locations.seeThrough.update(dt, player); // заслонившее героя — просвечивает
     dayNight.update(dt); // сутки идут своим ходом: свет, небо и тени
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней

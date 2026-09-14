@@ -1,4 +1,6 @@
+import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { listener, wakeAudio, audioGreeted } from './audio.js';
 
 const CFG = CONFIG.startMessage;
 
@@ -10,8 +12,12 @@ const CFG = CONFIG.startMessage;
  * до первого касания: иначе между появлением мира и первым тапом оставалась бы
  * щель, в которую можно уйти.
  *
- * Пускается сообщение тем же первым касанием, что и музыка, — раньше браузер
- * звук всё равно не даст, и играть оно начало бы в тишину.
+ * Разрешение на звук к этому моменту обычно уже дано кнопкой «Играть», поэтому
+ * голос начинает говорить сразу, как уровень появился. Если ворот не было,
+ * сообщение ждёт первого касания: раньше браузер звук всё равно не даст, и
+ * играть оно начало бы в тишину.
+ *
+ * На телефоне речь пропускается следующим касанием, на клавиатуре — Escape.
  *
  * Звучит один раз за сеанс. Смерть на первом уровне — дело обычное, и слушать
  * одну и ту же речь после каждой перезагрузки уровня было бы наказанием.
@@ -25,13 +31,21 @@ export class StartMessage {
     this.text = text;
     this.audio = new Audio(CFG.file);
     this.audio.preload = 'auto';
-    this.audio.volume = CFG.volume;
+
+    // Голос идёт через того же слушателя, что и всё остальное. Источник
+    // потоковый, а не разобранный в память: субтитры печатаются по
+    // `currentTime` самой дорожки, и элемент тут нужен как таковой.
+    this.voice = new THREE.Audio(listener);
+    this.voice.setMediaElementSource(this.audio);
+    this.voice.setVolume(CFG.volume);
 
     this.state = 'idle'; // idle → armed (ждём касание) → speaking → done
     this.played = false;
     this.muted = false;  // выключено в панели разработчика: логика не запускается вовсе
     this.start = this.start.bind(this);
     this._timer = null;
+    this._tap = null;      // ожидающее касание-пропуск, пока речь идёт
+    this._tapTimer = null; // и задержка, после которой оно начинает считаться
 
     // Пропуск. Речь длинная, а при отладке и на втором прохождении слушать её
     // незачем — но и снимать совсем нельзя: тому, кто пришёл впервые, она и
@@ -57,7 +71,16 @@ export class StartMessage {
 
     this.state = 'armed';
 
-    // Слушаем и касание, и мышь, и клавиши: на десктопе экрана касаться нечем.
+    // Разрешение на звук обычно уже дано кнопкой «Играть» — тогда голос звучит
+    // сразу, как уровень появился. Ждать после этого ещё одного касания было бы
+    // странно: игрок уже нажал, и тишина выглядела бы как поломка.
+    if (audioGreeted()) {
+      this.start();
+      return;
+    }
+
+    // Ворот не было — ждём первого действия. Слушаем и касание, и мышь, и
+    // клавиши: на десктопе экрана касаться нечем.
     for (const event of ['pointerdown', 'touchstart', 'keydown']) {
       addEventListener(event, this.start, { once: true });
     }
@@ -70,6 +93,10 @@ export class StartMessage {
     this.state = 'speaking';
     this.played = true;
 
+    // Дорожка звучит через общий граф, а спящий контекст его не выпускает
+    // наружу. Будим отсюда: сюда мы попали из обработчика касания.
+    wakeAudio();
+
     this.audio.addEventListener('ended', () => this._release(), { once: true });
     this.audio.addEventListener('error', () => this._release(), { once: true });
 
@@ -79,6 +106,30 @@ export class StartMessage {
 
     this.text?.start(this.audio); // текст идёт за дорожкой, а не за таймером
     this.audio.play().catch(() => this._release()); // браузер отказал — не держим игрока
+
+    this._armTap();
+  }
+
+  /**
+   * Пропуск вторым касанием — для телефона, где клавиши Escape нет.
+   *
+   * Мышь сюда не попадает: на десктопе речь и так пропускается клавишей, а
+   * случайный щелчок по экрану обрывал бы её ни за что. Отличаем не по модели
+   * устройства, а по тому, чем ткнули: палец есть палец, откуда бы он ни был.
+   */
+  _armTap() {
+    this._tap = (event) => {
+      if (event.pointerType === 'mouse') return;
+      this.skip();
+    };
+
+    // Слушатель держится до конца речи, а не снимается первым же событием:
+    // иначе щелчок мышью, который мы намеренно пропускаем мимо, снял бы его —
+    // и на гибридном экране палец после мыши уже ничего бы не пропустил.
+    // Снимет его `_release`, куда ведёт и сам пропуск.
+    this._tapTimer = setTimeout(() => {
+      addEventListener('pointerdown', this._tap);
+    }, CFG.tapSkipAfter * 1000);
   }
 
   /**
@@ -117,6 +168,14 @@ export class StartMessage {
   _release() {
     clearTimeout(this._timer);
     this._timer = null;
+
+    // Снимаем и ожидание касания, и само ожидающее касание: речь кончилась, и
+    // следующий тап — это уже управление, а не пропуск.
+    clearTimeout(this._tapTimer);
+    this._tapTimer = null;
+    if (this._tap) removeEventListener('pointerdown', this._tap);
+    this._tap = null;
+
     this.text?.stop();
     this.state = 'done';
   }
