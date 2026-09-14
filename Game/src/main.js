@@ -1,7 +1,7 @@
 import { Engine } from './core/Engine.js';
 import { Input } from './core/Input.js';
 import { FollowCamera } from './core/FollowCamera.js';
-import { loadGLTF, trackAssets } from './core/AssetLoader.js';
+import { loadGLTF, trackAssets, preload } from './core/AssetLoader.js';
 import { buildWorld } from './world/World.js';
 import { DayNight } from './world/DayNight.js';
 import { Visibility } from './world/Visibility.js';
@@ -13,6 +13,8 @@ import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
 import { Boot } from './ui/Boot.js';
+import { readChain } from './world/chain.js';
+import { asset } from './core/paths.js';
 import { Music } from './core/Music.js';
 import { StartMessage } from './core/StartMessage.js';
 import { Radio } from './ui/Radio.js';
@@ -59,7 +61,62 @@ const firstLevel = params.get('location') ?? remembered ?? CONFIG.locations.firs
 // игрок иначе смотрит в пустоту. Заставка уровня придёт уже после него.
 const boot = new Boot();
 boot.show();
-trackAssets(1 + 1 + Object.keys(CONFIG.zombies.sources).length, (share) => boot.setProgress(share));
+
+/**
+ * Всё, что игре понадобится: заставки, музыка, звуки, картинки, уровни.
+ *
+ * Список не выписан руками, а собран из самих настроек: любая строка, похожая
+ * на путь к файлу, попадает в него сама. Выписанный список пришлось бы править
+ * при каждом новом звуке, и однажды его бы забыли — а забытый файл догружается
+ * уже в игре, и видно это как пустая заставка или пропавший выстрел.
+ *
+ * Модели сюда не входят: их грузит GLTFLoader, и он же считает их байты. Двойной
+ * учёт сбил бы полосу.
+ */
+function assetsFromConfig(skip) {
+  const found = new Set();
+
+  const walk = (node) => {
+    if (typeof node === 'string') {
+      if (/\.(png|jpe?g|webp|gif|mp3|ogg|wav|json)$/i.test(node) && !skip.has(node)) found.add(node);
+      return;
+    }
+    if (Array.isArray(node)) return node.forEach(walk);
+    if (node && typeof node === 'object') Object.values(node).forEach(walk);
+  };
+
+  walk(CONFIG);
+  return found;
+}
+
+/** Файлы, которых в настройках нет поимённо: они собираются по номеру уровня. */
+async function assetsOfLevels() {
+  const chain = await readChain(firstLevel);
+  const files = [];
+
+  for (const level of chain) {
+    files.push(asset(`locations/${level.id}.json`));
+    files.push(`${CONFIG.splash.folder}${level.number}.png`);
+    files.push(`${CONFIG.music.folder}${level.number}.mp3`);
+  }
+  files.push(`${CONFIG.music.folder}${CONFIG.ending.track}.mp3`);
+  return files;
+}
+
+async function bootAssets() {
+  const models = new Set([
+    CONFIG.player.modelUrl,
+    CONFIG.props.libraryUrl,
+    ...Object.values(CONFIG.zombies.sources),
+  ]);
+
+  const fromLevels = await assetsOfLevels();
+  return [...new Set([...assetsFromConfig(models), ...fromLevels])];
+}
+
+const extras = await bootAssets();
+trackAssets(1 + 1 + Object.keys(CONFIG.zombies.sources).length + extras.length,
+  (share) => boot.setProgress(share));
 
 const splash = new Splash();
 splash.prepare(firstLevel); // заставка уровня готовится, пока идёт чёрный экран
@@ -73,6 +130,7 @@ let [gltf, prefabs, zombies] = await Promise.all([
   loadGLTF(CONFIG.player.modelUrl),
   PrefabLibrary.load(CONFIG.props.libraryUrl, CONFIG.props.prefabsUrl),
   ZombieLibrary.load(CONFIG.zombies.sources),
+  preload(extras), // заставки, звуки и картинки — вместе с моделями, а не после
 ]);
 
 const gunEffects = new GunEffects(engine.scene);

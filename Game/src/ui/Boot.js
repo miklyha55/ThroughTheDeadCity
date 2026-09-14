@@ -55,14 +55,21 @@ export class Boot {
     this.fill.style.width = `${Math.round(Math.min(1, Math.max(0, share)) * 100)}%`;
   }
 
-  /** Довести полосу до конца и уйти — не раньше, чем реплику успеют прочитать. */
+  /**
+   * Довести полосу до конца и уйти.
+   *
+   * Уходит не сразу: сперва запас `hold` на то, чтобы браузер разложил
+   * загруженное по памяти, — а до кучи реплику успевают прочитать. И не раньше
+   * `minTime` от появления, иначе на горячем кэше экран просто мигнёт.
+   */
   async hide() {
     clearInterval(this._timer);
     this._timer = null;
     this.setProgress(1);
 
     const shown = performance.now() - this.shownAt;
-    await new Promise((done) => setTimeout(done, Math.max(0, CFG.minTime - shown)));
+    const wait = Math.max(CFG.hold, CFG.minTime - shown);
+    await new Promise((done) => setTimeout(done, wait));
 
     this.root.hidden = true;
   }

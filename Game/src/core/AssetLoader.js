@@ -33,6 +33,40 @@ function report() {
   listener?.(Math.min(1, done / Math.max(expected, 1)));
 }
 
+/**
+ * Прогреть файлы, которые игре понадобятся сразу: заставки, звуки, картинки.
+ *
+ * Без этого заставка первого уровня выходит пустой — файл ещё летит по сети, а
+ * показать её нужно уже сейчас. Картинки именно декодируются, а не просто
+ * скачиваются: скачанный, но не разобранный png браузер всё равно не нарисует
+ * в тот же кадр.
+ *
+ * Сбой одного файла не держит остальных: не загрузилось — значит этого звука не
+ * будет, но игра начнётся.
+ *
+ * @param {string[]} urls
+ */
+export function preload(urls) {
+  return Promise.all(urls.map((url) => {
+    const file = { loaded: 0, total: 0, done: false };
+    tracked.set(url, file);
+
+    const finish = () => {
+      file.done = true;
+      report();
+    };
+
+    if (/\.(png|jpg|jpeg|webp|gif)$/i.test(url)) {
+      const image = new Image();
+      image.src = url;
+      return image.decode().then(finish, finish);
+    }
+
+    // остальному достаточно оказаться в кэше: дальше его возьмут уже оттуда
+    return fetch(url).then((res) => res.arrayBuffer()).then(finish, finish);
+  }));
+}
+
 export function loadGLTF(url) {
   const file = { loaded: 0, total: 0, done: false };
   tracked.set(url, file);

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { CONFIG } from '../config.js';
-import { asset } from '../core/paths.js';
+import { readChain } from '../world/chain.js';
 
 // м/с, с которой камера едет по локации от WASD и стрелок вверх-вниз
 const PAN_SPEED = 18;
@@ -158,17 +158,8 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
    * Уровень, открытый в обход цепочки (через `?location=`), дописывается в конец:
    * иначе он выпал бы из переключения вместе со всем, что правили именно на нём.
    */
-  async function readChain() {
-    const list = [];
-    let id = CONFIG.locations.first;
-
-    while (id && !list.includes(id)) {
-      list.push(id);
-
-      const res = await fetch(asset(`locations/${id}.json`));
-      if (!res.ok) break;
-      id = (await res.json()).next;
-    }
+  async function loadChain() {
+    const list = (await readChain(CONFIG.locations.first)).map((level) => level.id);
 
     const here = locations.current.data.id;
     if (!list.includes(here)) list.push(here);
@@ -339,7 +330,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     // пересобираем локацию: в правке нужна несклеенная геометрия, в игре — склеенная
     await locations.load(locations.current.data.id);
     if (locations.current.exitMark) locations.current.exitMark.visible = active;
-    if (active && chain.length === 0) await readChain();
+    if (active && chain.length === 0) await loadChain();
     onToggle?.(active);
     status('щёлкни по предмету');
   }
