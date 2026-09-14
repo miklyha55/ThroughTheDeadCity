@@ -2,15 +2,47 @@
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <!-- viewport-fit=cover обязателен: без него телефон не пускает страницу под
+         вырез и под полосу жеста, а те области красит сам — отсюда и бралось
+         деление экрана на серое и чёрное. Он же включает env(safe-area-inset-*),
+         на которые расставлен интерфейс: без cover они все нули. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+
+    <!-- Чем браузер красит свои полосы вокруг страницы. Не скажешь — возьмёт
+         свой цвет, и на чёрной игре он читается как серая плашка. -->
+    <meta name="theme-color" content="#07090a" />
+
+    <!-- То же самое для запуска с домашнего экрана: строка состояния поверх
+         игры, а не отдельной светлой полосой. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
     <title>Through The Dead City</title>
     <style>
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0d10; touch-action: none; -webkit-user-select: none; user-select: none; }
+      /* Чёрный в игре один и тот же — тот же, что у ворот, экрана загрузки и
+         тумана. Раньше страница была на тон светлее слоёв поверх неё, и там,
+         где слой не доходил до края (полоса под адресной строкой телефона,
+         оттяжка страницы), проступала светлая линия. */
+      /* Тёмная схема объявлена явно. Иначе подложка страницы у браузера белая,
+         и всё, что не закрыто нашим слоем, — полоса под адресной строкой,
+         оттяжка, область выреза — светится серым поверх чёрной игры. */
+      :root { color-scheme: dark; background: #07090a; }
+
+      /* Высота в динамических единицах: на телефоне адресная строка то
+         прячется, то возвращается, и `100%` отмеряется по одному её состоянию,
+         оставляя полосу в другом. `100%` оставлен запасным для старых браузеров. */
+      html, body {
+        margin: 0; height: 100%; height: 100dvh;
+        overflow: hidden; background: #07090a;
+        touch-action: none; -webkit-user-select: none; user-select: none;
+        overscroll-behavior: none;
+      }
       #app { position: fixed; inset: 0; }
       /* Текст вступления: внизу по центру, над джойстиком. Тёмная подложка —
          иначе светлые буквы теряются на светлой земле. */
       .radiotext {
-        position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%);
+        position: fixed; left: 50%; transform: translateX(-50%);
+        bottom: calc(92px + env(safe-area-inset-bottom));
         z-index: 45; pointer-events: none;
         width: min(80vw, 720px);
         opacity: 0;
@@ -21,7 +53,7 @@
       .radiotext__line {
         margin: 0; padding: 10px 16px;
         border-radius: 10px;
-        background: rgba(5, 7, 10, 0.55);
+        background: rgba(7, 9, 10, 0.55);
         color: #e8eef4; text-shadow: 0 2px 6px #000;
         font: 400 15px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
         letter-spacing: 0.02em;
@@ -40,13 +72,18 @@
 
       /* Патроны вверху по центру. Потраченные не исчезают, а гаснут:
          так видно и сколько осталось, и сколько магазин вмещает. */
+      /* Ряд обязан влезать в экран целиком. Десять патронов по 36 пикселей с
+         зазорами — это 396, шире телефона, и крайние гильзы срезало краем.
+         Предел по ширине даёт флексу право их сжать. */
       .ammo {
-        position: fixed; top: 34px; left: 50%; transform: translateX(-50%);
+        position: fixed; left: 50%; transform: translateX(-50%);
+        top: calc(34px + env(safe-area-inset-top));
+        max-width: calc(100vw - 24px);
         z-index: 25; pointer-events: none;
         display: flex; gap: 4px;
       }
       .ammo__round {
-        width: 36px; height: auto;
+        width: 36px; height: auto; min-width: 0;
         filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
         opacity: 1;
         transition: opacity 180ms ease;
@@ -102,8 +139,8 @@
       /* --- панель разработчика --- */
       .devpanel {
         position: fixed;
-        right: 14px;
-        top: 12px;
+        right: calc(14px + env(safe-area-inset-right));
+        top: calc(12px + env(safe-area-inset-top));
         z-index: 30;
         display: flex;
         flex-direction: column;
@@ -174,7 +211,6 @@
       .gate {
         position: fixed; inset: 0; z-index: 95;
         display: flex; align-items: center; justify-content: center;
-        background: #05070a;
       }
       .gate[hidden] { display: none; }
 
@@ -211,7 +247,7 @@
       .boot {
         position: fixed; inset: 0; z-index: 90;
         display: flex; align-items: center; justify-content: center;
-        background: #05070a;
+        background: #07090a;
       }
       .boot[hidden] { display: none; }
 
@@ -234,7 +270,7 @@
       .boot__bar {
         width: min(46vw, 340px); height: 8px;
         border-radius: 99px;
-        background: rgba(10,14,18,0.7);
+        background: rgba(7,9,10,0.7);
         border: 1px solid rgba(255,255,255,0.28);
         overflow: hidden;
       }
@@ -247,7 +283,7 @@
       /* Финальный экран: кроет всё, включая заставку, и не отдаёт управление. */
       .ending {
         position: fixed; inset: 0; z-index: 80;
-        background: #0b0e12 center / cover no-repeat;
+        background: #07090a center / cover no-repeat;
         opacity: 0; pointer-events: none;
         transition: opacity 900ms ease;
       }
@@ -278,7 +314,7 @@
       .splash {
         position: fixed; inset: 0; z-index: 60;
         display: flex; align-items: center; justify-content: center;
-        background: #0b0e12;
+        background: #07090a;
       }
       /* display: flex сильнее атрибута hidden, и без этой строки заставка
          остаётся висеть поверх игры, сколько её ни прячь. */
@@ -309,7 +345,7 @@
         position: relative;
         width: min(46vw, 340px); height: 8px;
         border-radius: 99px;
-        background: rgba(10,14,18,0.7);
+        background: rgba(7,9,10,0.7);
         border: 1px solid rgba(255,255,255,0.35);
         overflow: hidden;
       }
@@ -323,7 +359,9 @@
          а не показом — резкое включение в углу читается как сбой, а не как
          вызов на связь. */
       .radio {
-        position: fixed; left: 16px; bottom: 16px; z-index: 50;
+        position: fixed; z-index: 50;
+        left: calc(16px + env(safe-area-inset-left));
+        bottom: calc(16px + env(safe-area-inset-bottom));
         width: min(32vh, 230px); aspect-ratio: 1;
         opacity: 0; pointer-events: none;
         transition: opacity 450ms ease;
@@ -373,8 +411,12 @@
       }
 
       /* Счётчик кадров: правый верхний угол, мимо патронов и кнопки. */
+      /* Вниз, а не вверх: наверху и без него тесно — там имя уровня, патроны
+         и кнопка панели, и счётчик ложился прямо на гильзы. */
       .stats {
-        position: fixed; right: 12px; top: 42px; z-index: 26;
+        position: fixed; z-index: 26;
+        right: calc(12px + env(safe-area-inset-right));
+        bottom: calc(12px + env(safe-area-inset-bottom));
         pointer-events: none;
         font: 400 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
         color: #9fe6b0; text-shadow: 0 1px 3px #000;
@@ -382,9 +424,53 @@
       }
 
       #hud {
-        position: fixed; left: 12px; top: 10px; z-index: 25;
+        position: fixed; z-index: 25;
+        left: calc(12px + env(safe-area-inset-left));
+        top: calc(10px + env(safe-area-inset-top));
         font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
         color: #9fb4c7; text-shadow: 0 1px 2px #000; pointer-events: none;
+      }
+      /* --- телефон ---
+
+         На широком экране интерфейс расходится сам собой, на телефоне — нет.
+         Наверху одну полосу делят имя уровня, ряд патронов и кнопка панели;
+         внизу — рация и субтитры. Без правил ниже они наезжают друг на друга, а
+         рация вдобавок нарисована выше субтитров и просто съедала текст — ровно
+         тогда, когда его и надо читать, потому что показывают её на вступлении.
+
+         Разводим так: патроны мельче и ниже кнопки, рация заметно меньше, а
+         субтитры подняты выше её макушки. Пересечься они после этого не могут
+         ни при каком размере экрана. */
+
+      /* Узкий экран: телефон в портрете */
+      @media (max-width: 560px) {
+        .ammo { top: calc(46px + env(safe-area-inset-top)); }
+        .ammo__round { width: 22px; }
+
+        .radio { width: min(16vh, 84px); }
+
+        .radiotext {
+          bottom: calc(112px + env(safe-area-inset-bottom));
+          width: min(90vw, 560px);
+        }
+        .radiotext__line { font-size: 13px; padding: 8px 12px; }
+
+        .devpanel__status { max-width: min(320px, 52vw); }
+      }
+
+      /* Низкий экран: телефон в ландшафте. Места по высоте мало, поэтому текст
+         прижимается к самому низу, а вширь не пускается дальше рации. */
+      @media (max-height: 460px) {
+        .ammo { top: calc(30px + env(safe-area-inset-top)); }
+        .ammo__round { width: 20px; }
+
+        .radio { width: min(20vh, 84px); }
+
+        .radiotext {
+          bottom: calc(52px + env(safe-area-inset-bottom));
+          width: min(70vw, 520px);
+        }
+        .radiotext__line { font-size: 13px; padding: 7px 12px; }
       }
     </style>
   </head>

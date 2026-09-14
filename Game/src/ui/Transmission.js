@@ -98,21 +98,48 @@ export class Transmission {
    * Расписание: когда начинается и кончается каждая реплика.
    *
    * Строится, когда станет известна длина дорожки, — до этого её неоткуда взять.
-   * Вес реплики это её длина плюс небольшая добавка за саму реплику: между ними
-   * говорящий делает паузу, и без этой добавки короткие фразы пролетали бы.
+   *
+   * Если в настройках есть замеренные времена (`times`), берутся они. Это точные
+   * отметки начала каждой фразы в записи, и лучше них ничего нет.
    */
   _schedule(duration) {
+    const end = Math.max(0.1, duration - CFG.tailOut);
+    const starts = this._starts(duration);
+
+    return CFG.lines.map((text, i) => {
+      const from = starts[i];
+      const span = Math.max(0.1, (starts[i + 1] ?? end) - from);
+      // хвост реплики — пауза перед следующей: печатаем чуть быстрее, чем длится
+      return { text, from, to: from + span * CFG.typeShare };
+    });
+  }
+
+  /**
+   * Когда начинается каждая реплика.
+   *
+   * Замеренные времена обязаны совпадать с репликами поштучно: разойдись они —
+   * и текст поедет весь, а поймать это глазами тяжело. Поэтому при любом
+   * несовпадении честнее вернуться к прикидке, чем показывать заведомо кривое.
+   *
+   * Прикидка раскладывает реплики по длине: вес реплики это её длина плюс
+   * добавка за саму реплику — между ними говорящий делает паузу, и без добавки
+   * короткие фразы пролетали бы. Точных отметок она не заменяет: живая речь
+   * замедляется на многоточиях и ускоряется на перечислениях, и к концу записи
+   * такая раскладка уходила вперёд больше чем на секунду.
+   */
+  _starts(duration) {
+    const measured = CFG.times;
+    if (Array.isArray(measured) && measured.length === CFG.lines.length) return measured;
+
     const speech = Math.max(0.1, duration - CFG.leadIn - CFG.tailOut);
     const weights = CFG.lines.map((text) => text.length + CFG.linePause);
     const total = weights.reduce((sum, w) => sum + w, 0);
 
     let at = CFG.leadIn;
-    return CFG.lines.map((text, i) => {
-      const span = (weights[i] / total) * speech;
+    return CFG.lines.map((_, i) => {
       const from = at;
-      at += span;
-      // хвост реплики — пауза перед следующей: печатаем чуть быстрее, чем длится
-      return { text, from, to: from + span * CFG.typeShare };
+      at += (weights[i] / total) * speech;
+      return from;
     });
   }
 
