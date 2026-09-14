@@ -18,7 +18,9 @@ import { asset } from './core/paths.js';
 import { Music } from './core/Music.js';
 import { StartMessage } from './core/StartMessage.js';
 import { Radio } from './ui/Radio.js';
+import { Ammo } from './ui/Ammo.js';
 import { Ending } from './ui/Ending.js';
+import { BattleFog } from './fx/BattleFog.js';
 import { Sfx } from './core/Sfx.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
@@ -146,12 +148,16 @@ const puffs = new Puffs(engine.scene);
 
 const sfx = new Sfx(CONFIG.sounds.files);
 
+const ammo = new Ammo(CONFIG.player.magazine); // патроны вверху по центру
+
 let player = new Player(gltf);
 player.effects = gunEffects;
 player.blood = blood;
 player.ownBlood = playerBlood;
 player.sfx = sfx;
 player.puffs = puffs;
+player.onAmmo = (left) => ammo.set(left);
+ammo.set(player.rounds);
 engine.scene.add(player.root);
 
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
@@ -168,6 +174,8 @@ const NO_INTRO = 'dev:noIntro';
 if (import.meta.env.DEV) startMessage.muted = localStorage.getItem(NO_INTRO) === '1';
 const radio = new Radio(); // и рация в углу: видно, откуда голос и почему нельзя идти
 const ending = new Ending(); // экран, которым игра кончается
+const fog = new BattleFog();  // туман войны: карта открывается по мере хода
+fog.start();
 
 /**
  * Игра пройдена: последний уровень выпустил персонажа наружу.
@@ -244,6 +252,7 @@ engine.add({
     locations.seeThrough.update(dt, player); // заслонившее героя — просвечивает
     dayNight.update(dt); // сутки идут своим ходом: свет, небо и тени
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
+    fog.update(engine.camera, player); // за героем остаётся прорезанная дорожка
   },
 });
 
@@ -319,12 +328,14 @@ locations.onChange = (location) => {
   wireBlasts(location);
   showHud();
   updateDebugView();
+  fog.reset(location.width, location.depth); // новый уровень — заново закрытая карта
   music.play(location.data.number ?? 1); // у каждого уровня своя дорожка
   startMessage.arm(location.data.number ?? 1); // и вступление, если уровень первый
 };
 showHud();
 updateDebugView();
-music.play(locations.current.data.number ?? 1); // первый уровень: onChange к нему ещё не привязан
+fog.reset(locations.current.width, locations.current.depth); // первый уровень: onChange ещё не привязан
+music.play(locations.current.data.number ?? 1);
 startMessage.arm(locations.current.data.number ?? 1); // замок стоит сразу, до первого касания
 
 if (import.meta.env.DEV) {
@@ -388,6 +399,8 @@ if (import.meta.env.DEV) {
       player.ownBlood = playerBlood;
       player.sfx = sfx;
       player.puffs = puffs;
+      player.onAmmo = (left) => ammo.set(left);
+      ammo.set(player.rounds);
       player.placeAt(spot, yaw);
       engine.scene.add(player.root);
 
@@ -407,7 +420,7 @@ if (import.meta.env.DEV) {
   });
 
   window.__game = {
-    engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash,
+    engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash, fog,
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),
   };

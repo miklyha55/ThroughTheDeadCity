@@ -3,7 +3,30 @@ import { CONFIG } from '../config.js';
 
 const CFG = CONFIG.gunEffects;
 
+/**
+ * Красит гильзу по высоте: низ латунный, верх красный.
+ *
+ * Цилиндр стоит серединой в нуле, поэтому граница юбки — просто уровень по Y.
+ */
+function paintShell(geometry) {
+  const position = geometry.attributes.position;
+  const colors = new Float32Array(position.count * 3);
+
+  const body = new THREE.Color(CFG.shellBody);
+  const base = new THREE.Color(CFG.shellBase);
+  const edge = -0.5 + CFG.shellBaseShare;
+
+  for (let i = 0; i < position.count; i++) {
+    const paint = position.getY(i) <= edge ? base : body;
+    colors[i * 3] = paint.r;
+    colors[i * 3 + 1] = paint.g;
+    colors[i * 3 + 2] = paint.b;
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
 const _side = new THREE.Vector3();
+const _breech = new THREE.Vector3(); // окно выброса: назад от дула, к рукам
 const _up = new THREE.Vector3(0, 1, 0);
 const _toss = new THREE.Vector3();
 
@@ -55,12 +78,16 @@ export class GunEffects {
       this.flashes.push({ mesh, life: 0 });
     }
 
-    // гильзы: мелкие латунные цилиндрики, летят вбок и кувыркаются
+    // Гильзы: шестигранные патроны в два цвета — красное тело и латунная юбка,
+    // как на самой гильзе. Цвет запечён в вершины, поэтому обе части рисуются
+    // одним материалом, а не двумя, — так же, как вся остальная геометрия игры.
     const shellGeometry = new THREE.CylinderGeometry(1, 1, 1, 6);
+    paintShell(shellGeometry);
+
     const shellMaterial = new THREE.MeshStandardMaterial({
-      color: CFG.shellColor,
-      roughness: 0.35,
-      metalness: 0.8,
+      vertexColors: true,
+      roughness: 0.45,
+      metalness: 0.35,
     });
 
     this.shells = [];
@@ -132,7 +159,29 @@ export class GunEffects {
     this.light.intensity = CFG.lightPower;
     this.lightLife = CFG.lightLife;
 
-    this._ejectShell(from, to);
+  }
+
+  /**
+   * Выбросить гильзу.
+   *
+   * Отдельно от `fire`, потому что росчерк уходит на каждую дробину, а гильза —
+   * одна на выстрел: из ружья вылетает патрон, а не каждая дробинка по штуке.
+   *
+   * Вылетает она из затвора, а не из дула: отступаем назад по линии огня, к
+   * рукам, и чуть выше. Считается это здесь, а не у персонажа, — где именно у
+   * ружья окно выброса, знать должно оружие.
+   *
+   * @param {THREE.Vector3} muzzle — дуло @param {THREE.Vector3} to — куда бьёт
+   */
+  eject(muzzle, to) {
+    _side.subVectors(to, muzzle).setY(0);
+    if (_side.lengthSq() > 1e-8) _side.normalize();
+
+    _breech.copy(muzzle)
+      .addScaledVector(_side, -CFG.shellBack)
+      .setY(muzzle.y + CFG.shellRise);
+
+    this._ejectShell(_breech, to);
   }
 
   /**

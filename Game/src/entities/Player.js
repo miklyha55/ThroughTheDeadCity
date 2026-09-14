@@ -86,6 +86,7 @@ export class Player extends Figure {
     this._barrel = new THREE.Vector3();
     this._muzzle = new THREE.Vector3();
     this._hitPoint = new THREE.Vector3();
+    this._shell = new THREE.Vector3(); // откуда вылетает гильза: затвор, а не дуло
     this.effects = null; // росчерк и вспышка; ставится снаружи
     this.sfx = null;     // короткие звуки: выстрел и прочее
     this.puffs = null;   // пыль из-под ног; ставится снаружи
@@ -102,6 +103,14 @@ export class Player extends Figure {
     this.reloading = 0;    // пауза между выстрелами: в неё зомби и подходят
     this.jumpTime = 0;     // сколько уже длится прыжок, с; ноль — значит стоит на земле
     this.frozen = false;   // управление отобрано снаружи: звучит вступление
+    this.rounds = CFG.magazine; // патронов в магазине
+    this.refillAt = 0;          // сколько уже длится текущий круг набивки, с
+    this.onAmmo = null;         // кому сообщать о смене боезапаса; ставится снаружи
+
+    // Один круг клипа — один патрон. Клипа в модели может ещё не быть: тогда
+    // круг отмеряется временем, и механика работает вся, только без анимации.
+    this.refillFor = this.lengthOf('Reloading', CFG.reloadSpeed, CFG.reloadStep);
+
     this.throwing = null;  // идущий бросок: что в руке, в кого летит, сколько уже длится
     this.throwCooldown = 0; // пауза, чтобы он не хватал предметы очередью
     this._socket = this.root.getObjectByName('Socket_RightHand') ?? null;
@@ -179,6 +188,10 @@ export class Player extends Figure {
   revive() {
     this._drop();
     this.throwCooldown = 0;
+    this.reloading = CFG.startDelay; // с первого кадра не стреляем
+    this.rounds = CFG.magazine;      // и с полным магазином
+    this.refillAt = 0;
+    this.onAmmo?.(this.rounds);
     this.lives = CFG.lives;
     this.reacting = 0;
     this.velocity.set(0, 0, 0);
@@ -331,6 +344,7 @@ export class Player extends Figure {
   /** Ставит персонажа в точку старта локации, гася движение. */
   placeAt(position, yaw = 0) {
     this._drop(); // унести предмет в руке на другой конец карты нельзя
+    this.reloading = CFG.startDelay; // новый уровень начинается не с выстрела
     this.root.position.copy(position);
     this.yaw = yaw;
     this.root.rotation.y = yaw;
@@ -400,6 +414,17 @@ export class Player extends Figure {
    */
   update(dt, move, cameraYaw, location) {
     if (this.reacting > 0) this.reacting -= dt;
+
+    // Перезарядка идёт сама по себе, что бы персонаж ни делал.
+    //
+    // Раньше она обнулялась, стоило сдвинуться с места или потерять цель, — и
+    // выходило, что дёрганьем стика её можно сбросить и стрелять вдвое чаще,
+    // чем позволяет оружие. Теперь пауза честная: отбегай, прячься, меняй цель —
+    // ружьё всё равно готово не раньше срока.
+    //
+    // Пока идёт сам клип выстрела, время не течёт: пауза отсчитывается ПОСЛЕ
+    // него, иначе выстрел и перезарядка накладывались бы друг на друга.
+    if (this.shootPlaying <= 0 && this.reloading > 0) this.reloading -= dt;
 
     // мёртвый не управляется: доигрывает падение и остаётся лежать
     if (!this.alive) {
@@ -531,8 +556,9 @@ export class Player extends Figure {
     if (!this.target) {
       this.shotPending = 0;
       this.shootPlaying = 0;
-      this.reloading = 0; // целей нет — перезарядка ни к чему, следующая встреча начнётся с выстрела
-      return false;
+      // Перезарядку не трогаем: она не зависит от того, есть ли цель. А магазин
+      // набиваем — стоять без дела с неполным магазином незачем.
+      return this._refill(dt);
     }
 
     this._aimGunAt(this.target.position);
@@ -552,15 +578,19 @@ export class Player extends Figure {
     // Пауза между выстрелами: персонаж перезаряжается и стоит открытым.
     // Именно в это окно зомби успевают подойти вплотную и ударить.
     if (this.reloading > 0) {
-      this.reloading -= dt;
       this.play('Idle', CFG.stopFade);
       this.current.timeScale = 1;
       return true;
     }
 
+    // Пустой магазин стрелять не может — только набиваться. Но стоит появиться
+    // патрону, как выстрел уходит сразу: набивка ничего не держит.
+    if (this.rounds <= 0) return this._refill(dt);
+
     // цель есть и перезарядка кончилась — стреляем
     this.restart('Shoot', 0.08, CFG.shootSpeed);
 
+    this._spend();
     this.shotPending = CFG.shotDelay;
     this.shootPlaying = this.shootLength / CFG.shootSpeed;
     this.reloading = CFG.reloadFor; // пауза отсчитывается после клипа, а не вместе с ним
@@ -678,6 +708,53 @@ export class Player extends Figure {
     if (this.gunOnBack) this.gunOnBack.visible = !inHands;
   }
 
+  /** Есть ли что набивать: магазин неполон. */
+  get refilling() { return this.rounds < CFG.magazine; }
+
+  /** Потратить патрон. */
+  _spend() {
+    this.rounds = Math.max(0, this.rounds - 1);
+    this.onAmmo?.(this.rounds);
+  }
+
+  /**
+   * Набивка магазина: один круг клипа — один патрон.
+   *
+   * Идёт только пока персонаж стоит, и прерывается, едва он побежал, — но
+   * набитое остаётся. Побежал на седьмом патроне, отбился, встал — и добирает
+   * оставшиеся три, а не начинает с нуля.
+   *
+   * Патрон засчитывается по кругу клипа, а не по таймеру: сколько бы раз его ни
+   * ускорили, счёт совпадёт с тем, что видно на экране. Когда клипа в модели
+   * нет, круг просто отмеряется временем — механика от этого не меняется.
+   *
+   * @returns {boolean} занят ли персонаж — по этому наверху решают, что играть
+   */
+  _refill(dt) {
+    if (this.rounds >= CFG.magazine) return false;
+
+    // Не `restart`: клип идёт по кругу, и перезапуск его каждый кадр держал бы
+    // персонажа на первом кадре набивки. `play` на уже идущем клипе ничего не
+    // делает — ровно то, что нужно.
+    this.play('Reloading', CFG.stopFade);
+    if (this.current) this.current.timeScale = CFG.reloadSpeed;
+
+    this.refillAt += dt;
+
+    while (this.refillAt >= this.refillFor && this.rounds < CFG.magazine) {
+      this.refillAt -= this.refillFor;
+      this.rounds += 1;
+
+      // Щелчок ровно тогда, когда патрон встал в магазин: вместе с ним
+      // загорается и гильза наверху, так что слышно и видно одно и то же.
+      this.sfx?.play('reloading', CFG.reloadVolume);
+      this.onAmmo?.(this.rounds);
+    }
+
+    if (this.rounds >= CFG.magazine) this.refillAt = 0; // магазин полон, круг не нужен
+    return true;
+  }
+
   /**
    * Сбрасывает всё, что связано со стрельбой: прицел, недоигранный клип и паузу.
    *
@@ -689,8 +766,10 @@ export class Player extends Figure {
     this.target = null;
     this.shotPending = 0;
     this.shootPlaying = 0;
-    this.reloading = 0;
-    return false;
+    // Набитое не пропадает: круг, который персонаж не доиграл, начнётся заново,
+    // а уже вставленные патроны остаются в магазине.
+    this.refillAt = 0;
+    return false; // перезарядка остаётся: её нельзя сбросить, перестав целиться
   }
 
   /**
@@ -769,6 +848,11 @@ export class Player extends Figure {
       CFG.fireRange,
       flatDistance(zombie.position, muzzle) * CFG.missReach
     );
+
+    // Гильза одна на выстрел: она вылетает из ружья, а не из каждой дробины.
+    // Куда именно — знает само оружие, наше дело сказать, откуда и куда бьём.
+    this._shell.set(muzzle.x + Math.sin(base), muzzle.y, muzzle.z + Math.cos(base));
+    this.effects?.eject(muzzle, this._shell);
 
     for (let i = 0; i < CFG.pellets; i++) {
       const angle = base + (i - middle) * CFG.spreadAngle * DEG;
