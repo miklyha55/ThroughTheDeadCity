@@ -42,6 +42,32 @@ export class PropLibrary {
     return new PropLibrary(await loadGLTF(url));
   }
 
+  /**
+   * Отпустить геометрию библиотеки.
+   *
+   * Нужно только на пересборке моделей: прежняя библиотека больше никому не
+   * пригодится, а её геометрия сидит в видеопамяти. Без этого каждое нажатие
+   * «Обновить» оставляло там ещё один полный набор пропов — и через десяток
+   * нажатий их набиралось столько же, сколько живых.
+   *
+   * Материалы при этом НЕ трогаем: они общие, из кэша сведения, и ровно те же
+   * самые достанутся новой библиотеке. Выброси их — и новая соберётся из
+   * освобождённого.
+   */
+  dispose() {
+    for (const template of this.templates.values()) {
+      template.traverse((o) => {
+        if (o.isMesh) o.geometry.dispose();
+      });
+    }
+
+    this.templates.clear();
+    this.sizes.clear();
+    this.shapes.clear();
+    this.tall.clear();
+    this.bodies.clear();
+  }
+
   has(name) { return this.templates.has(name); }
 
   /** Габариты пропа в метрах — по ним раскладывается забор и проверяются отступы. */

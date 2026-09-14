@@ -20,6 +20,20 @@ const STATE = {
 // Ближе этого запаса до дистанции удара шагать уже некуда — зомби ждёт стоя.
 const CHASE_STEP_MIN = 0.02;
 
+/**
+ * Пороги, по которым подошедший зомби переступает с бега на стойку и обратно.
+ *
+ * Их два, и это не прихоть. С одним порогом зомби, оказавшийся ровно на нём,
+ * каждый кадр менял бы решение: шагнул — отошёл за порог — встал — расстояние
+ * снова выросло — побежал. Со стороны это мелкое перебирание ногами на месте.
+ *
+ * Тронуться сложнее, чем встать: чтобы снова побежать, нужно заметно больше
+ * места, чем нужно потерять, чтобы остановиться. Между порогами держится то,
+ * что уже выбрано.
+ */
+const CHASE_RUN_ON = 0.15;  // с этого запаса стоящий снова трогается
+const CHASE_RUN_OFF = 0.05; // и до этого идущий останавливается
+
 const _hit = new THREE.Vector3();
 const _toPlayer = new THREE.Vector3();
 const _push = new THREE.Vector3();
@@ -64,6 +78,7 @@ export class Zombie extends Figure {
     this.sfx = null;       // голос; ставится снаружи
     this.heardAt = Infinity; // как далеко от персонажа он сейчас — для громкости
     this.chaseMoving = true;
+    this.blindTime = 0;    // сколько уже не видит цель, с: погоня бросается не сразу
     this.state = STATE.PATROL;
     this.current = null;
     this.attackTime = 0;
@@ -447,15 +462,32 @@ export class Zombie extends Figure {
 
   /** Медленно идёт к персонажу, обходя препятствия и расталкивая соседей. */
   _chase(dt, distance, player, location, crowd) {
-    // Ушёл из сектора взгляда — за дом, за машину или просто вбок, за край
-    // обзора — и зомби тут же бросает погоню: гнаться за тем, кого не видит,
-    // он не умеет.
-    if (!player.alive || !this._inSight(player, distance, location)) {
-      this.alerted = false;
-      this.home.copy(this.root.position); // потерял цель — бродит уже здесь
-      this._pickWaypoint(location);
-      this._enter(STATE.PATROL);
-      return;
+    /**
+     * Потеря цели даётся не с первого кадра.
+     *
+     * Видно или не видно — величина рваная: у столба, у края дома, на самой
+     * кромке сектора взгляда она переключается туда-сюда по нескольку раз в
+     * секунду. А бросок погони здесь не мелочь: зомби разворачивается, переносит
+     * своё место и выбирает новую точку. Делать это на каждом мигании значит
+     * топтаться на месте и дёргаться.
+     *
+     * Поэтому потерянную цель зомби ещё несколько мгновений держит: любой кадр,
+     * в котором он снова её видит, обнуляет счёт. Заодно это и правдоподобнее —
+     * он идёт туда, где видел её в последний раз, а не забывает мгновенно.
+     */
+    if (player.alive && this._inSight(player, distance, location)) {
+      this.blindTime = 0;
+    } else {
+      this.blindTime += dt;
+
+      if (!player.alive || this.blindTime >= CFG.loseAfter) {
+        this.alerted = false;
+        this.blindTime = 0;
+        this.home.copy(this.root.position); // потерял цель — бродит уже здесь
+        this._pickWaypoint(location);
+        this._enter(STATE.PATROL);
+        return;
+      }
     }
     // Дотянулся — бьёт.
     if (distance <= CFG.attackRadius) {
@@ -484,7 +516,8 @@ export class Zombie extends Figure {
     const room = distance - CFG.attackRadius;
 
     // Дошёл и ждёт — значит стоит и дышит, а не перебирает ногами на месте.
-    this._chaseMotion(room > CHASE_STEP_MIN);
+    // Пороги разведены: идущий держится до меньшего, стоящий трогается с большего.
+    this._chaseMotion(room > (this.chaseMoving ? CHASE_RUN_OFF : CHASE_RUN_ON));
 
     _push.copy(_step).multiplyScalar(Math.min(CFG.speed * dt, room));
 

@@ -456,7 +456,10 @@ if (import.meta.env.DEV) {
       const spot = player.position.clone();
       const yaw = player.yaw;
 
-      player.root.removeFromParent();
+      // Прежнего персонажа отпускаем целиком, а не просто снимаем со сцены: у
+      // него свой миксер и свой скелет, а под скелет отведена текстура костей.
+      // Без этого каждое нажатие оставляло в видеопамяти ещё одного персонажа.
+      player.dispose();
       player = new Player(freshPlayer);
       player.effects = gunEffects;
       player.blood = blood;
@@ -473,10 +476,21 @@ if (import.meta.env.DEV) {
       locations.camera = camera;
       locations.player = player;
 
+      // Локацию пересобираем на свежей библиотеке ДО того, как выбросить
+      // прежнюю: пока она стоит на старых моделях, их геометрия ещё в работе.
+      const прежниеПропы = prefabs;
+      const прежниеЗомби = zombies;
+
       prefabs = freshPrefabs;
       zombies = freshZombies;
       locations.zombies = freshZombies;
       await locations.useLibrary(freshPrefabs);
+
+      // А вот теперь старое никому не нужно. Без этого набор пропов и шаблоны
+      // зомби оставались в видеопамяти целиком: замер показывал по два десятка
+      // лишних геометрий на каждое нажатие, и они не уходили никогда.
+      прежниеПропы?.dispose();
+      прежниеЗомби?.dispose();
 
       Object.assign(window.__game, { player, prefabs, zombies });
       return `${freshPrefabs.prefabs.size} пропов, ${freshZombies.list().length} видов зомби, персонаж`;

@@ -13,6 +13,7 @@ export class Joystick {
     this.value = new THREE.Vector2();
     this.active = false;
     this._pointerId = null;
+    this._moving = false; // уже пошёл: порог возврата у идущего ниже, чем порог старта
     this._maxDist = CFG.size * 0.5 - CFG.knobSize * 0.5 + CFG.overhang;
 
     this.base = document.createElement('div');
@@ -96,6 +97,7 @@ export class Joystick {
     if (!this.active) return;
     this.active = false;
     this._pointerId = null;
+    this._moving = false; // палец снят — следующий раз трогаться заново, с полного порога
     this.value.set(0, 0);
     this.knob.style.transform = 'translate(-50%, -50%)';
     this.base.classList.remove('is-active');
@@ -113,11 +115,27 @@ export class Joystick {
     }
     this.knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
 
-    // мёртвая зона, растянутая обратно на весь диапазон 0..1
-    let mag = Math.min(dist, this._maxDist) / this._maxDist;
-    mag = mag < CFG.deadZone ? 0 : (mag - CFG.deadZone) / (1 - CFG.deadZone);
+    const сырая = Math.min(dist, this._maxDist) / this._maxDist;
 
-    if (mag === 0 || dist === 0) {
+    // Порогов два, а не один: тронуться сложнее, чем остановиться.
+    //
+    // С одним порогом палец, замерший ровно на его границе, каждый кадр
+    // перекидывал ввод между нулём и движением. Персонаж от этого дёргался,
+    // не понимая, бежать ему или стоять: анимация металась между бегом,
+    // стойкой и вскинутым ружьём по нескольку раз в секунду.
+    //
+    // Разведённые пороги такого не допускают: чтобы пойти, палец должен зайти
+    // за `deadZone`, а чтобы встать — вернуться за `deadZoneRelease`, который
+    // заметно ближе к центру. Между ними ввод держит то, что уже выбрано.
+    this._moving = this._moving
+      ? сырая >= CFG.deadZoneRelease
+      : сырая >= CFG.deadZone;
+
+    // мёртвая зона, растянутая обратно на весь диапазон 0..1
+    let mag = this._moving ? (сырая - CFG.deadZone) / (1 - CFG.deadZone) : 0;
+    mag = Math.max(0, Math.min(1, mag));
+
+    if (!this._moving || dist === 0) {
       this.value.set(0, 0);
       return;
     }

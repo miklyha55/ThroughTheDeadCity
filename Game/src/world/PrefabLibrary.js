@@ -30,6 +30,12 @@ export class PrefabLibrary {
     return new PrefabLibrary(props, registry);
   }
 
+  /** Отпустить модели: нужно на пересборке, когда библиотеку сменили свежей. */
+  dispose() {
+    this.props.dispose();
+    this.prefabs.clear();
+  }
+
   /** Правила для модели: сначала поштучная запись, потом группа, потом общее. */
   _describe(name) {
     const { defaults, groups = {}, overrides = {} } = this.registry;

@@ -779,20 +779,38 @@ export class Player extends Figure {
    */
   _pickTarget(location) {
     const from = this.root.position;
+    const held = this.spotted; // кого держали на прицеле прошлый кадр
+
     let best = null;
-    let bestDistance = CFG.fireRange;
+    let bestDistance = Infinity;
 
     for (const zombie of location.zombies) {
       if (!zombie.alive) continue;
 
+      // Взятого на прицел отпускаем не на той же черте, на которой брали, а
+      // чуть дальше. Без этого зомби, идущий ровно по краю дальности, каждый
+      // кадр то попадал в цель, то выпадал: персонаж вскидывал и опускал ружьё
+      // по нескольку раз в секунду, дёргаясь между стойкой и выстрелом.
+      //
+      // Тот же приём, которым зомби держат самого героя: заметить можно с
+      // девяти метров, а потерять — только с шестнадцати.
+      const предел = zombie === held ? CFG.fireRange * CFG.keepTarget : CFG.fireRange;
+
       const distance = flatDistance(zombie.position, from);
-      if (distance >= bestDistance) continue;
+      if (distance >= предел) continue;
 
       // сквозь дом или машину не стреляем
       if (location.obstacles.blocksLine(from.x, from.z, zombie.position.x, zombie.position.z)) continue;
 
-      best = zombie;
-      bestDistance = distance;
+      // Прежняя цель сохраняется, пока она вообще годится: перебрасывать прицел
+      // на каждого, кто подошёл ближе, значит снова дёргаться — теперь уже
+      // корпусом, который доворачивается то к одному, то к другому.
+      if (zombie === held) return zombie;
+
+      if (distance < bestDistance) {
+        best = zombie;
+        bestDistance = distance;
+      }
     }
     return best;
   }
