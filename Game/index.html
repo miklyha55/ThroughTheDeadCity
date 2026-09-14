@@ -120,6 +120,44 @@
       }
       .editor__toggle input { cursor: pointer; }
 
+      /* Загрузка самой игры: голый чёрный экран, реплика и полоса под ней.
+         Ни картинок, ни рамок — до заставки уровня показывать ещё нечего. */
+      .boot {
+        position: fixed; inset: 0; z-index: 90;
+        display: flex; align-items: center; justify-content: center;
+        background: #05070a;
+      }
+      .boot[hidden] { display: none; }
+
+      /* Реплика вынута из потока и подвешена над полосой.
+         Иначе полоса ехала бы за ней: реплики разной длины, одна встаёт в
+         строку, другая в две — и на каждой смене полоса прыгала бы вниз-вверх.
+         Так она стоит ровно по центру экрана, сколько бы строк ни занял текст. */
+      .boot__line {
+        position: absolute;
+        left: 50%; transform: translateX(-50%);
+        bottom: calc(50% + 22px);
+        width: min(78vw, 560px);
+        text-align: center; text-wrap: balance;
+        color: #cbd6e2; text-shadow: 0 2px 6px #000;
+        font: 400 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.03em;
+        opacity: 0;
+        transition: opacity 320ms ease;
+      }
+      .boot__bar {
+        width: min(46vw, 340px); height: 8px;
+        border-radius: 99px;
+        background: rgba(10,14,18,0.7);
+        border: 1px solid rgba(255,255,255,0.28);
+        overflow: hidden;
+      }
+      .boot__fill {
+        height: 100%; width: 0;
+        background: #e8d08f;
+        transition: width 160ms linear;
+      }
+
       /* Финальный экран: кроет всё, включая заставку, и не отдаёт управление. */
       .ending {
         position: fixed; inset: 0; z-index: 80;

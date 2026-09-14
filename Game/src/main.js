@@ -1,7 +1,7 @@
 import { Engine } from './core/Engine.js';
 import { Input } from './core/Input.js';
 import { FollowCamera } from './core/FollowCamera.js';
-import { loadGLTF } from './core/AssetLoader.js';
+import { loadGLTF, trackAssets } from './core/AssetLoader.js';
 import { buildWorld } from './world/World.js';
 import { DayNight } from './world/DayNight.js';
 import { Visibility } from './world/Visibility.js';
@@ -12,6 +12,7 @@ import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
+import { Boot } from './ui/Boot.js';
 import { Music } from './core/Music.js';
 import { StartMessage } from './core/StartMessage.js';
 import { Radio } from './ui/Radio.js';
@@ -21,7 +22,6 @@ import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
 import { Dust } from './fx/Dust.js';
 import { Puffs } from './fx/Puffs.js';
-import { TargetMark } from './fx/TargetMark.js';
 import { HealthBars } from './fx/HealthBars.js';
 import { Explosions } from './fx/Explosions.js';
 import { CONFIG } from './config.js';
@@ -55,10 +55,14 @@ const LAST_LEVEL = 'dev:location';
 const remembered = import.meta.env.DEV ? localStorage.getItem(LAST_LEVEL) : null;
 const firstLevel = params.get('location') ?? remembered ?? CONFIG.locations.first;
 
-// Заставка поднимается первой, до всякой загрузки: модели, звук и библиотеки
-// едут несколько секунд, и без неё игрок это время смотрит в чёрный экран.
+// Первым делом — экран загрузки самой игры: модели весят мегабайты, и это время
+// игрок иначе смотрит в пустоту. Заставка уровня придёт уже после него.
+const boot = new Boot();
+boot.show();
+trackAssets(1 + 1 + Object.keys(CONFIG.zombies.sources).length, (share) => boot.setProgress(share));
+
 const splash = new Splash();
-splash.boot(firstLevel);
+splash.prepare(firstLevel); // заставка уровня готовится, пока идёт чёрный экран
 
 const world = buildWorld(engine.scene, engine.renderer);
 const { sun } = world;
@@ -121,6 +125,7 @@ locations.onFinish = () => {
   ending.show();
 };
 
+await boot.hide(); // модели готовы — чёрный экран уступает заставке уровня
 await locations.load(firstLevel);
 
 let editor = null; // правка расстановки: появляется только на dev-сервере
@@ -128,7 +133,6 @@ const joystick = new Joystick();
 const input = new Input(joystick);
 const camera = new FollowCamera(engine.camera, player);
 locations.camera = camera; // при смене уровня камера встаёт на персонажа сразу
-const targetMark = new TargetMark(engine.scene);
 
 engine.add({
   update(dt) {
@@ -165,7 +169,6 @@ engine.add({
     dust.update(dt, player.position);
     puffs.update(dt);
     camera.update(dt);
-    targetMark.update(player.spotted, dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     visibility.update(here); // за краем экрана фигуры не рисуются вовсе
     locations.seeThrough.update(dt, player); // заслонившее героя — просвечивает
