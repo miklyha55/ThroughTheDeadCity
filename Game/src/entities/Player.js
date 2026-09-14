@@ -739,12 +739,15 @@ export class Player extends Figure {
 
     this.refillAt += dt;
 
+    // За круг клипа в магазин уходит `roundsPerReload` патронов: персонаж
+    // закладывает их пачкой, а не по одному. Последняя пачка не выходит за
+    // вместимость — на девяти из десяти круг доложит один патрон, а не два.
     while (this.refillAt >= this.refillFor && this.rounds < CFG.magazine) {
       this.refillAt -= this.refillFor;
-      this.rounds += 1;
+      this.rounds = Math.min(CFG.magazine, this.rounds + CFG.roundsPerReload);
 
-      // Щелчок ровно тогда, когда патрон встал в магазин: вместе с ним
-      // загорается и гильза наверху, так что слышно и видно одно и то же.
+      // Щелчок ровно тогда, когда патроны встали в магазин: вместе с ним
+      // загораются и гильзы наверху, так что слышно и видно одно и то же.
       this.sfx?.play('reloading', CFG.reloadVolume);
       this.onAmmo?.(this.rounds);
     }
