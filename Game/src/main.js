@@ -29,6 +29,37 @@ import { CONFIG } from './config.js';
 const engine = new Engine(document.getElementById('app'));
 const hud = document.getElementById('hud');
 
+const params = new URLSearchParams(window.location.search);
+
+/**
+ * Какой уровень открыть и где его запомнить.
+ *
+ * В разработке игра возвращается на тот уровень, который выбрали стрелками в
+ * панели: правишь локацию, жмёшь перезагрузку — и снова на ней, а не в начале
+ * цепочки. В собранной игре этого нет: там уровни идут по порядку, и прыгать в
+ * середину незачем.
+ *
+ * Запоминается именно выбор в панели, а не всякая загрузка. Иначе достаточно
+ * было один раз дойти до выхода — и переход на следующий уровень молча
+ * переписывал бы выбранный, так что после перезагрузки игра открывалась совсем
+ * не там, куда её ставили.
+ *
+ * Адрес сильнее памяти: `?location=` открывает то, что в нём написано. Поэтому
+ * панель его за собой и правит — иначе забытый в строке адреса параметр
+ * перебивал бы выбор при каждой перезагрузке.
+ *
+ * Решается это первым делом: заставке нужно знать, чьё название показать, а она
+ * поднимается раньше всего остального.
+ */
+const LAST_LEVEL = 'dev:location';
+const remembered = import.meta.env.DEV ? localStorage.getItem(LAST_LEVEL) : null;
+const firstLevel = params.get('location') ?? remembered ?? CONFIG.locations.first;
+
+// Заставка поднимается первой, до всякой загрузки: модели, звук и библиотеки
+// едут несколько секунд, и без неё игрок это время смотрит в чёрный экран.
+const splash = new Splash();
+splash.boot(firstLevel);
+
 const world = buildWorld(engine.scene, engine.renderer);
 const { sun } = world;
 const dayNight = new DayNight({ scene: engine.scene, ...world });
@@ -59,7 +90,7 @@ player.puffs = puffs;
 engine.scene.add(player.root);
 
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
-locations.splash = new Splash();
+locations.splash = splash;
 locations.sfx = sfx;
 locations.seeThrough = new SeeThrough(engine.camera);
 
@@ -89,29 +120,8 @@ locations.onFinish = () => {
   music.play(CONFIG.ending.track);
   ending.show();
 };
-const params = new URLSearchParams(window.location.search);
 
-/**
- * Какой уровень открыть и где его запомнить.
- *
- * В разработке игра возвращается на тот уровень, который выбрали стрелками в
- * панели: правишь локацию, жмёшь перезагрузку — и снова на ней, а не в начале
- * цепочки. В собранной игре этого нет: там уровни идут по порядку, и прыгать в
- * середину незачем.
- *
- * Запоминается именно выбор в панели, а не всякая загрузка. Иначе достаточно
- * было один раз дойти до выхода — и переход на следующий уровень молча
- * переписывал бы выбранный, так что после перезагрузки игра открывалась совсем
- * не там, куда её ставили.
- *
- * Адрес сильнее памяти: `?location=` открывает то, что в нём написано. Поэтому
- * панель его за собой и правит — иначе забытый в строке адреса параметр
- * перебивал бы выбор при каждой перезагрузке.
- */
-const LAST_LEVEL = 'dev:location';
-const remembered = import.meta.env.DEV ? localStorage.getItem(LAST_LEVEL) : null;
-
-await locations.load(params.get('location') ?? remembered ?? CONFIG.locations.first);
+await locations.load(firstLevel);
 
 let editor = null; // правка расстановки: появляется только на dev-сервере
 const joystick = new Joystick();

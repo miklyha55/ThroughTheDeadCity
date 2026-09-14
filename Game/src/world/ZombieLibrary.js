@@ -12,7 +12,7 @@ export class ZombieLibrary {
     this.kinds = kinds; // Map: имя → { scene, animations }
   }
 
-  /** @param {Record<string, string>} sources — { zombie1: '/assets/models/zombie1.glb', … } */
+  /** @param {Record<string, string>} sources — { zombie1: 'assets/models/zombie1.glb', … } */
   static async load(sources) {
     const names = Object.keys(sources);
     const loaded = await Promise.all(names.map((name) => loadGLTF(sources[name])));

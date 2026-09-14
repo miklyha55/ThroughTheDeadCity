@@ -1,6 +1,8 @@
+import { asset } from './core/paths.js';
+
 export const CONFIG = {
   player: {
-    modelUrl: '/assets/models/player.glb',
+    modelUrl: asset('assets/models/player.glb'),
     runSpeed: 4.2,          // м/с, постоянная: стик задаёт направление, а не темп
     radius: 0.38,           // радиус персонажа для столкновений с препятствиями
     turnSpeed: 12,          // рад/с доворот корпуса к направлению движения
@@ -271,8 +273,8 @@ export const CONFIG = {
   zombies: {
     // где лежат модели: имя вида → файл
     sources: {
-      zombie1: '/assets/models/zombie1.glb',
-      zombie2: '/assets/models/zombie2.glb',
+      zombie1: asset('assets/models/zombie1.glb'),
+      zombie2: asset('assets/models/zombie2.glb'),
     },
     // Поведение: бродит — заметил — пошёл — ударил
     patrolSpeed: 1.7,     // м/с на прогулке: медленнее погони, но толпа заметно движется
@@ -323,8 +325,8 @@ export const CONFIG = {
   },
 
   props: {
-    libraryUrl: '/assets/models/props.glb',   // модели из Env.blend, как есть
-    prefabsUrl: '/prefabs.json',              // их роли в игре: препятствие, физика, тени
+    libraryUrl: asset('assets/models/props.glb'),   // модели из Env.blend, как есть
+    prefabsUrl: asset('prefabs.json'),        // их роли в игре: препятствие, физика, тени
   },
 
   // Свечение вокруг персонажа: круг света, в котором он и ближняя земля
@@ -364,41 +366,41 @@ export const CONFIG = {
     echoVolume: 0.32,      // во сколько раз он тише выстрела
     echoPitch: 0.88,       // и насколько ниже тоном: эхо всегда глуше
     files: {
-      fire: ['/assets/audio/fire.mp3'],
-      walk: ['/assets/audio/walk.mp3'],
-      throw: ['/assets/audio/throw.mp3'],
-      playerDie: ['/assets/audio/player_die.mp3'],
-      jump: ['/assets/audio/Jump.mp3'],
+      fire: [asset('assets/audio/fire.mp3')],
+      walk: [asset('assets/audio/walk.mp3')],
+      throw: [asset('assets/audio/throw.mp3')],
+      playerDie: [asset('assets/audio/player_die.mp3')],
+      jump: [asset('assets/audio/Jump.mp3')],
       zombieAlert: [
-        '/assets/audio/zombie/zombie-speak-1.mp3',
-        '/assets/audio/zombie/zombie-speak-2.mp3',
-        '/assets/audio/zombie/zombie-speak-3.mp3',
-        '/assets/audio/zombie/zombie-speak-4.mp3',
-        '/assets/audio/zombie/zombie-speak-5.mp3',
+        asset('assets/audio/zombie/zombie-speak-1.mp3'),
+        asset('assets/audio/zombie/zombie-speak-2.mp3'),
+        asset('assets/audio/zombie/zombie-speak-3.mp3'),
+        asset('assets/audio/zombie/zombie-speak-4.mp3'),
+        asset('assets/audio/zombie/zombie-speak-5.mp3'),
       ],
       // Отдельных предсмертных записей у зомби нет, поэтому хрип берётся из тех
       // же голосов, но ниже тоном (`deathPitch`) — так он не путается с окриком,
       // которым зомби замечает персонажа. Появятся свои файлы —менять только этот
       // список, вся остальная логика уже на месте.
       zombieDead: [
-        '/assets/audio/zombie/zombie-speak-1.mp3',
-        '/assets/audio/zombie/zombie-speak-2.mp3',
-        '/assets/audio/zombie/zombie-speak-3.mp3',
-        '/assets/audio/zombie/zombie-speak-4.mp3',
-        '/assets/audio/zombie/zombie-speak-5.mp3',
+        asset('assets/audio/zombie/zombie-speak-1.mp3'),
+        asset('assets/audio/zombie/zombie-speak-2.mp3'),
+        asset('assets/audio/zombie/zombie-speak-3.mp3'),
+        asset('assets/audio/zombie/zombie-speak-4.mp3'),
+        asset('assets/audio/zombie/zombie-speak-5.mp3'),
       ],
     },
   },
 
   // Фоновая музыка: на каждый уровень своя дорожка, по номеру уровня
   music: {
-    folder: '/assets/audio/music/',
+    folder: asset('assets/audio/music/'),
     volume: 0.3,  // фон, а не главный герой: поверх него ещё выстрелы и удары
   },
 
   // Вступление: голос поверх музыки, пока он говорит — персонаж не управляется
   startMessage: {
-    file: '/assets/audio/start_message.mp3',
+    file: asset('assets/audio/start_message.mp3'),
     level: 1,      // на каком уровне звучит
     volume: 1,     // громче музыки: это речь, её надо разобрать
     maxLock: 90,   // с — предохранитель: если звук не доиграл, управление вернётся само
@@ -406,20 +408,21 @@ export const CONFIG = {
 
   // Рация в углу: висит ровно столько, сколько длится сообщение
   radio: {
-    image: '/assets/ui/radio.png',
+    image: asset('assets/ui/radio.png'),
     waves: 3,  // кругов сигнала: одного мало — волна читается как разовая вспышка
   },
 
   // Заставка между уровнями
   // Финал: экран и музыка, которыми кончается игра
   ending: {
-    image: '/assets/splash/final.png',
+    image: asset('assets/splash/final.png'),
     track: 'final',   // дорожка из той же папки, что и уровневые, и так же зациклена
     fade: 900,        // мс, за сколько проявляется картинка
   },
 
   splash: {
-    folder: '/assets/splash/',  // картинка берётся по номеру уровня: 1.png, 2.png…
+    folder: asset('assets/splash/'),  // картинка берётся по номеру уровня: 1.png, 2.png…
+    bootLevel: 1,   // чья картинка висит, пока грузится сама игра и уровень ещё неизвестен
     minTime: 900,   // мс, сколько она держится на экране даже при мгновенной загрузке
     holdFull: 220,  // мс, сколько полоса стоит заполненной, прежде чем экран уйдёт
     ceiling: 0.92,  // докуда полоса доползает сама, не дожидаясь конца работы

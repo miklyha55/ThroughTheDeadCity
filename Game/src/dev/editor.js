@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { CONFIG } from '../config.js';
+import { asset } from '../core/paths.js';
 
 // м/с, с которой камера едет по локации от WASD и стрелок вверх-вниз
 const PAN_SPEED = 18;
@@ -149,7 +150,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     while (id && !list.includes(id)) {
       list.push(id);
 
-      const res = await fetch(`/locations/${id}.json`);
+      const res = await fetch(asset(`locations/${id}.json`));
       if (!res.ok) break;
       id = (await res.json()).next;
     }

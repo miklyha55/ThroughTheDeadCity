@@ -1,4 +1,5 @@
 import { Location } from './Location.js';
+import { asset } from '../core/paths.js';
 
 /**
  * Загружает локации по JSON и переключает их: старая снимается со сцены,
@@ -60,7 +61,7 @@ export class LocationManager {
   }
 
   async _load(id) {
-    const res = await fetch(`/locations/${id}.json`);
+    const res = await fetch(asset(`locations/${id}.json`));
     if (!res.ok) throw new Error(`локация «${id}» не найдена (${res.status})`);
     const data = await res.json();
     this.splash?.setLevel(data.name, data.number ?? 1); // узнали только теперь, из файла
