@@ -239,15 +239,17 @@ export class Zombie {
    * @param {string} sound — какой набор голосов брать
    * @param {number} loudness — громкость вблизи, доля от общей
    * @param {number} chance — с какой вероятностью он вообще подаст голос
+   * @param {number} pitch — сдвиг высоты тона: им предсмертный хрип отличается
+   *   от окрика, хотя записи у них одни и те же
    */
-  _voice(sound, loudness, chance = CFG.voiceChance) {
+  _voice(sound, loudness, chance = CFG.voiceChance, pitch = 1) {
     if (!this.sfx || Math.random() > chance) return;
 
     const away = this.heardAt ?? CFG.voiceRange;
     if (away >= CFG.voiceRange) return;
 
     const near = 1 - away / CFG.voiceRange;
-    this.sfx.play(sound, CONFIG.sounds.volume * loudness * near);
+    this.sfx.play(sound, CONFIG.sounds.volume * loudness * near, 1, pitch);
   }
 
   /** Расстояние до персонажа по земле: высота не в счёт. */
@@ -306,7 +308,7 @@ export class Zombie {
 
       case STATE.DEAD:
         this.deadTime = 0;
-        this._voice('zombieDead', CFG.deathVolume, 1); // хрип слышно всегда
+        this._voice('zombieDead', CFG.deathVolume, 1, CFG.deathPitch); // хрип слышно всегда
         this.play('Death', 0.15);
         this.current.reset().play();
         this.current.timeScale = 1;

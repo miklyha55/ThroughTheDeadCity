@@ -37,6 +37,19 @@ export const CONFIG = {
     jumpLiftShare: 0.3,     // с какой доли подъёма бёдер считать, что он оторвался
     jumpLandShare: 0.72,    // насколько раньше найденного касания заканчивать дугу
 
+    // Бросок предмета. Наткнулся на что-то валяющееся, а рядом зомби в радиусе
+    // огня — значит хватает и швыряет, вместо того чтобы отпинывать.
+    throwRange: 0.85,       // доля от радиуса огня, в которой он вообще берётся за проп
+    throwSpeed: 2.3,        // темп клипа Throw: им же задана длительность броска
+    throwRelease: 0.42,     // доля клипа, на которой предмет покидает руку
+    throwPower: 12,         // м/с, с которой он уходит вперёд
+    throwLift: 0.32,        // доля скорости вверх: предмет идёт дугой, а не по линейке
+    throwSpin: 8,           // рад/с закрутки: летит кувырком, а не плашмя
+    throwCooldown: 0.45,    // с после броска, прежде чем схватить следующий предмет
+    throwHold: [0, 0, 0],   // где предмет сидит в руке относительно сокета, м
+    throwGrace: 0.5,        // с, сколько брошенный предмет не замечает самого метателя
+    throwVolume: 0.7,       // громкость замаха, доля от общей
+
     lives: 1,               // сколько ударов держит персонаж: один удар — и всё
     restartAfter: 1,        // с после смерти, прежде чем нажатие начнёт уровень заново
     reactionSpeed: 1.65,    // темп реакции на удар: втрое быстрее прежнего
@@ -293,6 +306,7 @@ export const CONFIG = {
     voiceRange: 20,       // дальше этого его не слышно, м
     voiceVolume: 0.7,     // громкость вблизи, доля от общей
     deathVolume: 0.8,     // предсмертный хрип слышно чуть лучше
+    deathPitch: 0.78,     // и он заметно ниже окрика: это последний звук, а не боевой
     hurtSpeed: 2.8,       // темп анимации попадания: короткий рывок
     hurtFade: 0.05,       // быстрый переход в неё, чтобы удар читался сразу
     corpseLinger: 1.5,    // с труп лежит после падения, прежде чем уйти под землю
@@ -353,6 +367,7 @@ export const CONFIG = {
     files: {
       fire: ['/assets/audio/fire.mp3'],
       walk: ['/assets/audio/walk.mp3'],
+      throw: ['/assets/audio/throw.mp3'],
       zombieAlert: [
         '/assets/audio/zombie/zombie-speak-1.mp3',
         '/assets/audio/zombie/zombie-speak-2.mp3',
@@ -360,9 +375,16 @@ export const CONFIG = {
         '/assets/audio/zombie/zombie-speak-4.mp3',
         '/assets/audio/zombie/zombie-speak-5.mp3',
       ],
+      // Отдельных предсмертных записей у зомби нет, поэтому хрип берётся из тех
+      // же голосов, но ниже тоном (`deathPitch`) — так он не путается с окриком,
+      // которым зомби замечает персонажа. Появятся свои файлы —менять только этот
+      // список, вся остальная логика уже на месте.
       zombieDead: [
-        '/assets/audio/zombie/zombie-dead-1.mp3',
-        '/assets/audio/zombie/zombie-dead-2.mp3',
+        '/assets/audio/zombie/zombie-speak-1.mp3',
+        '/assets/audio/zombie/zombie-speak-2.mp3',
+        '/assets/audio/zombie/zombie-speak-3.mp3',
+        '/assets/audio/zombie/zombie-speak-4.mp3',
+        '/assets/audio/zombie/zombie-speak-5.mp3',
       ],
     },
   },
@@ -384,6 +406,7 @@ export const CONFIG = {
   // Рация в углу: висит ровно столько, сколько длится сообщение
   radio: {
     image: '/assets/ui/radio.png',
+    waves: 3,  // кругов сигнала: одного мало — волна читается как разовая вспышка
   },
 
   // Заставка между уровнями

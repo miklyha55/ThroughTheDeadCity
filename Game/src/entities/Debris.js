@@ -57,6 +57,9 @@ export class Debris {
       angular: new THREE.Vector3(),
       idle: 0,
       asleep: true,
+      held: false,   // пока предмет в руке, физика его не трогает вовсе
+      ignore: null,  // кого предмет не замечает сразу после броска
+      ignoreFor: 0,  // и сколько ещё секунд
       explosive, // бочка: пуля её прошивает — и она детонирует
     });
   }
@@ -68,12 +71,24 @@ export class Debris {
    */
   update(dt, movers) {
     for (const item of this.items) {
+      // Предмет в руке живёт не здесь: его возит анимация, и ни падать, ни
+      // кого-то сбивать он пока не может.
+      if (item.held) continue;
+
+      // Только что брошенный предмет какое-то время не замечает того, кто его
+      // кинул: иначе он вылетает прямо из зоны касания и сам себя отпинывает —
+      // бросок гаснет, не начавшись.
+      if (item.ignoreFor > 0) item.ignoreFor -= dt;
+
       for (const mover of movers) {
         if (!mover) continue;
+        if (item.ignoreFor > 0 && mover === item.ignore) continue;
+
         this._crush(item, mover);
+        if (this._grabbed(item, mover)) break; // ушёл в руку — пинать уже нечего
         this._kick(item, mover.position, mover.radius, mover.speed);
       }
-      if (item.asleep) continue;
+      if (item.held || item.asleep) continue;
 
       this._integrate(item, dt);
       for (let i = 0; i < CFG.iterations; i++) this._resolveGround(item);
@@ -114,6 +129,62 @@ export class Debris {
     if (closing < CFG.lethalSpeed) return;
 
     mover.crush(position);
+  }
+
+  /**
+   * Предложить предмет тому, кто его коснулся.
+   *
+   * Физика не решает, кто и что может поднять: она только сообщает о касании и
+   * спрашивает. Тот же приём, что и с `crush`, — достаточно, чтобы фигура умела
+   * `grab`, а зомби такого метода не имеет и потому ничего не подбирает.
+   *
+   * @returns {boolean} предмет забрали — пинать его уже не надо
+   */
+  _grabbed(item, mover) {
+    if (!mover.grab) return false;
+
+    const position = item.object.position;
+    const gap = Math.hypot(position.x - mover.position.x, position.z - mover.position.z);
+    if (gap > item.radius + mover.radius) return false;
+
+    return mover.grab(item, this) === true;
+  }
+
+  /** Забрать предмет из физики в руку: он замирает и ждёт броска. */
+  hold(item) {
+    item.held = true;
+    item.velocity.set(0, 0, 0);
+    item.angular.set(0, 0, 0);
+    item.asleep = true;
+    item.idle = 0;
+  }
+
+  /**
+   * Выпустить предмет из руки с заданной скоростью — дальше он живёт как всё
+   * остальное: летит, кувыркается, падает и сбивает того, в кого попал.
+   *
+   * Где предмет окажется, решает не физика: он вылетает оттуда, где его
+   * отпустила рука, и к этому моменту уже стоит на своём месте в мире.
+   *
+   * @param {object} item — тело из физики
+   * @param {number} dirX @param {number} dirZ — куда, единичный вектор по земле
+   * @param {number} speed — м/с вдоль земли
+   * @param {number} lift — доля скорости, уходящая вверх: предмет идёт дугой
+   * @param {number} spin — рад/с закрутки поперёк полёта
+   * @param {object} [by] — кто бросил: его предмет на первых порах не замечает
+   * @param {number} [grace] — сколько секунд не замечает
+   */
+  launch(item, dirX, dirZ, speed, lift, spin, by = null, grace = 0) {
+    item.held = false;
+    item.ignore = by;
+    item.ignoreFor = grace;
+
+    item.velocity.set(dirX * speed, speed * lift, dirZ * speed);
+    // закрутка поперёк полёта: предмет уходит кувырком, а не плашмя
+    item.angular.set(-dirZ * spin, 0, dirX * spin);
+
+    item.asleep = false;
+    item.idle = 0;
   }
 
   /** Пинок прилетает в бок предмета, а не в центр — потому он ещё и закручивается. */
@@ -158,7 +229,7 @@ export class Debris {
     const found = [];
 
     for (const item of this.items) {
-      if (!item.explosive) continue;
+      if (!item.explosive || item.held) continue;
 
       const position = item.object.position;
       const ox = position.x - from.x;
@@ -177,6 +248,8 @@ export class Debris {
   /** Раскидывает предметы вокруг точки взрыва: чем ближе, тем сильнее. */
   blast(at, radius, power, lift) {
     for (const item of this.items) {
+      if (item.held) continue; // в руке его взрывной волной не достать
+
       const position = item.object.position;
       const dx = position.x - at.x;
       const dy = position.y - at.y;
@@ -364,9 +437,11 @@ export class Debris {
     const items = this.items;
     for (let i = 0; i < items.length; i++) {
       const a = items[i];
+      if (a.held) continue; // предмет в руке не расталкивает то, мимо чего его несут
+
       for (let j = i + 1; j < items.length; j++) {
         const b = items[j];
-        if (a.asleep && b.asleep) continue;
+        if (b.held || (a.asleep && b.asleep)) continue;
 
         const pa = a.object.position;
         const pb = b.object.position;

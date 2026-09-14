@@ -27,6 +27,7 @@ export class StartMessage {
 
     this.state = 'idle'; // idle → armed (ждём касание) → speaking → done
     this.played = false;
+    this.muted = false;  // выключено в панели разработчика: логика не запускается вовсе
     this.start = this.start.bind(this);
     this._timer = null;
   }
@@ -43,7 +44,7 @@ export class StartMessage {
    * @param {number} level — номер уровня из его файла
    */
   arm(level) {
-    if (this.played || level !== CFG.level) return;
+    if (this.muted || this.played || level !== CFG.level) return;
 
     this.state = 'armed';
 
@@ -68,6 +69,24 @@ export class StartMessage {
     this._timer = setTimeout(() => this._release(), CFG.maxLock * 1000);
 
     this.audio.play().catch(() => this._release()); // браузер отказал — не держим игрока
+  }
+
+  /**
+   * Выключить вступление совсем — или вернуть его.
+   *
+   * Выключенное не просто молчит: замок с управления снимается тут же, даже
+   * если голос уже говорит. Разработчику, который десятый раз перезапускает
+   * уровень, ждать эти полминуты незачем.
+   *
+   * @param {boolean} off
+   */
+  mute(off) {
+    this.muted = off;
+    if (!off) return;
+
+    this.audio.pause();
+    this.audio.currentTime = 0;
+    this._release();
   }
 
   _release() {

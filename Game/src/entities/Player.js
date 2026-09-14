@@ -94,6 +94,15 @@ export class Player {
       this.shootLength = shoot.getClip().duration;
     }
 
+    const toss = this.actions.get('Throw');
+    this.throwLength = 0;
+    if (toss) {
+      toss.setLoop(THREE.LoopOnce, 1);
+      toss.clampWhenFinished = true;
+      // клип играется быстрее, значит и замах длится меньше своей записи
+      this.throwLength = toss.getClip().duration / CFG.throwSpeed;
+    }
+
     const jump = this.actions.get('Jump');
     this.jumpLanding = 0.6;   // когда в клипе он касается земли, с
     if (jump) {
@@ -133,6 +142,10 @@ export class Player {
     this.reloading = 0;    // пауза между выстрелами: в неё зомби и подходят
     this.jumpTime = 0;     // сколько уже длится прыжок, с; ноль — значит стоит на земле
     this.frozen = false;   // управление отобрано снаружи: звучит вступление
+    this.throwing = null;  // идущий бросок: что в руке, в кого летит, сколько уже длится
+    this.throwCooldown = 0; // пауза, чтобы он не хватал предметы очередью
+    this._socket = this.root.getObjectByName('Socket_RightHand') ?? null;
+    this._hand = new THREE.Vector3(); // точка выпуска: где рука в момент отпускания
     this._jumpFrom = new THREE.Vector3();
     this._jumpTo = new THREE.Vector3();
 
@@ -207,6 +220,8 @@ export class Player {
    * попытка, и снова поставить в стойку.
    */
   revive() {
+    this._drop();
+    this.throwCooldown = 0;
     this.lives = CFG.lives;
     this.reacting = 0;
     this.velocity.set(0, 0, 0);
@@ -219,7 +234,142 @@ export class Player {
     this.current.timeScale = 1;
   }
 
+  /**
+   * Взять предмет в руку и замахнуться — физика предлагает, решает персонаж.
+   *
+   * Зовётся из физики в момент касания. Хватает он не всё и не всегда: нужен
+   * зомби в радиусе огня, свободные руки и целый предмет, который не жалко
+   * потерять. Бочка не в счёт — она не снаряд, а мишень: её взрывают выстрелом,
+   * и носить её в руках значило бы таскать с собой собственную смерть.
+   *
+   * @param {object} item — тело из физики
+   * @param {import('./Debris.js').Debris} debris
+   * @returns {boolean} взял ли — если нет, физика просто отпинёт предмет
+   */
+  grab(item, debris) {
+    if (this.throwing || this.throwCooldown > 0) return false;
+    if (!this.alive || this.frozen || this.jumping || this.helpless || this.reacting > 0) return false;
+    if (!this._socket || this.throwLength <= 0) return false;
+    if (item.explosive) return false;
+
+    // Кидать имеет смысл только в кого-то: это тот же, кого он держит на прицеле.
+    const target = this.spotted;
+    if (!target?.alive) return false;
+
+    // Берётся за проп он ближе, чем стреляет. Доля от радиуса огня, а не своё
+    // число: у самой границы выстрела бросок не долетал бы, и на краю прицела
+    // персонаж вместо стрельбы принимался бы возиться с ящиком.
+    const reach = CFG.fireRange * CFG.throwRange;
+    const away = Math.hypot(
+      target.position.x - this.root.position.x,
+      target.position.z - this.root.position.z
+    );
+    if (away > reach) return false;
+
+    debris.hold(item);
+
+    // Предмет переезжает на сокет правой руки — туда же, где висит ружьё, —
+    // и дальше его возит анимация, а не физика.
+    const home = item.object.parent;
+    this._socket.add(item.object);
+    item.object.position.fromArray(CFG.throwHold);
+    item.object.quaternion.identity();
+
+    this.throwing = { item, debris, home, target, time: 0, released: false };
+
+    this._holdFire();
+    this._holdGun(false); // руки заняты предметом — ружьё за спиной
+    this.velocity.set(0, 0, 0);
+
+    this.play('Throw', 0.1);
+    this.current.reset().play();
+    this.current.timeScale = CFG.throwSpeed;
+    return true;
+  }
+
+  /**
+   * Ход броска: доворот к цели, момент отпускания, конец клипа.
+   *
+   * Момент отпускания взят долей клипа, а не таймером: анимацию можно ускорить
+   * или замедлить, и предмет всё равно уйдёт ровно тогда, когда рука его
+   * выпускает, — как и топот берётся из цикла бега, а не из секундомера.
+   */
+  _throwStep(dt) {
+    const toss = this.throwing;
+    toss.time += dt;
+
+    // корпус доворачивается к цели прямо на замахе: кидают в того, кого выбрали
+    if (toss.target?.alive) {
+      const to = Math.atan2(
+        toss.target.position.x - this.root.position.x,
+        toss.target.position.z - this.root.position.z
+      );
+      this._turnTo(to, CFG.turnSpeed, dt);
+    }
+
+    if (!toss.released && toss.time >= this.throwLength * CFG.throwRelease) this._release();
+    if (toss.time < this.throwLength) return;
+
+    this.throwing = null;
+    this.throwCooldown = CFG.throwCooldown;
+  }
+
+  /** Рука разжалась: предмет возвращается в мир и уходит в цель. */
+  _release() {
+    const toss = this.throwing;
+    const { item, debris, home } = toss;
+    toss.released = true;
+
+    // Точка вылета — там, где сейчас рука. `attach` возвращает предмет в мир,
+    // не сдвинув его с места: он продолжает лететь ровно оттуда, где был.
+    item.object.getWorldPosition(this._hand);
+    home.attach(item.object);
+
+    // Звук — здесь, вместе с самим вылетом, а не при начале замаха: до этого
+    // момента бросок ещё можно оборвать, и раньше остался бы хэканье без броска.
+    this.sfx?.play('throw', CONFIG.sounds.volume * CFG.throwVolume);
+
+    // Цель могли убить, пока шёл замах, — тогда предмет уходит просто вперёд.
+    let dirX = Math.sin(this.yaw);
+    let dirZ = Math.cos(this.yaw);
+
+    if (toss.target?.alive) {
+      const dx = toss.target.position.x - this._hand.x;
+      const dz = toss.target.position.z - this._hand.z;
+      const length = Math.hypot(dx, dz);
+      if (length > 1e-4) {
+        dirX = dx / length;
+        dirZ = dz / length;
+      }
+    }
+
+    debris.launch(
+      item, dirX, dirZ,
+      CFG.throwPower, CFG.throwLift, CFG.throwSpin,
+      this, CFG.throwGrace
+    );
+  }
+
+  /**
+   * Уронить то, что в руке, где стоим.
+   *
+   * Нужно на смерти и на перезапуске: иначе предмет остаётся висеть на кости и
+   * уезжает вместе с персонажем через всю карту.
+   */
+  _drop() {
+    if (!this.throwing) return;
+
+    const { item, debris, home, released } = this.throwing;
+    this.throwing = null;
+
+    if (released) return; // уже улетел, возвращать нечего
+
+    home.attach(item.object);
+    debris.launch(item, 0, 0, 0, 0, 0, this, CFG.throwGrace);
+  }
+
   _die() {
+    this._drop();
     this.velocity.set(0, 0, 0);
     this.play('Death', 0.15);
     this.current.reset().play();
@@ -228,6 +378,7 @@ export class Player {
 
   /** Ставит персонажа в точку старта локации, гася движение. */
   placeAt(position, yaw = 0) {
+    this._drop(); // унести предмет в руке на другой конец карты нельзя
     this.root.position.copy(position);
     this.yaw = yaw;
     this.root.rotation.y = yaw;
@@ -319,6 +470,15 @@ export class Player {
       this.mixer.update(dt);
       return;
     }
+
+    // Бросок: пока идёт замах, персонаж стоит и ничем другим не занят — ни
+    // бежит, ни стреляет. Предмет в это время едет в руке вместе с анимацией.
+    if (this.throwing) {
+      this._throwStep(dt);
+      this.mixer.update(dt);
+      return;
+    }
+    if (this.throwCooldown > 0) this.throwCooldown -= dt;
 
     // в полёте управление отобрано: траектория уже задана, менять её нечем
     if (this.jumping) {
@@ -698,7 +858,7 @@ export class Player {
       // поиск шёл на всю дальность огня, и боковая пуля веера подрывала бочку
       // далеко в стороне — там, куда персонаж вовсе не целился.
       const barrels = location?.debris.explosivesAlong(muzzle, dirX, dirZ, flight) ?? [];
-      for (const barrel of barrels) location.explode(barrel);
+      for (const barrel of barrels) location.explode(barrel, this);
 
       // росчерк обрывается на том, в кого попали, — или тянется в пустоту
       if (victim) {

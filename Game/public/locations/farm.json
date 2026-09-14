@@ -13,8 +13,8 @@
   },
   "spawn": {
     "position": [
-      0,
-      17
+      -0.41,
+      19.14
     ],
     "rotation": 180
   },
@@ -423,10 +423,10 @@
     {
       "prop": "Heavy_Tractor",
       "at": [
-        -5,
-        4
+        -8,
+        16
       ],
-      "rotation": 35
+      "rotation": 115
     },
     {
       "prop": "Car_PickupArmored",
@@ -439,10 +439,10 @@
     {
       "prop": "Car_SedanWreck",
       "at": [
-        -8,
-        16
+        -5,
+        4
       ],
-      "rotation": 115
+      "rotation": 35
     },
     {
       "prop": "Prop_Crate",
@@ -1381,8 +1381,8 @@
     {
       "kind": "zombie2",
       "at": [
-        6.89,
-        6.33
+        7.46,
+        4.42
       ],
       "rotation": 161.8
     },

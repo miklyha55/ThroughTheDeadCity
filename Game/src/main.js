@@ -64,6 +64,11 @@ locations.seeThrough = new SeeThrough(engine.camera);
 
 const music = new Music();
 const startMessage = new StartMessage(); // вступление на первом уровне: пока говорит — персонаж стоит
+
+// Галочка из панели разработчика. Читается до первой постановки на уровень:
+// выключенное вступление не должно даже начинать замок, а панель появляется позже.
+const NO_INTRO = 'dev:noIntro';
+if (import.meta.env.DEV) startMessage.muted = localStorage.getItem(NO_INTRO) === '1';
 const radio = new Radio(); // и рация в углу: видно, откуда голос и почему нельзя идти
 const params = new URLSearchParams(window.location.search);
 
@@ -225,6 +230,14 @@ if (import.meta.env.DEV) {
   editor = createEditor({
     engine, locations, joystick, camera,
     onToggle: () => showHud(),
+    toggles: [{
+      label: 'без вступления',
+      value: startMessage.muted,
+      onChange: (off) => {
+        startMessage.mute(off);
+        localStorage.setItem(NO_INTRO, off ? '1' : '0');
+      },
+    }],
     onPick: (id) => {
       // выбор стрелками и есть то, что игра вспомнит после перезагрузки
       localStorage.setItem(LAST_LEVEL, id);

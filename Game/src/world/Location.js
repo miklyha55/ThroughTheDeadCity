@@ -361,20 +361,24 @@ export class Location {
    * вполне может снести того, до кого не дотянулся сам взрыв.
    *
    * @param {object} item — тело из физики: сама бочка
-   * @param {import('../entities/Player.js').Player} player
+   * @param {import('../entities/Player.js').Player} [player] — кого ещё накрыло
    */
-  explode(item) {
+  explode(item, player) {
     const CFG = CONFIG.explosion;
     const at = item.object.position.clone();
 
     this.debris.remove(item);
     this.debris.blast(at, CFG.kickRadius, CFG.kick, CFG.lift);
 
-    // Персонажа взрыв не трогает: он сам его и устроил, а погибать от того, во
-    // что стрелял, — наказание не за ошибку, а за приём.
+    // Взрыв не разбирает, кто его устроил: в круге не выживает никто. Бочка —
+    // это не вторая пушка, а решение, с какого расстояния по ней стрелять.
     for (const zombie of this.zombies) {
       if (!zombie.alive) continue;
       if (zombie.position.distanceTo(at) <= CFG.radius) zombie.crush(at, CFG.gore);
+    }
+
+    if (player?.alive && player.position.distanceTo(at) <= CFG.radius) {
+      player.takeDamage(Infinity, at); // из круга не выходят: жизней не считаем
     }
 
     this.onBlast?.(at); // вспышка и тряска — дело сцены, а не локации

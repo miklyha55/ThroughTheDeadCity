@@ -109,6 +109,17 @@
       }
       .editor__arrow:hover { background: rgba(255,255,255,0.2); }
 
+      .editor__toggles {
+        display: flex; flex-direction: column; gap: 4px;
+        margin: 8px 0 6px;
+      }
+      .editor__toggle {
+        pointer-events: auto;
+        display: flex; align-items: center; gap: 2px;
+        color: #e8eef4; cursor: pointer;
+      }
+      .editor__toggle input { cursor: pointer; }
+
       .splash {
         position: fixed; inset: 0; z-index: 60;
         display: flex; flex-direction: column;
@@ -148,25 +159,55 @@
 
       /* Рация: видна, пока по ней говорят. Появляется и уходит прозрачностью,
          а не показом — резкое включение в углу читается как сбой, а не как
-         вызов на связь. Покачивается, чтобы не выглядеть наклейкой на экране. */
+         вызов на связь. */
       .radio {
         position: fixed; left: 16px; bottom: 16px; z-index: 50;
-        width: min(32vh, 230px); height: auto;
+        width: min(32vh, 230px); aspect-ratio: 1;
         opacity: 0; pointer-events: none;
         transition: opacity 450ms ease;
+      }
+      .radio--on { opacity: 1; }
+
+      /* Сама рация покачивается, чтобы не выглядеть наклейкой на стекле. Круги
+         качаться не должны — они идут от антенны и стоят на месте, поэтому
+         движение висит на картинке, а не на всей коробке. */
+      .radio__set {
+        position: relative; z-index: 1;
+        width: 100%; height: 100%;
+        object-fit: contain;
         filter: drop-shadow(0 6px 14px rgba(0,0,0,0.55));
         transform-origin: 50% 90%;
       }
-      .radio--on { opacity: 1; animation: radio-bounce 820ms ease-in-out infinite alternate; }
+      .radio--on .radio__set { animation: radio-bounce 820ms ease-in-out infinite alternate; }
 
       @keyframes radio-bounce {
         from { transform: translateY(0) rotate(-2deg); }
         to   { transform: translateY(-9px) rotate(2deg); }
       }
 
-      /* Кому движение мешает — рация просто висит на месте. */
+      /* Круги сигнала: расходятся от рации и тают. Три штуки вразнобой — одна
+         волна читается как разовая вспышка, а не как идущая передача. */
+      .radio__wave {
+        position: absolute; left: 50%; top: 52%;
+        width: 62%; aspect-ratio: 1;
+        margin: -31% 0 0 -31%;
+        border: 2px solid rgba(232, 208, 143, 0.75);
+        border-radius: 50%;
+        opacity: 0;
+      }
+      .radio--on .radio__wave { animation: radio-wave 2200ms ease-out infinite; }
+      .radio--on .radio__wave:nth-child(2) { animation-delay: 730ms; }
+      .radio--on .radio__wave:nth-child(3) { animation-delay: 1460ms; }
+
+      @keyframes radio-wave {
+        from { transform: scale(0.35); opacity: 0.85; }
+        to   { transform: scale(1.6);  opacity: 0; }
+      }
+
+      /* Кому движение мешает — рация просто висит на месте, без кругов. */
       @media (prefers-reduced-motion: reduce) {
-        .radio--on { animation: none; }
+        .radio--on .radio__set,
+        .radio--on .radio__wave { animation: none; }
       }
 
       #hud {

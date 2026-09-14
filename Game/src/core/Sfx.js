@@ -92,14 +92,15 @@ export class Sfx {
    * @param {string} name — какой звук
    * @param {number} [volume] — своя громкость, если нужна тише общей
    * @param {number} [layers] — сколько дорожек пустить разом
+   * @param {number} [pitch] — сдвиг высоты тона: ниже единицы — ниже и глуше
    *
    * Громкость одной дорожки браузер ограничивает единицей, и поднять звук выше
    * этого потолка нечем. Поэтому по-настоящему громкое — взрыв — пускается в
    * несколько дорожек сразу: они складываются по амплитуде, а лёгкий разброс
    * высоты между ними делает звук ещё и плотнее, а не просто громче.
    */
-  play(name, volume = CFG.volume, layers = 1) {
-    for (let i = 0; i < layers; i++) this._once(name, volume);
+  play(name, volume = CFG.volume, layers = 1, pitch = 1) {
+    for (let i = 0; i < layers; i++) this._once(name, volume, pitch);
 
     // Отзвук: тот же выстрел, но тише, глуше и с небольшим опозданием — будто
     // отразился от стен. Приходит он не всегда и каждый раз через разное время,
@@ -109,7 +110,7 @@ export class Sfx {
     const delay = CFG.echoDelay + Math.random() * CFG.echoSpread;
     const timer = setTimeout(() => {
       this.echoes.delete(timer);
-      this._once(name, volume * CFG.echoVolume, CFG.echoPitch);
+      this._once(name, volume * CFG.echoVolume, CFG.echoPitch * pitch);
     }, delay);
     this.echoes.add(timer);
   }

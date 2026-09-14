@@ -33,7 +33,7 @@ const _where = new THREE.Vector3();
  * Пока редактор открыт, локация пересобирается без слияния статики: слитая
  * геометрия неподвижна, и тянуть в ней было бы нечего.
  */
-export function createEditor({ engine, locations, joystick, camera, onToggle, onPick }) {
+export function createEditor({ engine, locations, joystick, camera, onToggle, onPick, toggles = [] }) {
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const down = new THREE.Vector2();
@@ -74,8 +74,34 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
   switcher.append(prev, title, next);
 
   const hint = document.createElement('div');
-  panel.append(switcher, hint);
+  panel.append(switcher, checkboxes(), hint);
   document.body.appendChild(panel);
+
+  /**
+   * Выключатели для отладки: галочки, которые переживают перезагрузку.
+   *
+   * Состояние хранится не в самой галочке, а снаружи — иначе оно не пережило бы
+   * ни одной перезагрузки, а нужны они как раз тем, кто перезапускает уровень
+   * по десять раз подряд.
+   */
+  function checkboxes() {
+    const box = document.createElement('div');
+    box.className = 'editor__toggles';
+
+    for (const toggle of toggles) {
+      const label = document.createElement('label');
+      label.className = 'editor__toggle';
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = toggle.value;
+      input.addEventListener('change', () => toggle.onChange(input.checked));
+
+      label.append(input, document.createTextNode(` ${toggle.label}`));
+      box.appendChild(label);
+    }
+    return box;
+  }
 
   /**
    * Кнопка соседнего уровня. Цепочка берётся из самих локаций: каждая знает,
