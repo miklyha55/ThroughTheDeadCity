@@ -17,6 +17,7 @@ import { readChain } from './world/chain.js';
 import { asset } from './core/paths.js';
 import { Music } from './core/Music.js';
 import { StartMessage } from './core/StartMessage.js';
+import { Transmission } from './ui/Transmission.js';
 import { Radio } from './ui/Radio.js';
 import { Ammo } from './ui/Ammo.js';
 import { Ending } from './ui/Ending.js';
@@ -166,7 +167,8 @@ locations.sfx = sfx;
 locations.seeThrough = new SeeThrough(engine.camera);
 
 const music = new Music();
-const startMessage = new StartMessage(); // вступление на первом уровне: пока говорит — персонаж стоит
+const transmission = new Transmission(); // текст вступления по букве внизу экрана
+const startMessage = new StartMessage(transmission); // пока говорит — персонаж стоит
 
 // Галочка из панели разработчика. Читается до первой постановки на уровень:
 // выключенное вступление не должно даже начинать замок, а панель появляется позже.

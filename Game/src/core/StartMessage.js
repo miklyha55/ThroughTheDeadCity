@@ -20,7 +20,9 @@ const CFG = CONFIG.startMessage;
  * снимается сам. Молчащее сообщение не повод оставить игрока без управления.
  */
 export class StartMessage {
-  constructor() {
+  /** @param {import('../ui/Transmission.js').Transmission} [text] — субтитры */
+  constructor(text = null) {
+    this.text = text;
     this.audio = new Audio(CFG.file);
     this.audio.preload = 'auto';
     this.audio.volume = CFG.volume;
@@ -68,6 +70,7 @@ export class StartMessage {
     // вкладку свернули, звук не отдали. Замок снимется по времени.
     this._timer = setTimeout(() => this._release(), CFG.maxLock * 1000);
 
+    this.text?.start(this.audio); // текст идёт за дорожкой, а не за таймером
     this.audio.play().catch(() => this._release()); // браузер отказал — не держим игрока
   }
 
@@ -92,6 +95,7 @@ export class StartMessage {
   _release() {
     clearTimeout(this._timer);
     this._timer = null;
+    this.text?.stop();
     this.state = 'done';
   }
 }
