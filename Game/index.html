@@ -54,7 +54,9 @@
         margin: 0; padding: 10px 16px;
         border-radius: 10px;
         background: rgba(7, 9, 10, 0.55);
-        color: #e8eef4; text-shadow: 0 2px 6px #000;
+        /* Тени у букв нет: под ними своя подложка, и она уже отделяет текст от
+           земли. Тень поверх неё лишь мылит края и читается как расфокус. */
+        color: #e8eef4;
         font: 400 15px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
         letter-spacing: 0.02em;
         text-align: center;
@@ -536,7 +538,11 @@
   </head>
   <body>
     <div id="app"></div>
-    <div id="hud">загрузка…</div>
+    <!-- Подпись уровня. Скрыта до тех пор, пока уровень не собран: показывать
+         её раньше нечего, а на экране с кнопкой она просвечивала насквозь и
+         мозолила глаза словом «загрузка» поверх пустоты. Показывает её сама
+         игра, когда ей действительно есть что написать. -->
+    <div id="hud" hidden>загрузка…</div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

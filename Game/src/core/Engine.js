@@ -19,6 +19,19 @@ export class Engine {
     this.renderer.toneMappingExposure = CONFIG.world.exposure;
     container.appendChild(this.renderer.domElement);
 
+    // Холст красится тем же чёрным, что и страница, и красится СРАЗУ.
+    //
+    // Пустой холст WebGL непрозрачен и чёрен по-настоящему, в ноль. Страница же
+    // чуть светлее, и пока игра не нарисовала первый кадр, поверх страницы
+    // лежал прямоугольник другого чёрного во весь экран. Через прозрачные
+    // экраны поверх него — тот, что с кнопкой, — это и было видно как деление
+    // экрана на две почти одинаковые, но разные половины.
+    //
+    // Одного `setClearColor` мало: он говорит, чем красить в следующий раз, а
+    // покрасить должен кто-то. Поэтому сразу же и красим.
+    this.renderer.setClearColor(CONFIG.world.pageColor, 1);
+    this.renderer.clear();
+
     this.scene = new THREE.Scene();
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
 
