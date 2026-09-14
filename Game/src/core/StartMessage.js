@@ -32,6 +32,13 @@ export class StartMessage {
     this.muted = false;  // выключено в панели разработчика: логика не запускается вовсе
     this.start = this.start.bind(this);
     this._timer = null;
+
+    // Пропуск. Речь длинная, а при отладке и на втором прохождении слушать её
+    // незачем — но и снимать совсем нельзя: тому, кто пришёл впервые, она и
+    // рассказывает, куда идти.
+    addEventListener('keydown', (event) => {
+      if (event.code === CFG.skipKey && this.locked) this.skip();
+    });
   }
 
   /** Управление отобрано: либо ещё ждём касания, либо голос говорит. */
@@ -72,6 +79,21 @@ export class StartMessage {
 
     this.text?.start(this.audio); // текст идёт за дорожкой, а не за таймером
     this.audio.play().catch(() => this._release()); // браузер отказал — не держим игрока
+  }
+
+  /**
+   * Пропустить речь: замок снимается, звук обрывается, текст уходит.
+   *
+   * От `mute` отличается тем, что не выключает вступление насовсем: это разовый
+   * пропуск, а не галочка в панели.
+   */
+  skip() {
+    if (!this.locked) return;
+
+    this.played = true; // второй раз за сеанс оно не заведётся
+    this.audio.pause();
+    this.audio.currentTime = 0;
+    this._release();
   }
 
   /**
