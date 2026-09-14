@@ -165,6 +165,13 @@
         opacity: 0; pointer-events: none;
         transition: opacity 900ms ease;
       }
+      /* Песок поверх картинки: он часть кадра, поэтому дышит вместе с ним. */
+      .ending__dust {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+      }
+
       .ending--on {
         opacity: 1; pointer-events: auto;
         animation: ending-breath 11s ease-in-out infinite alternate;
@@ -184,8 +191,7 @@
 
       .splash {
         position: fixed; inset: 0; z-index: 60;
-        display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 14px;
+        display: flex; align-items: center; justify-content: center;
         background: #0b0e12;
       }
       /* display: flex сильнее атрибута hidden, и без этой строки заставка
@@ -199,10 +205,18 @@
         background-repeat: no-repeat;
         background-size: cover;
       }
+      /* Подпись подвешена над полосой ровно так же, как реплика на загрузке
+         игры: у обоих экранов полоса стоит по центру и никуда не едет, сколько
+         бы строк ни занял текст. Иначе на переходе от одной загрузки к другой
+         полоса прыгает — а идут они подряд, и прыжок этот хорошо виден. */
       .splash__caption {
-        position: relative;
+        position: absolute;
+        left: 50%; transform: translateX(-50%);
+        bottom: calc(50% + 22px);
+        width: min(78vw, 560px);
+        text-align: center; text-wrap: balance;
         color: #e8eef4; text-shadow: 0 2px 6px #000;
-        font: 600 15px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        font: 600 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
         letter-spacing: 0.04em;
       }
       .splash__bar {

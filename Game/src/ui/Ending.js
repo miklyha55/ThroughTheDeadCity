@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { ScreenDust } from '../fx/ScreenDust.js';
 
 const CFG = CONFIG.ending;
 
@@ -16,8 +17,12 @@ export class Ending {
   constructor(container = document.body) {
     this.root = document.createElement('div');
     this.root.className = 'ending';
-    this.root.style.backgroundImage = `url(${CFG.image})`;
     container.appendChild(this.root);
+
+    // Песок живёт внутри экрана: показали финал — он пошёл, убрали — замер.
+    this.dust = new ScreenDust(this.root);
+
+    this.refresh();
 
     this.shown = false;
   }
@@ -27,5 +32,26 @@ export class Ending {
 
     this.shown = true;
     this.root.classList.add('ending--on');
+    this.dust.start();
+  }
+
+  /**
+   * Перечитать картинку с диска.
+   *
+   * Файл мог смениться — его копирует та же кнопка «Обновить», что пересобирает
+   * модели. Браузер сам об этом не догадается и отдаст старый из кэша, поэтому
+   * каждой перечитке свой адрес.
+   */
+  refresh() {
+    this.root.style.backgroundImage = `url(${CFG.image}?v=${Date.now()})`;
+  }
+
+  /** Убрать финал: нужно только в панели разработчика, стрелкой обратно. */
+  hide() {
+    if (!this.shown) return;
+
+    this.shown = false;
+    this.root.classList.remove('ending--on');
+    this.dust.stop();
   }
 }

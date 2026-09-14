@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { NOISE_GLSL } from './noise.js';
 
 const CFG = CONFIG.dust;
 
@@ -111,29 +112,7 @@ const FRAGMENT = /* glsl */`
 
   varying vec2 vWorld;
 
-  // Обычный шум на решётке: значение в узлах берётся из хеша, между узлами —
-  // сглаженная интерполяция. Текстуры для этого не нужны.
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-
-  float noise(vec2 p) {
-    vec2 cell = floor(p);
-    vec2 part = fract(p);
-    vec2 smoothed = part * part * (3.0 - 2.0 * part);
-
-    return mix(
-      mix(hash(cell), hash(cell + vec2(1.0, 0.0)), smoothed.x),
-      mix(hash(cell + vec2(0.0, 1.0)), hash(cell + vec2(1.0, 1.0)), smoothed.x),
-      smoothed.y
-    );
-  }
-
-  // Несколько слоёв шума разной частоты: крупные пятна задают общий рисунок,
-  // мелкие рвут их края. Без этого пыль выглядит мягкими кляксами.
-  float layered(vec2 p) {
-    return noise(p) * 0.55 + noise(p * 2.3) * 0.28 + noise(p * 4.7) * 0.17;
-  }
+${NOISE_GLSL}
 
   void main() {
     vec2 p = vWorld * scale - wind * time * scale;

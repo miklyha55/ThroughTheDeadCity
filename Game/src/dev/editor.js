@@ -35,7 +35,7 @@ const _where = new THREE.Vector3();
  * Пока редактор открыт, локация пересобирается без слияния статики: слитая
  * геометрия неподвижна, и тянуть в ней было бы нечего.
  */
-export function createEditor({ engine, locations, joystick, camera, onToggle, onPick, toggles = [] }) {
+export function createEditor({ engine, locations, joystick, camera, onToggle, onPick, onFinal, toggles = [] }) {
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const down = new THREE.Vector2();
@@ -118,20 +118,35 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     button.addEventListener('click', async () => {
       if (locations.loading || chain.length < 2) return;
 
-      const at = chain.indexOf(locations.current.data.id);
+      const at = chain.indexOf(atFinal ? FINAL : locations.current.data.id);
       const to = chain[(at + step + chain.length) % chain.length];
 
       gizmo.detach();
       picked = null;
-      await locations.load(to);
-      onPick?.(to); // сюда игра и вернётся после перезагрузки
+
+      if (to === FINAL) {
+        atFinal = true;
+        onFinal?.(true);
+      } else {
+        // уходим с финала — гасим его, иначе новый уровень откроется под картинкой
+        if (atFinal) {
+          atFinal = false;
+          onFinal?.(false);
+        }
+        await locations.load(to);
+        onPick?.(to); // сюда игра и вернётся после перезагрузки
+      }
       status('щёлкни по предмету');
     });
 
     return button;
   }
 
+  // Финал стоит в той же цепочке, что и уровни: он такая же часть игры, и
+  // смотреть его должно быть так же просто — теми же стрелками, не перезапуском.
+  const FINAL = '\u0000final';
   let chain = [];
+  let atFinal = false;
 
   /**
    * Собирает цепочку уровней, идя по ссылкам `next` от самого первого.
@@ -158,11 +173,13 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     const here = locations.current.data.id;
     if (!list.includes(here)) list.push(here);
 
+    list.push(FINAL); // за последним уровнем — финальный экран
     chain = list;
   }
 
   const status = (text) => {
-    title.textContent = active ? locations.current.data.name : '';
+    const where = atFinal ? CONFIG.ending.title : locations.current.data.name;
+    title.textContent = active ? where : '';
     hint.textContent = active
       ? 'WASD — камера · ←→ поворот · 1 сдвиг · 2 разворот · 3 размер\n'
         + 'Enter — сохранить · Tab — выйти\n'

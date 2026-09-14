@@ -39,6 +39,7 @@ export class Splash {
     this.progress = 0;
     this.shownAt = 0;
     this._timer = null;
+    this.stamp = Date.now(); // метка кэша: меняется на каждой пересборке ресурсов
   }
 
   /**
@@ -78,7 +79,15 @@ export class Splash {
    */
   setLevel(title, number) {
     this.caption.textContent = title ?? '';
-    this.image.style.backgroundImage = `url(${CFG.folder}${number}.png)`;
+    this.image.style.backgroundImage = `url(${CFG.folder}${number}.png?v=${this.stamp})`;
+  }
+
+  /**
+   * Перечитать картинки с диска: их копирует кнопка «Обновить» вместе с
+   * моделями, а браузер без нового адреса отдаст старые из кэша.
+   */
+  refresh() {
+    this.stamp = Date.now();
   }
 
   /**

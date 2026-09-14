@@ -116,6 +116,7 @@ const ending = new Ending(); // экран, которым игра кончае
  * как продолжение боя. Остаётся одна музыка, зациклённая, как и на уровнях.
  */
 let finished = false;
+
 locations.onFinish = () => {
   if (finished) return;
 
@@ -124,6 +125,14 @@ locations.onFinish = () => {
   music.play(CONFIG.ending.track);
   ending.show();
 };
+
+/** Вернуться с финала в игру. Нужно только панели разработчика. */
+function leaveEnding() {
+  if (!finished) return;
+
+  finished = false;
+  ending.hide();
+}
 
 await boot.hide(); // модели готовы — чёрный экран уступает заставке уровня
 await locations.load(firstLevel);
@@ -271,6 +280,7 @@ if (import.meta.env.DEV) {
         localStorage.setItem(NO_INTRO, off ? '1' : '0');
       },
     }],
+    onFinal: (on) => (on ? locations.onFinish() : leaveEnding()),
     onPick: (id) => {
       // выбор стрелками и есть то, что игра вспомнит после перезагрузки
       localStorage.setItem(LAST_LEVEL, id);
@@ -289,6 +299,11 @@ if (import.meta.env.DEV) {
       // Отдельный адрес на каждую сборку, иначе браузер отдаст старый файл из кэша.
       const stamp = Date.now();
       const bust = (url) => `${url}?v=${stamp}`;
+
+      // Заставки и финал копируются той же кнопкой — значит и перечитать их надо
+      // здесь же, иначе правленую картинку видно только после перезагрузки.
+      ending.refresh();
+      splash.refresh();
 
       const zombieSources = Object.fromEntries(
         Object.entries(CONFIG.zombies.sources).map(([kind, url]) => [kind, bust(url)])
@@ -331,7 +346,7 @@ if (import.meta.env.DEV) {
   });
 
   window.__game = {
-    engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage,
+    engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash,
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),
   };
