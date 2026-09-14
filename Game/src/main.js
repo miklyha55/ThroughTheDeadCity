@@ -89,9 +89,11 @@ function assetsFromConfig(skip) {
   return found;
 }
 
+let chain = []; // цепочка уровней: читается один раз и нужна и файлам, и заставке
+
 /** Файлы, которых в настройках нет поимённо: они собираются по номеру уровня. */
 async function assetsOfLevels() {
-  const chain = await readChain(firstLevel);
+  chain = await readChain(firstLevel);
   const files = [];
 
   for (const level of chain) {
@@ -119,7 +121,8 @@ trackAssets(1 + 1 + Object.keys(CONFIG.zombies.sources).length + extras.length,
   (share) => boot.setProgress(share));
 
 const splash = new Splash();
-splash.prepare(firstLevel); // заставка уровня готовится, пока идёт чёрный экран
+splash.learn(chain);        // теперь она знает каждый уровень в лицо
+splash.prepare(firstLevel); // и готовится встречать первый, пока идёт чёрный экран
 
 const world = buildWorld(engine.scene, engine.renderer);
 const { sun } = world;

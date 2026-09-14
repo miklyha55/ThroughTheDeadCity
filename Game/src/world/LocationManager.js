@@ -50,6 +50,10 @@ export class LocationManager {
   async load(id) {
     this.loading = true;
     this.sfx?.silence(); // старый уровень уходит — его шаги и хрипы уходят с ним
+
+    // Сначала чем встречать, и только потом показ: иначе первым делом виден
+    // предыдущий уровень, и лишь через мгновение его сменяет нужный.
+    this.splash?.prepare(id);
     this.splash?.show();
 
     try {
@@ -64,7 +68,9 @@ export class LocationManager {
     const res = await fetch(asset(`locations/${id}.json`));
     if (!res.ok) throw new Error(`локация «${id}» не найдена (${res.status})`);
     const data = await res.json();
-    this.splash?.setLevel(data.name, data.number ?? 1); // узнали только теперь, из файла
+    // Для знакомого уровня это уже сделано до показа; здесь — на случай, если он
+    // открыт в обход цепочки и о нём узнали только сейчас, из файла.
+    this.splash?.setLevel(data.name, data.number ?? 1);
 
     this.current?.dispose();
     this.seeThrough?.clear(); // прежние здания ушли вместе с локацией
