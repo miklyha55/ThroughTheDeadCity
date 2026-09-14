@@ -661,6 +661,10 @@ export class Player {
 
     this._turnTo(Math.atan2(dirX, dirZ), CFG.turnSpeed * 8, 1); // сразу лицом по ходу
 
+    // Звук — вместе с отрывом от земли: дальше прыжок уже не отменить, и он
+    // всегда совпадёт с началом клипа, как бы тот ни был ускорен.
+    this.sfx?.play('jump', CONFIG.sounds.volume * CFG.jumpVolume);
+
     this.play('Jump', 0.08);
     this.current.reset().play();
     this.current.timeScale = CFG.jumpSpeed;
