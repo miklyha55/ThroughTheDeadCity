@@ -65,6 +65,11 @@ export class Music {
 
     this.track = track;
     this.audio.src = `${CFG.folder}${track}.mp3`;
+
+    // Своя громкость, если у уровня она задана: на вводной поверх музыки идёт
+    // голос по рации, и общая её заглушала.
+    this.sound.setVolume(CFG.byLevel?.[track] ?? CFG.volume);
+
     this._resume();
   }
 

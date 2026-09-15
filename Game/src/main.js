@@ -11,6 +11,7 @@ import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
 import { GunPickup } from './entities/GunPickup.js';
+import { Pointer } from './fx/Pointer.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
 import { Boot } from './ui/Boot.js';
@@ -218,6 +219,28 @@ engine.scene.add(player.root);
  */
 const gunPickup = new GunPickup(engine.scene);
 
+/**
+ * Ружьё подобрано.
+ *
+ * Появились патроны, а указатель переходит к следующей цели. Кончились цели —
+ * он гаснет и отпирает выход.
+ */
+gunPickup.onTaken = () => {
+  showAmmo();
+
+  // Ружьё взято: указатель переходит к выходу, а сам выход отпирается.
+  pointer.next();
+  locations.current?.lockExit(false);
+};
+
+/**
+ * Стрелка под ногами: куда идти дальше.
+ *
+ * Ездит на самом персонаже, поэтому переживает смену уровня. Цель ей ставит
+ * `aimPointer` — сейчас это лежащее ружьё, дальше будет что угодно.
+ */
+const pointer = new Pointer(player.root, engine.scene);
+
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 locations.splash = splash;
 locations.sfx = sfx;
@@ -331,6 +354,7 @@ engine.add({
     playerBlood.update(dt);
     explosions.update(dt);
     gunPickup.update(dt, player); // лежащее ружьё: крутится, а подошёл — летит в руки
+    pointer.update(dt, player.yaw); // стрелка под ногами держит цель
     dust.update(dt, player.position);
     puffs.update(dt);
     camera.update(dt);
@@ -355,6 +379,49 @@ async function updateDebugView() {
 /** Патроны показываем, только когда есть чем стрелять. */
 function showAmmo() {
   ammo.root.hidden = !player.armed;
+}
+
+/**
+ * Куда сейчас вести героя и открыт ли выход.
+ *
+ * Пока на уровне лежит ружьё, стрелка ведёт к нему, а выход заперт: уйти, не
+ * подобрав его, значит прийти на следующий уровень безоружным. Подобрал — выход
+ * открывается, а стрелка гаснет: дальше дорогу игрок ищет сам.
+ *
+ * Это и есть то место, куда добавляются будущие цели: стрелке всё равно, на что
+ * показывать, ей нужна лишь точка.
+ */
+function aimPointer() {
+  /**
+   * Очередь целей на этом уровне. Собирается заново на каждом.
+   *
+   * Отсюда и берутся все цели игры по порядку: ружьё и выход на вводной, выход
+   * на ферме, выход на заправке. Выход попадает сюда сам на любом уровне, где он
+   * есть, — отдельно перечислять уровни не нужно, и новый подхватится тем же
+   * правилом.
+   *
+   * Добавится ключ, рубильник или ящик с патронами — просто встанет в список.
+   * Указатель поведёт к первой цели, а взяв её, сам перейдёт к следующей.
+   */
+  const here = locations.current;
+  const targets = [];
+
+  // Ружьё: к нему ведём с подсветкой и с любого расстояния — пока оно лежит,
+  // это единственное, что нужно сделать.
+  const gun = gunPickup.object && !player.armed ? gunPickup.object : null;
+  if (gun) targets.push({ at: gun, halo: true });
+
+  // Выход: без подсветки и только вблизи. Круг под дверью читался бы как «встань
+  // сюда», а он и так на виду; напомнить стоит, лишь когда герой рядом.
+  if (here?.exitMark) {
+    targets.push({ at: here.exitMark, halo: false, within: CONFIG.pointer.exitWithin });
+  }
+
+  pointer.follow(targets);
+
+  // Выход заперт, пока не взято ружьё: уйти без него значит прийти на следующий
+  // уровень безоружным.
+  here?.lockExit(Boolean(gun));
 }
 
 function showHud() {
@@ -419,6 +486,7 @@ for (const event of ['pointerdown', 'keydown', 'touchstart']) {
 locations.onChange = (location) => {
   wireBlasts(location);
   gunPickup.place(location, player, locations.editing); // в правке лежит всегда
+  aimPointer();
   showAmmo();
   showHud();
   updateDebugView();
@@ -427,6 +495,7 @@ locations.onChange = (location) => {
   startMessage.arm(location.data.number ?? 1); // и вступление, если уровень первый
 };
 gunPickup.place(locations.current, player, locations.editing); // первый уровень: onChange ещё не привязан
+aimPointer();
 showAmmo();
 showHud();
 updateDebugView();
@@ -502,6 +571,11 @@ if (import.meta.env.DEV) {
       ammo.set(player.rounds);
       player.placeAt(spot, yaw);
       engine.scene.add(player.root);
+
+      // Стрелка жила на прежнем персонаже и ушла вместе с ним — переселяем её
+      // на нового. Без этого она осталась бы висеть на выброшенной модели и
+      // пропала бы с экрана после первой же пересборки.
+      pointer.attach(player.root);
 
       // всё, что держало ссылку на прежнего персонажа
       camera.target = player;

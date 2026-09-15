@@ -68,6 +68,7 @@ export class Location {
     // без её мелких деталей — зеркала и колёса прыжку не помеха.
     this.vaults = [];
     this.zombies = [];
+    this.exitLocked = false; // заперт ли выход: на вводной — пока не взято ружьё
     this._movers = [];  // кто может задеть разбросанные предметы
     this.statics = []; // неподвижные пропы: их геометрия сливается в общие меши
     this.watched = []; // крупное, что просвечивает: сливается рядами, а не всё разом
@@ -726,6 +727,7 @@ export class Location {
     );
 
     mark.name = 'exit';
+    mark.material.opacity = CONFIG.exit.openOpacity;
     mark.position.copy(at).setY(0.05);
     mark.scale.set(radius, 1, radius);
     mark.castShadow = false;
@@ -743,9 +745,27 @@ export class Location {
    * редакторе, так что радиус триггера всегда совпадает с тем, что видно.
    */
   reachedExit(p) {
-    if (!this.exitMark) return false;
+    if (!this.exitMark || this.exitLocked) return false;
 
     return flatDistance(p, this.exitMark.position) <= this.exitMark.scale.x;
+  }
+
+  /**
+   * Запереть или отпереть выход.
+   *
+   * На вводной локации он заперт, пока не поднято ружьё: уйти, не взяв его,
+   * значит прийти на ферму безоружным. Запертый выход ещё и гаснет — по кругу
+   * на полу видно, что туда пока рано.
+   *
+   * @param {boolean} locked
+   */
+  lockExit(locked) {
+    this.exitLocked = locked;
+
+    if (!this.exitMark) return;
+    this.exitMark.material.opacity = locked
+      ? CONFIG.exit.lockedOpacity
+      : CONFIG.exit.openOpacity;
   }
 
   /**
