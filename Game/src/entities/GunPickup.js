@@ -86,6 +86,25 @@ export class GunPickup {
     location.group.add(gun);
     this.object = gun;
 
+    // Круг на полу. Лежащее ружьё само по себе теряется среди хлама, а так
+    // сразу видно: это не декорация, это берут.
+    const glow = new THREE.Mesh(
+      new THREE.CircleGeometry(CFG.glowRadius, 32),
+      new THREE.MeshBasicMaterial({
+        color: CFG.glowColor,
+        transparent: true,
+        opacity: CFG.glowOpacity,
+        depthWrite: false, // лежит на полу и не спорит с ним за глубину
+      })
+    );
+    glow.name = 'gun:glow';
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.set(spot[0], CFG.glowHeight, spot[1]);
+    glow.renderOrder = 1;
+
+    location.group.add(glow);
+    this.glow = glow;
+
     // Локация должна знать, где лежит ружьё: по этой метке редактор его двигает,
     // а сохранение пишет новое место в файл.
     this.location = location;
@@ -97,6 +116,15 @@ export class GunPickup {
   /** Убрать со сцены. Геометрия и материал общие с персонажем — их не трогаем. */
   clear() {
     this.object?.removeFromParent();
+
+    // Круг рисуется своей геометрией и материалом — их и освобождаем.
+    if (this.glow) {
+      this.glow.removeFromParent();
+      this.glow.geometry.dispose();
+      this.glow.material.dispose();
+      this.glow = null;
+    }
+
     if (this.location?.gunMark === this.object) this.location.gunMark = null;
 
     this.object = null;
@@ -120,8 +148,12 @@ export class GunPickup {
 
     // Крутится и покачивается: неподвижная вещь на полу читается как часть
     // обстановки, а эта — то, за чем идут.
+    const breath = Math.sin(this.time * CFG.bobSpeed);
     this.object.rotation.y = this.time * CFG.spin;
-    this.object.position.y = CFG.height + Math.sin(this.time * CFG.bobSpeed) * CFG.bob;
+    this.object.position.y = CFG.height + breath * CFG.bob;
+
+    // Круг дышит с ружьём в такт: ниже опустилось — ярче горит под ним.
+    if (this.glow) this.glow.material.opacity = CFG.glowOpacity - breath * CFG.glowPulse;
 
     if (!player.alive || player.frozen) return;
     if (flatDistance(player.position, this.object.position) > CFG.takeRadius) return;
@@ -137,6 +169,9 @@ export class GunPickup {
     this.flight += dt;
 
     const share = Math.min(1, this.flight / CFG.flyFor);
+
+    // Ружьё оторвалось от пола — отметке под ним больше нечего отмечать.
+    if (this.glow) this.glow.material.opacity = CFG.glowOpacity * (1 - share);
     this.to.copy(player.position).setY(player.position.y + CFG.catchHeight);
 
     arcPoint(this.object.position, this.from, this.to, share, CFG.flyArc);
