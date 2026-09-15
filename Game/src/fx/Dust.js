@@ -37,7 +37,7 @@ export class Dust {
           color: { value: new THREE.Color(CFG.color) },
           opacity: { value: CFG.opacity * (1 - share * 0.35) }, // верхний слой тоньше
           scale: { value: CFG.scale * (1 + share * 0.6) },
-          wind: { value: new THREE.Vector2() },
+          drift: { value: new THREE.Vector2() },
           swirl: { value: CFG.swirl },
           coverage: { value: CFG.coverage - share * 0.08 },
           softness: { value: CFG.softness },
@@ -59,7 +59,7 @@ export class Dust {
       mesh.name = `dust:${i}`;
       scene.add(mesh);
 
-      this.layers.push({ mesh, material, speed: 1 - share * 0.3 });
+      this.layers.push({ mesh, material, speed: 1 - share * 0.3, drift: new THREE.Vector2() });
     }
 
     this.time = 0;
@@ -74,11 +74,32 @@ export class Dust {
       + Math.sin(this.time * CFG.swingSpeed) * CFG.swing;
     const gust = CFG.wind * (1 + Math.sin(this.time * CFG.gustSpeed) * CFG.gust);
 
+    // Куда ветер дует прямо сейчас, м/с.
+    const windX = Math.sin(angle) * gust;
+    const windZ = Math.cos(angle) * gust;
+
     for (const layer of this.layers) {
       const { uniforms } = layer.material;
 
+      /**
+       * Снос копится по шагу за кадр, а не считается как «ветер на время».
+       *
+       * Так было, и это разгоняло пыль. Ветер не постоянный: и сила, и
+       * направление гуляют. Умножая нынешний ветер на всё прошедшее время, мы
+       * каждый раз пересчитывали ВЕСЬ пройденный путь по новой силе — и видимая
+       * скорость выходила тем больше, чем дольше идёт игра. Через минуту пыль
+       * шла впятеро быстрее задуманного, через пять минут — в двадцать раз, да
+       * ещё и металась туда-сюда вместе с порывами.
+       *
+       * Правильная величина — не произведение, а сумма пройденного: сколько
+       * ветер надул за этот кадр, столько и прибавили. Тогда видимая скорость
+       * равна нынешнему ветру, и так в любой момент игры.
+       */
+      layer.drift.x += windX * dt * layer.speed;
+      layer.drift.y += windZ * dt * layer.speed;
+
       uniforms.time.value += dt * layer.speed;
-      uniforms.wind.value.set(Math.sin(angle) * gust, Math.cos(angle) * gust);
+      uniforms.drift.value.copy(layer.drift);
       uniforms.center.value.set(around.x, around.z);
 
       // полотно ездит за персонажем, а рисунок остаётся привязанным к миру
@@ -103,7 +124,7 @@ const FRAGMENT = /* glsl */`
   uniform vec3 color;
   uniform float opacity;
   uniform float scale;
-  uniform vec2 wind;
+  uniform vec2 drift;
   uniform float swirl;
   uniform float coverage;
   uniform float softness;
@@ -115,7 +136,7 @@ const FRAGMENT = /* glsl */`
 ${NOISE_GLSL}
 
   void main() {
-    vec2 p = vWorld * scale - wind * time * scale;
+    vec2 p = (vWorld - drift) * scale;
 
     // Завихрение: перед тем как взять шум, смещаем саму точку по другому шуму.
     // Оттого струи закручиваются, а не ползут параллельными полосами.
