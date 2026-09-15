@@ -184,6 +184,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     if (locations.player) list.push(locations.player.root);
     if (locations.current.ground) list.push(locations.current.ground);
     if (locations.current.exitMark) list.push(locations.current.exitMark);
+    if (locations.current.gunMark) list.push(locations.current.gunMark);
     return list;
   };
 
@@ -289,6 +290,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     if (object === locations.player?.root) status('выбран персонаж: это точка старта');
     else if (object === locations.current.ground) status('выбран пол: двигается по высоте');
     else if (object === locations.current.exitMark) status('выбрана область перехода: размер — радиус');
+    else if (object === locations.current.gunMark) status('выбрано ружьё: где оно лежит на уровне');
     else if (locations.current.zombies.some((z) => z.root === object)) status('выбран зомби');
     else status(`выбран ${object.name || 'проп'}`);
   }
@@ -311,8 +313,8 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
 
     const location = locations.current;
     if (picked === location.ground || picked === location.exitMark
-        || picked === locations.player?.root) {
-      status('это убрать нельзя: пол, старт и выход — часть самой локации');
+        || picked === location.gunMark || picked === locations.player?.root) {
+      status('это убрать нельзя: пол, старт, выход и ружьё — часть самой локации');
       return;
     }
 
@@ -340,8 +342,8 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
 
     const location = locations.current;
     if (picked === location.ground || picked === location.exitMark
-        || picked === locations.player?.root) {
-      status('это не копируется: пол, старт и выход на локации по одному');
+        || picked === location.gunMark || picked === locations.player?.root) {
+      status('это не копируется: пол, старт, выход и ружьё на локации по одному');
       return;
     }
 

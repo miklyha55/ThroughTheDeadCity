@@ -140,7 +140,11 @@ export class Location {
 
     obj.position.set(entry.at[0], (entry.y ?? 0) - sinkOf(prefab), entry.at[1]);
     obj.rotation.y = (entry.rotation ?? 0) * DEG;
-    if (entry.scale) obj.scale.setScalar(entry.scale);
+    // Масштаб бывает двух видов: одно число — растянуть во все стороны поровну,
+    // три — по каждой оси своё. Второе нужно стенам: секцию тянут вдоль, чтобы
+    // закрыть проём, и толстеть и расти при этом она не должна.
+    if (Array.isArray(entry.scale)) obj.scale.set(...entry.scale);
+    else if (entry.scale) obj.scale.setScalar(entry.scale);
     this.group.add(obj);
 
     const { carrier, com } = this._place(entry.prop, obj);
@@ -329,7 +333,6 @@ export class Location {
     if (prefab.dynamic) return;
 
     const CFG = CONFIG.player;
-    const scale = object.scale.x;
     if (prefab.size.y * object.scale.y > CFG.vaultMaxHeight) return;
 
     this.vaults.push({
@@ -337,8 +340,9 @@ export class Location {
       x: object.position.x,
       z: object.position.z,
       yaw: object.rotation.y,
-      halfW: (prefab.size.x * scale) / 2,
-      halfD: (prefab.size.z * scale) / 2,
+      // по своей оси свой множитель: растянутое вдоль не становится шире поперёк
+      halfW: (prefab.size.x * object.scale.x) / 2,
+      halfD: (prefab.size.z * object.scale.z) / 2,
     });
   }
 
@@ -543,12 +547,12 @@ export class Location {
       ],
       rotation: yawOf(shaped),
       y: round(target.position.y - (com?.y ?? 0) + sinkOf(prefab)),
-      scale: round(shaped.scale.x),
+      scale: [round(shaped.scale.x), round(shaped.scale.y), round(shaped.scale.z)],
     };
 
     if (!copy.rotation) delete copy.rotation;
     if (Math.abs(copy.y) < 1e-3) delete copy.y;
-    if (Math.abs(copy.scale - 1) < 1e-3) delete copy.scale;
+    if (copy.scale.every((v) => Math.abs(v - 1) < 1e-3)) delete copy.scale;
 
     return this.addProp(copy);
   }
@@ -584,7 +588,17 @@ export class Location {
       const yaw = yawOf(object);
       if (yaw) saved.rotation = yaw;
       if (Math.abs(y) > 1e-3) saved.y = round(y);
-      if (Math.abs(object.scale.x - 1) > 1e-3) saved.scale = round(object.scale.x);
+      // Оси сохраняем порознь, если их растянули по-разному. Раньше уезжала одна
+      // и та же цифра на все три, и стена, растянутая только вдоль, после
+      // перезагрузки оказывалась ещё и вдвое толще и выше.
+      const s = object.scale;
+      const ровно = Math.abs(s.x - s.y) < 1e-3 && Math.abs(s.x - s.z) < 1e-3;
+
+      if (ровно) {
+        if (Math.abs(s.x - 1) > 1e-3) saved.scale = round(s.x);
+      } else {
+        saved.scale = [round(s.x), round(s.y), round(s.z)];
+      }
       return saved;
     });
 
@@ -613,11 +627,17 @@ export class Location {
         round(this.exitMark.scale.x)]
       : this.data.exitAt;
 
+    // Место под ружьё правится тем же гизмо: в файл уходит точка, где оно лежит.
+    const gun = this.gunMark
+      ? { ...this.data.gun, at: [round(this.gunMark.position.x), round(this.gunMark.position.z)] }
+      : this.data.gun;
+
     // Пол тоже правится мышью: в файл уходит та высота, на которой он стоит.
     const ground = { ...this.data.ground, y: round(this.ground.position.y) };
 
     const data = { ...this.data, ground, spawn, props, zombies };
     if (exitAt) data.exitAt = exitAt;
+    if (gun) data.gun = gun;
 
     return data;
   }

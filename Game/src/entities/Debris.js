@@ -212,6 +212,17 @@ export class Debris {
     _impulse.set(dx * power, CFG.lift * item.mass * share, dz * power);
 
     this._applyImpulse(item, _impulse, _point);
+
+    // Выше потолка вещь от ноги не разгоняется. Считается импульс через массу, и
+    // на лёгком и плоском — поддоне, покрышке — сходилось так, что его уносило
+    // через полкомнаты и подбрасывало вверх. Бросок этим не ограничен: там
+    // скорость задаётся прямо и осознанно.
+    const speed = item.velocity.length();
+    if (speed > CFG.maxKickSpeed) item.velocity.multiplyScalar(CFG.maxKickSpeed / speed);
+
+    const spin = item.angular.length();
+    if (spin > CFG.maxKickSpin) item.angular.multiplyScalar(CFG.maxKickSpin / spin);
+
     item.asleep = false;
     item.idle = 0;
 

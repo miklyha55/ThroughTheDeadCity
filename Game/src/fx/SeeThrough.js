@@ -39,9 +39,11 @@ export class SeeThrough {
   watch(object, size) {
     if (!size) return false;
 
-    const scale = object.scale.x || 1;
-    const tall = size.y * scale >= CFG.minHeight;
-    const wide = Math.max(size.x, size.z) * scale >= CFG.minWidth;
+    // Каждую сторону меряем со своим множителем: стену могли растянуть вдоль,
+    // и от этого она не стала выше.
+    const tall = size.y * (object.scale.y || 1) >= CFG.minHeight;
+    const wide = Math.max(size.x * (object.scale.x || 1),
+      size.z * (object.scale.z || 1)) >= CFG.minWidth;
     if (!tall || !wide) return false;
 
     // Габариты берём сразу и навсегда: дом не двигается, а по ним потом решают,

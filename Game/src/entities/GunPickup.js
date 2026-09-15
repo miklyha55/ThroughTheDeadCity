@@ -18,6 +18,9 @@ const CFG = CONFIG.gunPickup;
  *
  * Летит к герою по дуге, той же самой, по которой он сам перепрыгивает машины:
  * общая на всю игру, лежит в `core/arc.js`.
+ *
+ * Живёт оно в группе своего уровня: так его видит правка расстановки, и так оно
+ * уходит вместе с уровнем, не переживая его.
  */
 export class GunPickup {
   constructor(scene) {
@@ -39,11 +42,16 @@ export class GunPickup {
    * @param {import('../world/Location.js').Location} location
    * @param {import('./Player.js').Player} player — у него и берётся модель
    */
-  place(location, player) {
+  place(location, player, editing = false) {
     this.clear();
 
     const spot = location.data.gun?.at;
-    if (!spot || player.armed) return;
+    if (!spot) return;
+
+    // Подобранное ружьё на полу больше не лежит — иначе после смерти на этой же
+    // локации оно появлялось бы снова и снова. Но в правке расстановки оно
+    // нужно всегда: иначе место, куда его класть, было бы не подвинуть.
+    if (player.armed && !editing) return;
 
     const sample = player.gun ?? player.gunOnBack;
     if (!sample) return;
@@ -72,8 +80,16 @@ export class GunPickup {
       if (node.isMesh) node.castShadow = true;
     });
 
-    this.scene.add(gun);
+    // Кладём в группу локации, а не прямо в сцену: правка расстановки ищет
+    // предметы лучом именно по ней, и лежащее мимо неё мышью не поймать. Заодно
+    // ружьё уходит вместе с уровнем, когда тот сменяется.
+    location.group.add(gun);
     this.object = gun;
+
+    // Локация должна знать, где лежит ружьё: по этой метке редактор его двигает,
+    // а сохранение пишет новое место в файл.
+    this.location = location;
+    location.gunMark = gun;
     this.time = 0;
     this.flight = 0;
   }
@@ -81,7 +97,10 @@ export class GunPickup {
   /** Убрать со сцены. Геометрия и материал общие с персонажем — их не трогаем. */
   clear() {
     this.object?.removeFromParent();
+    if (this.location?.gunMark === this.object) this.location.gunMark = null;
+
     this.object = null;
+    this.location = null;
     this.flight = 0;
   }
 

@@ -418,7 +418,7 @@ for (const event of ['pointerdown', 'keydown', 'touchstart']) {
 
 locations.onChange = (location) => {
   wireBlasts(location);
-  gunPickup.place(location, player); // на вводной оно лежит у выхода
+  gunPickup.place(location, player, locations.editing); // в правке лежит всегда
   showAmmo();
   showHud();
   updateDebugView();
@@ -426,7 +426,7 @@ locations.onChange = (location) => {
   music.play(location.data.number ?? 1); // у каждого уровня своя дорожка
   startMessage.arm(location.data.number ?? 1); // и вступление, если уровень первый
 };
-gunPickup.place(locations.current, player); // первый уровень: onChange ещё не привязан
+gunPickup.place(locations.current, player, locations.editing); // первый уровень: onChange ещё не привязан
 showAmmo();
 showHud();
 updateDebugView();

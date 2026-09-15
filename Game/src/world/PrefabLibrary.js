@@ -63,6 +63,27 @@ export class PrefabLibrary {
 
     const dynamic = rules.dynamic === true || small;
 
+    /**
+     * Через что можно перемахнуть.
+     *
+     * `vaultUnder` — предельная высота: ниже неё вещь перепрыгивается. Диван и
+     * обеденный стол ниже, шкаф и холодильник выше, и решает это сама модель.
+     * Подвижное сюда не идёт вовсе — его просто расталкивают ногами.
+     */
+    const vault = rules.vault === true
+      || (Boolean(rules.vaultUnder) && Boolean(size) && size.y <= rules.vaultUnder);
+
+    /**
+     * За чем герой пропадает из виду.
+     *
+     * Обычно это решает высота куска: всё, что выше пояса, заслоняет обзор.
+     * Но за диван можно залечь, хотя он по пояс и не доходит, — поэтому у
+     * мебели обзор перекрывает вся её геометрия целиком, а не только верх.
+     */
+    const sightShapes = rules.hides === true
+      ? this.props.collisionShapes(name)
+      : this.props.sightShapes(name);
+
     // «ниже пояса — не преграда» удобнее задавать высотой, чем перечислять мелочь поимённо.
     // Подвижное преградой не бывает вовсе: его расталкивают, а не обходят.
     const solid = rules.solid && !dynamic
@@ -73,11 +94,11 @@ export class PrefabLibrary {
       size,
       solid,
       dynamic,
-      vault: rules.vault === true,
+      vault,
       sink: rules.sink ?? 0, // на сколько утопить: у настила это толщина полотна
       shadows: rules.shadows !== false,
       shapes: this.props.collisionShapes(name),
-      sightShapes: this.props.sightShapes(name),
+      sightShapes,
       body: this.props.body(name),
     };
   }
