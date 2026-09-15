@@ -14,8 +14,7 @@ import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
 import { Boot } from './ui/Boot.js';
 import { Gate } from './ui/Gate.js';
-import { UpdateBar } from './ui/UpdateBar.js';
-import { Updates } from './core/Updates.js';
+import { UpdatePrompt } from './ui/UpdatePrompt.js';
 import { readChain } from './world/chain.js';
 import { asset } from './core/paths.js';
 import { Music } from './core/Music.js';
@@ -44,6 +43,22 @@ const hud = document.getElementById('hud');
 // можно только из жеста, а жест может случиться уже на экране загрузки.
 attachListener(engine.camera);
 unlockAudio();
+
+/**
+ * Подсказка об обновлении — сразу, первым делом.
+ *
+ * Не в конце: здесь заводится служебный поток, а он должен встать до того, как
+ * игра начнёт тянуть свои тридцать мегабайт. Поставленный последним, он узнавал
+ * бы о новой сборке только через полминуты после открытия — а к этому времени
+ * игрок уже играет.
+ *
+ * Сама подсказка ничего не проверяет: поток замечает новую сборку и зовёт её, а
+ * нажатие ставит версию и перезагружает страницу.
+ *
+ * Только в собранной игре: на dev-сервере потока нет, да он и не нужен — правки
+ * и так приезжают сами.
+ */
+if (import.meta.env.PROD) new UpdatePrompt();
 
 const params = new URLSearchParams(window.location.search);
 
@@ -503,44 +518,5 @@ if (import.meta.env.DEV) {
     go: (id) => locations.load(id),
   };
 }
-
-/**
- * Слежение за новой версией.
- *
- * Заводится последним, когда игра уже на ногах: до этого показывать кнопку
- * некому и незачем. Ошибки внутри ничего не ломают — не дозвонились до сервера,
- * значит просто живём на той версии, что открыта.
- */
-const updateBar = new UpdateBar(() => Updates.apply());
-const updates = new Updates(() => updateBar.show());
-updates.start();
-
-// ?update — показать строку сразу, не дожидаясь новой сборки: проверить, как
-// она выглядит и нажимается, не дожидаясь настоящего обновления.
-if (params.has('update')) updateBar.show();
-
-/**
- * ?update=log — вывести на экран, что со слежением происходит.
- *
- * На телефоне консоли нет, и без этого проверять можно только вслепую: кнопка
- * не появилась — а почему, неизвестно. Здесь видно каждый шаг: прочитался ли
- * отпечаток, что запомнили, по какому поводу сверялись и чем это кончилось.
- */
-if (params.get('update') === 'log') {
-  const окно = document.createElement('div');
-  окно.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:100;'
-    + 'padding:8px 10px;border-radius:8px;background:rgba(7,9,10,0.9);'
-    + 'border:1px solid rgba(232,208,143,0.4);color:#e8d08f;'
-    + 'font:11px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;'
-    + 'pointer-events:none;max-height:45vh;overflow:hidden';
-  document.body.appendChild(окно);
-
-  updates.onNote = (log) => { окно.textContent = log.join('\n'); };
-  окно.textContent = 'слежение за версией: ждём первый ответ…';
-}
-
-// Дописываем в консольный объект здесь, а не вместе с остальным: тот собирается
-// раньше, и сослаться на ещё не созданное оттуда нельзя.
-if (import.meta.env.DEV) Object.assign(window.__game, { updates, updateBar });
 
 engine.start();

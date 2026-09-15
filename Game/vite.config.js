@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import { spawn } from 'node:child_process';
-import { basename, resolve, join } from 'node:path';
-import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { basename, resolve } from 'node:path';
+import { cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const BLENDER = process.env.BLENDER_PATH ?? '/Applications/Blender.app/Contents/MacOS/Blender';
@@ -185,103 +185,44 @@ function locationSaver() {
 }
 
 
-/** Все файлы папки, вместе с вложенными. */
-async function listFiles(dir) {
-  const out = [];
-  for (const item of await readdir(dir, { withFileTypes: true })) {
-    if (item.name.startsWith('.')) continue;
-    const full = resolve(dir, item.name);
-    out.push(...(item.isDirectory() ? await listFiles(full) : [full]));
-  }
-  return out.sort();
-}
-
-const VERSION_FILE = 'version.json';
-
-/**
- * Отпечаток игры — по её ИСХОДНИКАМ, а не по собранным файлам.
- *
- * Это принципиально. Отпечаток нужно знать самой игре: только зная, что она
- * такое, она может понять, что на сервере лежит уже не она. Отпечаток готовой
- * сборки внутрь неё не положить — запись изменит то, по чему он считался. А вот
- * отпечаток исходников известен ДО сборки, и его можно и вписать в код, и
- * положить рядом файлом. Оба совпадут.
- *
- * Считается по содержимому всего мелкого — кода, разметки, уровней, реестра — и
- * по именам с размерами для тяжёлого: моделей, звука, картинок. Читать на каждый
- * запрос три десятка мегабайт незачем, а размер у изменившейся модели меняется
- * практически всегда.
- */
-async function sourceStamp() {
-  const корни = ['src', 'public', 'index.html'].map((p) => resolve(import.meta.dirname, p));
-  const hash = createHash('sha1');
-
-  for (const корень of корни) {
-    if (!existsSync(корень)) continue;
-
-    const файлы = (await stat(корень)).isDirectory() ? await listFiles(корень) : [корень];
-    for (const file of файлы) {
-      if (basename(file) === VERSION_FILE) continue; // себя в расчёт не берём
-
-      const короткий = file.slice(resolve(import.meta.dirname).length);
-      hash.update(короткий);
-
-      // мелкое — по содержимому, тяжёлое — по размеру
-      if (/\.(js|json|html|css|glsl)$/i.test(file)) hash.update(await readFile(file));
-      else hash.update(String((await stat(file)).size));
-    }
-  }
-  return hash.digest('hex').slice(0, 12);
-}
-
-/**
- * Игра узнаёт о новой версии, сверяя свой отпечаток с тем, что лежит на сервере.
- *
- * Отпечаток попадает в два места сразу: внутрь кода (через `define`) и в файл
- * рядом с игрой. Пока они совпадают — версия та же.
- *
- * Раньше игра своего отпечатка не знала и запоминала тот, что прочла при
- * открытии. Из этого выходило две беды. Открыв игру уже ПОСЛЕ выкладки, игрок
- * не видел кнопки никогда: расходиться было нечему. А если страница пришла из
- * кэша, то есть игрок и правда сидел на старой, то в память ложился уже новый
- * отпечаток — и старая версия считала себя свежей.
- */
-function versionStamp(stamp) {
-  return {
-    name: 'version-stamp',
-
-    // Сборка: кладём рядом с игрой тот же отпечаток, что вписан внутрь неё.
-    async closeBundle() {
-      const dir = resolve(import.meta.dirname, 'dist');
-      if (!existsSync(dir)) return;
-
-      await writeFile(join(dir, VERSION_FILE), JSON.stringify({ build: stamp }) + '\n');
-      console.log(`отпечаток сборки: ${stamp}`);
-    },
-
-    // Разработка: файла на диске нет, считаем на лету. Правка любого исходника
-    // меняет отпечаток, а в коде остаётся тот, что был на запуске сервера, —
-    // так кнопку видно сразу, не выкладывая ничего.
-    configureServer(server) {
-      server.middlewares.use(`/${VERSION_FILE}`, async (req, res) => {
-        res.setHeader('content-type', 'application/json');
-        res.setHeader('cache-control', 'no-store');
-        res.end(JSON.stringify({ build: await sourceStamp() }));
-      });
-    },
-  };
-}
-
-const STAMP = await sourceStamp();
-
 export default defineConfig({
-  plugins: [blenderExport(), locationSaver(), versionStamp(STAMP)],
+  plugins: [
+    blenderExport(),
+    locationSaver(),
 
-  // Отпечаток вписывается прямо в код: так игра знает, что она такое, и может
-  // сверить себя с тем, что лежит на сервере.
-  define: {
-    __BUILD__: JSON.stringify(STAMP),
-  },
+    /**
+     * Обновление игры у тех, кто её уже открыл.
+     *
+     * Держится на служебном потоке: он хранит файлы игры у себя и сам замечает,
+     * что на сервере лежит сборка новее. `prompt` значит, что менять версию
+     * молча под игроком он не станет — только скажет, а решать игроку.
+     *
+     * Своей проверки версий у нас больше нет, и это к лучшему. Она сверяла
+     * отпечатки по сети и спотыкалась о кэш раздачи: нажатие на кнопку
+     * перезагружало страницу, а та приходила из кэша всё той же старой, и кнопка
+     * возвращалась. Служебный поток этой беды лишён — он сам себе кэш, и
+     * перезагрузка после него отдаёт уже новые файлы, а не те же самые.
+     */
+    VitePWA({
+      registerType: 'prompt',
+      workbox: {
+        // Только код и разметка. Модели, звук и картинки весят три десятка
+        // мегабайт, и складывать их в хранилище браузера незачем: они меняются
+        // редко, а место занимают всё.
+        globPatterns: ['**/*.{js,css,html}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      },
+      manifest: {
+        name: 'Through The Dead City',
+        short_name: 'Dead City',
+        theme_color: '#07090a',
+        background_color: '#07090a',
+        display: 'standalone',
+        icons: [],
+      },
+    }),
+  ],
+
   server: {
     port: 5173,
     open: false,
