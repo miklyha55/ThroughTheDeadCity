@@ -36,7 +36,11 @@ export class SeeThrough {
    * @param {THREE.Object3D} object — размещённый проп
    * @param {THREE.Vector3} size — его габариты из библиотеки
    */
-  watch(object, size) {
+  /**
+   * Достаточно ли вещь крупна, чтобы заслонять героя. Без постановки на учёт:
+   * локация сперва разбирает, что куда, и только потом отдаёт сюда готовое.
+   */
+  isBig(object, size) {
     if (!size) return false;
 
     // Каждую сторону меряем со своим множителем: стену могли растянуть вдоль,
@@ -44,7 +48,12 @@ export class SeeThrough {
     const tall = size.y * (object.scale.y || 1) >= CFG.minHeight;
     const wide = Math.max(size.x * (object.scale.x || 1),
       size.z * (object.scale.z || 1)) >= CFG.minWidth;
-    if (!tall || !wide) return false;
+
+    return tall && wide;
+  }
+
+  watch(object, size) {
+    if (!this.isBig(object, size)) return false;
 
     // Габариты берём сразу и навсегда: дом не двигается, а по ним потом решают,
     // попал ли он в кадр. По одной точке в основании так решать нельзя — камера

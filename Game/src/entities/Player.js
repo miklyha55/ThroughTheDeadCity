@@ -108,6 +108,7 @@ export class Player extends Figure {
 
     this._holdGun(false); // пока не стреляет, ружьё висит за спиной
 
+    this.world = null;     // локация текущего кадра: по ней проверяется линия броска
     this.target = null;    // зомби, по которому идёт стрельба
     this.spotted = null;   // ближайший в радиусе огня — он же помечается отметкой
     this.shotPending = 0;  // сколько осталось до момента выстрела в клипе
@@ -169,6 +170,19 @@ export class Player extends Figure {
    */
   takeDamage(amount = 1, from = null) {
     if (!this.alive) return;
+
+    /**
+     * В прыжке зомби до него не достают.
+     *
+     * Он перемахивает машину или диван по дуге, над их головами, и удар в этот
+     * момент читается как несправедливость: игрок всё сделал верно, а его сбили
+     * из-под ног. Прыжок и задуман как способ уйти от толпы — пусть им и будет.
+     *
+     * Взрыв бочки при этом достаёт и в воздухе: он бьёт с запасом по высоте, и
+     * прятаться от него прыжком было бы странно. Его сила приходит бесконечной,
+     * по ней и отличаем.
+     */
+    if (this.jumping && Number.isFinite(amount)) return;
 
     this.lives = Math.max(0, this.lives - amount);
 
@@ -242,6 +256,11 @@ export class Player extends Figure {
     const reach = CFG.fireRange * CFG.throwRange;
     if (flatDistance(target.position, this.root.position) > reach) return false;
 
+    // Сквозь стену, машину и шкаф не кидают: предмет просто воткнётся в
+    // преграду у ног. Проверка та же, что у выстрела, и по тем же твёрдым
+    // вещам — мелочь, которую и так расталкивают ногами, помехой не считается.
+    if (this._blocked(target)) return false;
+
     debris.hold(item);
 
     // Предмет переезжает на сокет правой руки — туда же, где висит ружьё, —
@@ -307,7 +326,10 @@ export class Player extends Figure {
     let dirX = Math.sin(this.yaw);
     let dirZ = Math.cos(this.yaw);
 
-    if (toss.target?.alive) {
+    // Замах длится, и за это время цель могла уйти за угол или машину. Кидать
+    // вслед бессмысленно: предмет ударится в преграду. Тогда он летит просто
+    // вперёд, как и в случае, когда цель убили.
+    if (toss.target?.alive && !this._blocked(toss.target)) {
       const dx = toss.target.position.x - this._hand.x;
       const dz = toss.target.position.z - this._hand.z;
       const length = Math.hypot(dx, dz);
@@ -510,6 +532,7 @@ export class Player extends Figure {
     // Ближайший зомби нужен не только ружью: по нему же герой решает, в кого
     // швырнуть подвернувшийся ящик. Безоружный без этого не мог бросать вовсе —
     // цели не было, а значит и хватать было незачем.
+    this.world = location; // за неё же спрашивают, свободна ли линия броска
     this.spotted = location ? this._pickTarget(location) : null;
 
     // Стрелять можно только стоя. Проверяем сам ввод, а не скорость: на кадре
@@ -809,6 +832,23 @@ export class Player extends Figure {
    * Ближайший живой зомби в радиусе огня, до которого долетит пуля.
    * Куда персонаж смотрит — неважно: он сам довернётся к тому, кого выбрал.
    */
+  /**
+   * Стоит ли что-то твёрдое между героем и целью.
+   *
+   * Смотрит по тем же контурам, что и линия огня: дома, машины, заборы, шкафы —
+   * всё, что помечено твёрдым. Разбросанная мелочь сюда не входит: её и так
+   * расталкивают ногами, и брошенный ящик перелетит её без помех.
+   *
+   * @param {{position: THREE.Vector3}} target
+   */
+  _blocked(target) {
+    const obstacles = this.world?.obstacles;
+    if (!obstacles) return false;
+
+    const from = this.root.position;
+    return obstacles.blocksLine(from.x, from.z, target.position.x, target.position.z);
+  }
+
   _pickTarget(location) {
     const from = this.root.position;
     const held = this.spotted; // кого держали на прицеле прошлый кадр

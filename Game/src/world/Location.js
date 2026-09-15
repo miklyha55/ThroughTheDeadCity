@@ -70,6 +70,7 @@ export class Location {
     this.zombies = [];
     this._movers = [];  // кто может задеть разбросанные предметы
     this.statics = []; // неподвижные пропы: их геометрия сливается в общие меши
+    this.watched = []; // крупное, что просвечивает: сливается рядами, а не всё разом
     this.group = new THREE.Group();
     this.group.name = `location:${data.id}`;
     this.obstacles = new Obstacles();
@@ -102,7 +103,17 @@ export class Location {
 
     this._buildZombies();
     this._buildExitMark();
-    if (batched) this._batchStatics();
+
+    if (batched) {
+      this._batchStatics();
+      this._batchWatched();
+    } else {
+      // В правке расстановки ничего не сливаем: слитое мышью не подвинуть.
+      for (const object of this.watched) {
+        this.seeThrough?.watch(object, object.userData.prefab?.size);
+      }
+      this.watched.length = 0;
+    }
   }
 
   _buildGround() {
@@ -196,6 +207,55 @@ export class Location {
    */
   _batchStatics() {
     this._batched = this._merge(this.statics, 0);
+  }
+
+  /**
+   * Сливает крупное рядами и отдаёт ряды на просвечивание.
+   *
+   * Стена комнаты набрана секциями по четыре метра, и каждая секция заслоняет
+   * героя сама по себе — то есть рисуется отдельным вызовом. На вводной локации
+   * таких секций три десятка, и вместе с тенями они съедали больше половины
+   * кадра.
+   *
+   * Сливаем их по рядам: ряд — это одна стена комнаты. Гаснет она теперь
+   * целиком, и это как раз то, что нужно внутри помещения: когда стена
+   * закрывает героя, ей и положено растаять целиком, а не по кускам.
+   *
+   * Всё, что в своём ряду одно — отдельно стоящий дом, — так и остаётся само по
+   * себе: сливать его не с чем.
+   */
+  _batchWatched() {
+    const rows = new Map();
+
+    for (const object of this.watched) {
+      // Ряд — это поворот плюс поперечная координата: секции одной стены стоят
+      // на одной линии и смотрят в одну сторону.
+      const yaw = Math.round(object.rotation.y / DEG / 90) * 90;
+      const along = ((yaw % 180) + 180) % 180 === 0;
+      const across = Math.round((along ? object.position.z : object.position.x) * 10) / 10;
+
+      const key = `${along ? 'z' : 'x'}${across}`;
+      if (!rows.has(key)) rows.set(key, []);
+      rows.get(key).push(object);
+    }
+
+    for (const row of rows.values()) {
+      if (row.length < 2) {
+        this.seeThrough.watch(row[0], this.prefabs.get(row[0].userData.prefab?.name)?.size
+          ?? new THREE.Box3().setFromObject(row[0]).getSize(new THREE.Vector3()));
+        continue;
+      }
+
+      const merged = batchStatic(row);
+      for (const object of row) object.removeFromParent();
+      this.group.add(merged);
+
+      // Габариты слитого ряда считаем по нему самому: своей модели у него нет.
+      const size = new THREE.Box3().setFromObject(merged).getSize(new THREE.Vector3());
+      this.seeThrough.watch(merged, size);
+    }
+
+    this.watched.length = 0;
   }
 
   /** Сливает список пропов в общие меши и ставит им слой отрисовки. */
@@ -307,9 +367,12 @@ export class Location {
     if (prefab.dynamic) {
       const body = this._makeDynamic(prefab, object);
       if (body) ({ carrier, com } = body);
-    } else if (!this.seeThrough?.watch(object, prefab.size)) {
-      // Крупное под наблюдением просвечивания живёт отдельным объектом: в общем
-      // меше его не погасить поодиночке. Остальное сливается, как и раньше.
+    } else if (this.seeThrough?.isBig(object, prefab.size)) {
+      // Крупное — стены, дома — просвечивает, когда заслоняет героя, и потому не
+      // может уйти в общий меш со всей локацией. Но и поштучно держать его дорого,
+      // поэтому оно копится здесь, а сливается рядами ниже.
+      this.watched.push(object);
+    } else {
       this.statics.push(object);
     }
 
