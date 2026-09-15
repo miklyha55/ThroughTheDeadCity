@@ -94,6 +94,18 @@ export class Player extends Figure {
     this.blood = null;     // зелёные брызги: его попадания по зомби
     this.ownBlood = null;  // красные: попадания по нему самому
 
+    /**
+     * Есть ли у героя ружьё.
+     *
+     * На вводной локации его нет: оно лежит у выхода, и первое, чему игра учит, —
+     * швырять в зомби то, что подвернулось под руку. Подобрал ружьё в конце —
+     * дальше играет уже со стрельбой.
+     *
+     * Держится на самом персонаже, а не в локации: он один на всю игру, и
+     * подобранное не должно теряться при переходе на следующий уровень.
+     */
+    this.armed = CFG.armed !== false;
+
     this._holdGun(false); // пока не стреляет, ружьё висит за спиной
 
     this.target = null;    // зомби, по которому идёт стрельба
@@ -495,12 +507,16 @@ export class Player extends Figure {
     // Кого персонаж держит на прицеле — считаем всегда, даже на бегу: по этому
     // зомби рисуется отметка, и видно, кто уже попал под выстрел, ещё до того,
     // как остановишься.
+    // Ближайший зомби нужен не только ружью: по нему же герой решает, в кого
+    // швырнуть подвернувшийся ящик. Безоружный без этого не мог бросать вовсе —
+    // цели не было, а значит и хватать было незачем.
     this.spotted = location ? this._pickTarget(location) : null;
 
     // Стрелять можно только стоя. Проверяем сам ввод, а не скорость: на кадре
     // отпускания стика скорость ещё старая, и выстрел терялся бы до следующего.
     const standing = this._desired.lengthSq() === 0;
-    const canShoot = standing && location && !this.helpless && !this.frozen;
+    // Безоружный не стреляет и не целится: ни ружья, ни отметки на цели.
+    const canShoot = standing && location && !this.helpless && !this.frozen && this.armed;
     const shooting = canShoot ? this._aimAndFire(dt, location) : this._holdFire();
 
     // ружьё либо в руках, либо за спиной — одновременно видно только одно
@@ -702,8 +718,24 @@ export class Player extends Figure {
 
   /** Достаёт ружьё в руки или убирает за спину. */
   _holdGun(inHands) {
-    if (this.gun) this.gun.visible = inHands;
-    if (this.gunOnBack) this.gunOnBack.visible = !inHands;
+    // Безоружному прятать нечего: ружья нет ни в руках, ни за спиной.
+    const held = inHands && this.armed;
+    if (this.gun) this.gun.visible = held;
+    if (this.gunOnBack) this.gunOnBack.visible = this.armed && !held;
+  }
+
+  /**
+   * Ружьё подобрано: с этого мгновения герой умеет стрелять.
+   *
+   * Зовётся один раз за игру, когда он поднял его у выхода из первого дома.
+   */
+  arm() {
+    if (this.armed) return;
+
+    this.armed = true;
+    this.rounds = CFG.magazine;
+    this.onAmmo?.(this.rounds);
+    this._holdGun(false); // появляется сразу — за спиной
   }
 
   /** Есть ли что набивать: магазин неполон. */
@@ -729,7 +761,7 @@ export class Player extends Figure {
    * @returns {boolean} занят ли персонаж — по этому наверху решают, что играть
    */
   _refill(dt) {
-    if (this.rounds >= CFG.magazine) return false;
+    if (!this.armed || this.rounds >= CFG.magazine) return false;
 
     // Не `restart`: клип идёт по кругу, и перезапуск его каждый кадр держал бы
     // персонажа на первом кадре набивки. `play` на уже идущем клипе ничего не
@@ -794,10 +826,10 @@ export class Player extends Figure {
       //
       // Послабление тут ровно одно и только это: прежней цели позволено быть
       // чуть дальше. На то, КОГО выбрать из годных, оно не влияет никак.
-      const предел = zombie === held ? CFG.fireRange * CFG.keepTarget : CFG.fireRange;
+      const limit = zombie === held ? CFG.fireRange * CFG.keepTarget : CFG.fireRange;
 
       const distance = flatDistance(zombie.position, from);
-      if (distance >= предел) continue;
+      if (distance >= limit) continue;
 
       // сквозь дом или машину не стреляем
       if (location.obstacles.blocksLine(from.x, from.z, zombie.position.x, zombie.position.z)) continue;

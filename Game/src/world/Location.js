@@ -29,6 +29,24 @@ function sinkOf(prefab) {
   return prefab?.sink ?? 0;
 }
 
+const _facing = new THREE.Vector3();
+
+/**
+ * На сколько вещь развёрнута вокруг вертикали, в градусах.
+ *
+ * Считается по тому, куда смотрит её нос, а НЕ по `rotation.y`. Разница
+ * появляется ровно там, где её меньше всего ждёшь: поворот на 180° тот же угол
+ * Эйлера записывает как «перевёрнут через верх», то есть (180, 0, 180), и
+ * вертикальный угол читается нулём. Диван, развёрнутый к стене, после
+ * сохранения оказывался развёрнутым обратно в комнату.
+ *
+ * Направление же от разложения по осям не зависит: куда смотрит, туда и смотрит.
+ */
+function yawOf(object) {
+  _facing.set(0, 0, 1).applyQuaternion(object.quaternion);
+  return Math.round((Math.atan2(_facing.x, _facing.z) / DEG) * 10) / 10;
+}
+
 /** Округление до сантиметра: в файле не нужны хвосты из пятнадцати знаков. */
 const round = (value) => Math.round(value * 100) / 100;
 
@@ -102,19 +120,34 @@ export class Location {
   }
 
   _buildProps() {
-    for (const entry of this.data.props ?? []) {
-      const obj = this.prefabs.create(entry.prop);
-      const prefab = this.prefabs.get(entry.prop);
-      if (!obj || !prefab) continue;
-      obj.position.set(entry.at[0], (entry.y ?? 0) - sinkOf(prefab), entry.at[1]);
-      obj.rotation.y = (entry.rotation ?? 0) * DEG;
-      if (entry.scale) obj.scale.setScalar(entry.scale);
-      this.group.add(obj);
-      const { carrier, com } = this._place(entry.prop, obj);
+    for (const entry of this.data.props ?? []) this.addProp(entry);
+  }
 
-      // связь со строкой в JSON: по ней редактор сохраняет сдвинутое обратно
-      this.placed.push({ object: carrier, com, entry });
-    }
+  /**
+   * Поставить одну вещь по её записи из файла.
+   *
+   * Отдельным методом, потому что тем же путём идёт и клонирование в редакторе:
+   * копия должна попасть во все те же списки, что и вещь из файла, иначе она
+   * будет только выглядеть предметом — без столкновений, физики и сохранения.
+   *
+   * @param {object} entry — запись вида { prop, at, rotation, y, scale }
+   * @returns {THREE.Object3D|null} то, что двигают на сцене
+   */
+  addProp(entry) {
+    const obj = this.prefabs.create(entry.prop);
+    const prefab = this.prefabs.get(entry.prop);
+    if (!obj || !prefab) return null;
+
+    obj.position.set(entry.at[0], (entry.y ?? 0) - sinkOf(prefab), entry.at[1]);
+    obj.rotation.y = (entry.rotation ?? 0) * DEG;
+    if (entry.scale) obj.scale.setScalar(entry.scale);
+    this.group.add(obj);
+
+    const { carrier, com } = this._place(entry.prop, obj);
+
+    // связь со строкой в JSON: по ней редактор сохраняет сдвинутое обратно
+    this.placed.push({ object: carrier, com, entry, shaped: obj });
+    return carrier;
   }
 
   /** Расставляет зомби: каждый записан в локации поимённо, со своим местом. */
@@ -128,7 +161,7 @@ export class Location {
 
   _addZombie(kind, x, z, yaw, phase) {
     const zombie = this.zombieLibrary.create(kind);
-    if (!zombie) return;
+    if (!zombie) return null;
 
     zombie.kind = kind; // чтобы редактор знал, кого записывать в файл
 
@@ -147,6 +180,7 @@ export class Location {
 
     this.group.add(zombie.root);
     this.zombies.push(zombie);
+    return zombie;
   }
 
   /**
@@ -299,6 +333,7 @@ export class Location {
     if (prefab.size.y * object.scale.y > CFG.vaultMaxHeight) return;
 
     this.vaults.push({
+      owner: object,
       x: object.position.x,
       z: object.position.z,
       yaw: object.rotation.y,
@@ -437,6 +472,103 @@ export class Location {
    * координатами: в файле нет ничего, что разыгрывалось бы заново при загрузке,
    * поэтому сохранённое и увиденное всегда совпадают.
    */
+  /**
+   * Убрать вещь с площадки насовсем. Нужно правке расстановки.
+   *
+   * Снять со сцены мало: одна и та же модель записана в нескольких местах —
+   * контуры столкновений, помеха обзору, физика, коробка для прыжка, список на
+   * слияние, наблюдение за просвечиванием. Забудь хоть одно, и на пустом месте
+   * останется невидимая стена или предмет, который всё ещё пинается.
+   *
+   * @param {THREE.Object3D} target — то, что выбрано в редакторе
+   * @returns {boolean} нашлось ли, что убирать
+   */
+  removeObject(target) {
+    const entry = this.placed.find((one) => one.object === target);
+    if (!entry) return false;
+
+    // У подвижной вещи по сцене ездит контейнер, а контуры сняты с самой модели.
+    const shaped = entry.shaped ?? target;
+
+    this.obstacles.forget(shaped);
+    this.sight.forget(shaped);
+    this.seeThrough?.forget(shaped);
+
+    const body = this.debris.items.find((item) => item.object === target);
+    if (body) this.debris.remove(body);
+
+    this.vaults = this.vaults.filter((box) => box.owner !== shaped);
+    this.statics = this.statics.filter((one) => one !== shaped);
+    this.placed = this.placed.filter((one) => one !== entry);
+
+    target.removeFromParent();
+    return true;
+  }
+
+  /**
+   * Сделать копию вещи или зомби. Нужно правке расстановки.
+   *
+   * Копия встаёт ровно туда же, где стоит исходник, и редактор сразу берётся за
+   * неё. Дальше её оттаскивают гизмо — и это правильный порядок: куда именно
+   * ставить вторую такую же, знает тот, кто расставляет, а не игра.
+   *
+   * @param {THREE.Object3D} target — то, что выбрано в редакторе
+   * @returns {THREE.Object3D|null} копия, чтобы редактор сразу за неё взялся
+   */
+  copyObject(target) {
+    const zombie = this.zombies.find((one) => one.root === target);
+    if (zombie) {
+      const copy = this._addZombie(
+        zombie.kind,
+        zombie.position.x, zombie.position.z,
+        zombie.root.rotation.y, Math.random()
+      );
+      return copy?.root ?? null;
+    }
+
+    const entry = this.placed.find((one) => one.object === target);
+    if (!entry) return null;
+
+    // Из чего копия: берём то, что видно на сцене сейчас, а не строку из файла —
+    // вещь могли только что подвинуть и повернуть, и копия должна это повторить.
+    const com = entry.com;
+    const prefab = this.prefabs.get(entry.entry.prop);
+    const shaped = entry.shaped ?? target;
+
+    const copy = {
+      prop: entry.entry.prop,
+      at: [
+        round(target.position.x - (com?.x ?? 0)),
+        round(target.position.z - (com?.z ?? 0)),
+      ],
+      rotation: yawOf(shaped),
+      y: round(target.position.y - (com?.y ?? 0) + sinkOf(prefab)),
+      scale: round(shaped.scale.x),
+    };
+
+    if (!copy.rotation) delete copy.rotation;
+    if (Math.abs(copy.y) < 1e-3) delete copy.y;
+    if (Math.abs(copy.scale - 1) < 1e-3) delete copy.scale;
+
+    return this.addProp(copy);
+  }
+
+  /**
+   * Убрать зомби. Отдельно от вещей: у него свой скелет, и снять его со сцены
+   * мало — текстура костей осталась бы в видеопамяти.
+   *
+   * @param {THREE.Object3D} root — корень его модели
+   * @returns {boolean} нашёлся ли такой
+   */
+  removeZombie(root) {
+    const zombie = this.zombies.find((one) => one.root === root);
+    if (!zombie) return false;
+
+    zombie.dispose();
+    this.zombies = this.zombies.filter((one) => one !== zombie);
+    return true;
+  }
+
   snapshot(player = null) {
     const props = this.placed.map(({ object, com, entry }) => {
       // У физического предмета начало координат сидит в центре масс, а в файле
@@ -449,7 +581,7 @@ export class Location {
 
       const saved = { prop: entry.prop, at: [round(x), round(z)] };
 
-      const yaw = Math.round((object.rotation.y / DEG) * 10) / 10;
+      const yaw = yawOf(object);
       if (yaw) saved.rotation = yaw;
       if (Math.abs(y) > 1e-3) saved.y = round(y);
       if (Math.abs(object.scale.x - 1) > 1e-3) saved.scale = round(object.scale.x);
@@ -461,7 +593,7 @@ export class Location {
     const zombies = this.zombies.map((zombie) => ({
       kind: zombie.kind,
       at: [round(zombie.position.x), round(zombie.position.z)],
-      rotation: Math.round((zombie.root.rotation.y / DEG) * 10) / 10,
+      rotation: yawOf(zombie.root),
     }));
 
     // Точка старта — там, где персонаж стоит сейчас: в правке его двигают тем же
@@ -471,7 +603,7 @@ export class Location {
     const spawn = player
       ? {
         position: [round(player.position.x), round(player.position.z)],
-        rotation: Math.round((player.root.rotation.y / DEG) * 10) / 10,
+        rotation: yawOf(player.root),
       }
       : this.data.spawn;
 

@@ -46,14 +46,33 @@ export class PrefabLibrary {
     const rules = { ...defaults, ...(group ? groups[group] : null), ...(overrides[name] ?? null) };
     const size = this.props.size(name);
 
-    // «ниже пояса — не преграда» удобнее задавать высотой, чем перечислять мелочь поимённо
-    const solid = rules.solid && !(rules.minSolidHeight && size && size.y < rules.minSolidHeight);
+    /**
+     * Мелкое — значит подвижное: его пинают, хватают и швыряют.
+     *
+     * Задаётся не списком имён, а размером: `dynamicUnder` — сторона куба, в
+     * который вещь должна помещаться. Табуретка помещается, диван нет, и решает
+     * это сама модель. Перечислять поимённо было бы недолго ровно до первой
+     * новой партии мебели из Blender, а дальше кто-нибудь забыл бы дописать.
+     *
+     * Высота считается наравне с шириной: у шкафа основание с табуретку, но
+     * поднять его герой не может.
+     */
+    const small = Boolean(rules.dynamicUnder) && Boolean(size)
+      && Math.max(size.x, size.z) <= rules.dynamicUnder
+      && size.y <= rules.dynamicUnder;
+
+    const dynamic = rules.dynamic === true || small;
+
+    // «ниже пояса — не преграда» удобнее задавать высотой, чем перечислять мелочь поимённо.
+    // Подвижное преградой не бывает вовсе: его расталкивают, а не обходят.
+    const solid = rules.solid && !dynamic
+      && !(rules.minSolidHeight && size && size.y < rules.minSolidHeight);
 
     return {
       name,
       size,
       solid,
-      dynamic: rules.dynamic === true,
+      dynamic,
       vault: rules.vault === true,
       sink: rules.sink ?? 0, // на сколько утопить: у настила это толщина полотна
       shadows: rules.shadows !== false,

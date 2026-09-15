@@ -71,6 +71,18 @@ export class SeeThrough {
    * стоит собранная шейдерная программа, и если их не выбросить, каждый заход на
    * уровень оставлял бы по копии на каждый меш каждого дома.
    */
+  /** Снять с наблюдения одну вещь: её убрали с площадки. */
+  forget(object) {
+    const item = this.items.find((one) => one.object === object);
+    if (!item) return;
+
+    item.object.traverse((mesh) => {
+      if (mesh.isMesh && mesh.material?.userData.fade) mesh.material.dispose();
+    });
+    this.items = this.items.filter((one) => one !== item);
+    this.blocking.delete(item);
+  }
+
   clear() {
     for (const item of this.items) {
       item.object.traverse((mesh) => {

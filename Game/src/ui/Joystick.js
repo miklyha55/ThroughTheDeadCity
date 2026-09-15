@@ -115,7 +115,7 @@ export class Joystick {
     }
     this.knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
 
-    const сырая = Math.min(dist, this._maxDist) / this._maxDist;
+    const reach = Math.min(dist, this._maxDist) / this._maxDist;
 
     // Порогов два, а не один: тронуться сложнее, чем остановиться.
     //
@@ -128,11 +128,11 @@ export class Joystick {
     // за `deadZone`, а чтобы встать — вернуться за `deadZoneRelease`, который
     // заметно ближе к центру. Между ними ввод держит то, что уже выбрано.
     this._moving = this._moving
-      ? сырая >= CFG.deadZoneRelease
-      : сырая >= CFG.deadZone;
+      ? reach >= CFG.deadZoneRelease
+      : reach >= CFG.deadZone;
 
     // мёртвая зона, растянутая обратно на весь диапазон 0..1
-    let mag = this._moving ? (сырая - CFG.deadZone) / (1 - CFG.deadZone) : 0;
+    let mag = this._moving ? (reach - CFG.deadZone) / (1 - CFG.deadZone) : 0;
     mag = Math.max(0, Math.min(1, mag));
 
     if (!this._moving || dist === 0) {

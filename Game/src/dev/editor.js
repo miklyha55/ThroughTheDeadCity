@@ -168,7 +168,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     title.textContent = active ? where : '';
     hint.textContent = active
       ? 'WASD — камера · ←→ поворот · 1 сдвиг · 2 разворот · 3 размер\n'
-        + 'Enter — сохранить · Tab — выйти\n'
+        + 'Enter — сохранить · C — копия · Del — убрать · Tab — выйти\n'
         + text
       : '';
   };
@@ -293,6 +293,70 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     else status(`выбран ${object.name || 'проп'}`);
   }
 
+  /**
+   * Убрать выбранное со сцены.
+   *
+   * Удаляется всё, что расставлено: и вещи, и зомби. Не трогаются трое, у кого
+   * удаление не имеет смысла, — пол, точка старта и круг выхода: это не предметы,
+   * а свойства самой локации, и без них она не соберётся.
+   *
+   * С диска ничего не пропадает, пока не нажали сохранение: передумал — выйди
+   * из правки без него, и всё вернётся как было.
+   */
+  function removePicked() {
+    if (!picked) {
+      status('нечего убирать: сначала выберите предмет');
+      return;
+    }
+
+    const location = locations.current;
+    if (picked === location.ground || picked === location.exitMark
+        || picked === locations.player?.root) {
+      status('это убрать нельзя: пол, старт и выход — часть самой локации');
+      return;
+    }
+
+    const имя = picked.name || 'предмет';
+    const убрано = location.removeZombie(picked) || location.removeObject(picked);
+
+    gizmo.detach();
+    picked = null;
+
+    status(убрано ? `убран ${имя} · Enter — сохранить` : 'этот предмет не убирается');
+  }
+
+  /**
+   * Размножить выбранное: копия появляется рядом и сразу берётся в работу.
+   *
+   * Копируется всё, что расставлено, — и вещи, и зомби. Пол, точка старта и круг
+   * выхода не копируются: их на локации ровно по одному, и второй такой ей не
+   * нужен.
+   */
+  function copyPicked() {
+    if (!picked) {
+      status('нечего копировать: сначала выберите предмет');
+      return;
+    }
+
+    const location = locations.current;
+    if (picked === location.ground || picked === location.exitMark
+        || picked === locations.player?.root) {
+      status('это не копируется: пол, старт и выход на локации по одному');
+      return;
+    }
+
+    const copy = location.copyObject(picked);
+    if (!copy) {
+      status('этот предмет не копируется');
+      return;
+    }
+
+    // Берёмся сразу за копию: её чаще всего и двигают дальше.
+    picked = copy;
+    gizmo.attach(copy);
+    status(`копия ${copy.name || 'предмета'} на том же месте: тяните гизмо · Enter — сохранить`);
+  }
+
   async function save() {
     status('сохраняю…');
     const location = locations.current;
@@ -354,6 +418,12 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     if (event.code === 'Digit2') gizmo.setMode('rotate');
     if (event.code === 'Digit3') gizmo.setMode('scale');
     if (event.code === 'Enter') save();
+    // Delete и Backspace: на маке отдельной клавиши Delete у многих просто нет.
+    if (event.code === 'KeyC') copyPicked();
+    if (event.code === 'Delete' || event.code === 'Backspace') {
+      event.preventDefault(); // Backspace иначе уводит браузер на прошлую страницу
+      removePicked();
+    }
     if (event.code === 'Escape') { gizmo.detach(); picked = null; }
   });
 

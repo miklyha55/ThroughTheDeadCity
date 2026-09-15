@@ -10,6 +10,7 @@ import { PrefabLibrary } from './world/PrefabLibrary.js';
 import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
+import { GunPickup } from './entities/GunPickup.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
 import { Boot } from './ui/Boot.js';
@@ -207,9 +208,15 @@ player.blood = blood;
 player.ownBlood = playerBlood;
 player.sfx = sfx;
 player.puffs = puffs;
-player.onAmmo = (left) => ammo.set(left);
+player.onAmmo = (left) => { ammo.set(left); showAmmo(); };
 ammo.set(player.rounds);
 engine.scene.add(player.root);
+
+/**
+ * Ружьё, лежащее на уровне. Своей модели у него нет — берёт ту же, что висит у
+ * персонажа за спиной, поэтому заводится только после него.
+ */
+const gunPickup = new GunPickup(engine.scene);
 
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 locations.splash = splash;
@@ -323,6 +330,7 @@ engine.add({
     blood.update(dt);
     playerBlood.update(dt);
     explosions.update(dt);
+    gunPickup.update(dt, player); // лежащее ружьё: крутится, а подошёл — летит в руки
     dust.update(dt, player.position);
     puffs.update(dt);
     camera.update(dt);
@@ -342,6 +350,11 @@ async function updateDebugView() {
   const { showObstacles } = await import('./dev/collisionDebug.js');
   debugView?.removeFromParent();
   debugView = showObstacles(engine.scene, locations.current.obstacles);
+}
+
+/** Патроны показываем, только когда есть чем стрелять. */
+function showAmmo() {
+  ammo.root.hidden = !player.armed;
 }
 
 function showHud() {
@@ -405,15 +418,19 @@ for (const event of ['pointerdown', 'keydown', 'touchstart']) {
 
 locations.onChange = (location) => {
   wireBlasts(location);
+  gunPickup.place(location, player); // на вводной оно лежит у выхода
+  showAmmo();
   showHud();
   updateDebugView();
   fog.reset(location.width, location.depth); // новый уровень — заново закрытая карта
   music.play(location.data.number ?? 1); // у каждого уровня своя дорожка
   startMessage.arm(location.data.number ?? 1); // и вступление, если уровень первый
 };
+gunPickup.place(locations.current, player); // первый уровень: onChange ещё не привязан
+showAmmo();
 showHud();
 updateDebugView();
-fog.reset(locations.current.width, locations.current.depth); // первый уровень: onChange ещё не привязан
+fog.reset(locations.current.width, locations.current.depth);
 music.play(locations.current.data.number ?? 1);
 startMessage.arm(locations.current.data.number ?? 1); // замок стоит сразу, до первого касания
 
@@ -481,7 +498,7 @@ if (import.meta.env.DEV) {
       player.ownBlood = playerBlood;
       player.sfx = sfx;
       player.puffs = puffs;
-      player.onAmmo = (left) => ammo.set(left);
+      player.onAmmo = (left) => { ammo.set(left); showAmmo(); };
       ammo.set(player.rounds);
       player.placeAt(spot, yaw);
       engine.scene.add(player.root);
@@ -493,8 +510,8 @@ if (import.meta.env.DEV) {
 
       // Локацию пересобираем на свежей библиотеке ДО того, как выбросить
       // прежнюю: пока она стоит на старых моделях, их геометрия ещё в работе.
-      const прежниеПропы = prefabs;
-      const прежниеЗомби = zombies;
+      const oldProps = prefabs;
+      const oldZombies = zombies;
 
       prefabs = freshPrefabs;
       zombies = freshZombies;
@@ -504,8 +521,8 @@ if (import.meta.env.DEV) {
       // А вот теперь старое никому не нужно. Без этого набор пропов и шаблоны
       // зомби оставались в видеопамяти целиком: замер показывал по два десятка
       // лишних геометрий на каждое нажатие, и они не уходили никогда.
-      прежниеПропы?.dispose();
-      прежниеЗомби?.dispose();
+      oldProps?.dispose();
+      oldZombies?.dispose();
 
       Object.assign(window.__game, { player, prefabs, zombies });
       return `${freshPrefabs.prefabs.size} пропов, ${freshZombies.list().length} видов зомби, персонаж`;

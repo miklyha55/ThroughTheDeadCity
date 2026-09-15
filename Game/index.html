@@ -91,6 +91,10 @@
         transition: opacity 180ms ease;
       }
       .ammo__round--spent { opacity: 0.22; }
+      /* display: flex сильнее атрибута hidden — без этой строки ряд патронов
+         остаётся на экране, сколько его ни прячь. Та же ловушка, что у заставки.
+         Прячем его, пока герой безоружен: считать ему нечего. */
+      .ammo[hidden] { display: none; }
 
       /* Мгла лежит поверх кадра, но под всем, чем игрок пользуется. */
       .fog { position: fixed; inset: 0; z-index: 5; pointer-events: none; }

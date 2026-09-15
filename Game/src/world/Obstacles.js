@@ -50,7 +50,7 @@ export class Obstacles {
         reach = Math.max(reach, Math.hypot(points[i] - cx, points[i + 1] - cz));
       }
 
-      this.items.push({ points, cx, cz, reach });
+      this.items.push({ points, cx, cz, reach, owner: object });
     }
   }
 
@@ -71,6 +71,18 @@ export class Obstacles {
   }
 
   /** Задевает ли круг хоть один контур — нужно, чтобы не ставить пропы внутрь других моделей. */
+  /**
+   * Забыть контуры объекта: его больше нет на площадке.
+   *
+   * Нужно правке расстановки. Убрать модель со сцены мало — снятые с неё
+   * контуры остались бы невидимой стеной ровно там, где она стояла.
+   *
+   * @param {THREE.Object3D} object
+   */
+  forget(object) {
+    this.items = this.items.filter((item) => item.owner !== object);
+  }
+
   hits(x, z, radius) {
     for (const item of this.items) {
       const span = item.reach + radius;
