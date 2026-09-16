@@ -143,11 +143,18 @@ export class BattleFog extends ScreenShader {
     const px = (x / this.field.width + 0.5) * this.canvas2d.width;
     const py = (z / this.field.depth + 0.5) * this.canvas2d.height;
 
-    // Радиус — это то, что открыто начисто, а размытие идёт ЗА ним. Если растить
-    // мягкий край внутрь, он съедает видимость там, где герой ещё стреляет: цель
-    // на краю дальности оказывалась бы наполовину в тумане.
-    const clear = CFG.radius * CFG.pixelsPerMetre;
-    const soft = (CFG.radius + CFG.feather) * CFG.pixelsPerMetre;
+    /**
+     * Обе черты отмеряются от дальности огня.
+     *
+     * Внутренняя открыта начисто, внешняя — это конец мягкого края, и она же
+     * предел выстрела: дальше, чем герой достаёт, карта не открывается. Мягкий
+     * край идёт ЗА чистым кругом, а не внутрь него: растущий внутрь, он съедал
+     * бы видимость там, где ещё стреляют, и цель на краю дальности оказывалась
+     * бы наполовину в тумане.
+     */
+    const reach = CONFIG.player.fireRange;
+    const clear = reach * CFG.clearShare * CFG.pixelsPerMetre;
+    const soft = reach * CFG.sightShare * CFG.pixelsPerMetre;
 
     // Кисть непрозрачна по всей длине, а гаснет цветом от белого к чёрному.
     // Будь у края прозрачность, «максимум» считался бы поверх полупрозрачного

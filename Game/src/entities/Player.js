@@ -282,9 +282,9 @@ export class Player extends Figure {
     const target = this.spotted;
     if (!target?.alive) return false;
 
-    // Берётся за проп он ближе, чем стреляет. Доля от радиуса огня, а не своё
-    // число: у самой границы выстрела бросок не долетал бы, и на краю прицела
-    // персонаж вместо стрельбы принимался бы возиться с ящиком.
+    // Докуда он тянется за предметом — та же черта, что и у выстрела. Долей от
+    // радиуса огня, а не своим числом: две дальности, живущие порознь, рано или
+    // поздно разъезжаются, а игрок различает только одну.
     const reach = CFG.fireRange * CFG.throwRange;
     if (flatDistance(target.position, this.root.position) > reach) return false;
 
