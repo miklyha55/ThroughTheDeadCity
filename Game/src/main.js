@@ -23,6 +23,7 @@ import { Music } from './core/Music.js';
 import { attachListener, unlockAudio, wakeAudio } from './core/audio.js';
 import { StartMessage } from './core/StartMessage.js';
 import { ControlsHint } from './ui/ControlsHint.js';
+import { lockViewport } from './core/viewport.js';
 import { SkipHint } from './ui/SkipHint.js';
 import { DeathScreen } from './ui/DeathScreen.js';
 import { Transmission } from './ui/Transmission.js';
@@ -65,6 +66,11 @@ unlockAudio();
  * и так приезжают сами.
  */
 if (import.meta.env.PROD) new UpdatePrompt();
+
+// Замок на масштаб и прокрутку: щипок растягивал страницу, а холст оставался
+// прежним — и экран разъезжался на две половины. Ставится первым делом, до
+// всего остального: игрок может ущипнуть экран и на чёрных воротах.
+lockViewport();
 
 const params = new URLSearchParams(window.location.search);
 

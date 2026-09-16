@@ -6,7 +6,7 @@
          вырез и под полосу жеста, а те области красит сам — отсюда и бралось
          деление экрана на серое и чёрное. Он же включает env(safe-area-inset-*),
          на которые расставлен интерфейс: без cover они все нули. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 
     <!-- Чем браузер красит свои полосы вокруг страницы. Не скажешь — возьмёт
          свой цвет, и на чёрной игре он читается как серая плашка. -->
@@ -36,6 +36,16 @@
         overflow: hidden; background: #07090a;
         touch-action: none; -webkit-user-select: none; user-select: none;
         overscroll-behavior: none;
+        /* Страница прибита к экрану и ехать ей некуда: ни оттяжки, ни отскока,
+           ни сдвига после щипка. Без этого растянутая страница уезжала вбок, а
+           холст оставался на месте — экран делился на две несходящиеся половины. */
+        position: fixed; inset: 0; width: 100%;
+        /* Телефон иначе сам подгоняет кегль под ширину, когда страница
+           растянута, и подписи разъезжаются. */
+        -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+        /* Долгое нажатие не должно звать меню «скопировать картинку»: игрок
+           держит палец на стике секундами. */
+        -webkit-touch-callout: none;
       }
       #app { position: fixed; inset: 0; }
       /* Текст вступления: внизу по центру, над джойстиком. Тёмная подложка —
