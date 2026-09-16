@@ -13,7 +13,8 @@ export class LocationManager {
     this.player = player;
     this.current = null;
     this.loading = false;
-    this.onChange = null; // вызывается после смены локации — обновить HUD и прочее
+    this.onChange = null; // после смены локации — обновить HUD и прочее
+    this.onOpened = null; // уровень открылся: заставка ушла, мир пошёл
     this.editing = false; // в режиме правки статику не сливаем: её двигают мышью
     this.camera = null;   // ставится снаружи: её надо переносить вместе с игроком
     this.splash = null;   // заставка на время загрузки; ставится снаружи
@@ -72,6 +73,11 @@ export class LocationManager {
       // её концу уровень и начинается.
       await this.splash?.hide();
       this.loading = false;
+
+      // Экран свободен, мир пошёл — вот теперь уровню и можно заговорить.
+      // Всё, что должно случиться на глазах у игрока, а не под картинкой,
+      // вешается сюда.
+      this.onOpened?.(this.current);
     }
   }
 

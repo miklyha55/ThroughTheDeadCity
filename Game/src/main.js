@@ -492,7 +492,19 @@ locations.onChange = (location) => {
   updateDebugView();
   fog.reset(location.width, location.depth); // новый уровень — заново закрытая карта
   music.play(location.data.number ?? 1); // у каждого уровня своя дорожка
-  startMessage.arm(location.data.number ?? 1); // и вступление, если уровень первый
+};
+
+/**
+ * Уровень открылся: заставка ушла, мир пошёл.
+ *
+ * Вступление взводится ИМЕННО здесь, а не при сборке сцены. Сборка быстрая, а
+ * заставка висит после неё ещё пару секунд, и голос начинал говорить под
+ * картинкой: игрок смотрел на заставку и слушал речь, которой ещё не время.
+ * Хуже того, часть её он пропускал — субтитры идут по самой дорожке и в это
+ * время шли под закрытым экраном.
+ */
+locations.onOpened = (location) => {
+  startMessage.arm(location.data.number ?? 1);
 };
 gunPickup.place(locations.current, player, locations.editing); // первый уровень: onChange ещё не привязан
 aimPointer();
@@ -501,7 +513,7 @@ showHud();
 updateDebugView();
 fog.reset(locations.current.width, locations.current.depth);
 music.play(locations.current.data.number ?? 1);
-startMessage.arm(locations.current.data.number ?? 1); // замок стоит сразу, до первого касания
+locations.onOpened(locations.current); // первый уровень: onOpened ещё не был привязан
 
 if (import.meta.env.DEV) {
   // Tab — правка расстановки мышью; пока она открыта, игра стоит на паузе

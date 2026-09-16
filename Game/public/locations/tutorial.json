@@ -409,7 +409,7 @@
         -8.94,
         -7.4
       ],
-      "rotation": -176.3
+      "rotation": 1.6
     },
     {
       "prop": "Furn_FloorLamp",
@@ -494,7 +494,7 @@
         4.48,
         -2.71
       ],
-      "rotation": -91.4
+      "rotation": 88
     },
     {
       "prop": "Furn_FloorLamp",
@@ -771,6 +771,14 @@
         1.1,
         1.1
       ]
+    },
+    {
+      "prop": "Furn_Bookshelf",
+      "at": [
+        4.95,
+        -7.47
+      ],
+      "rotation": 1.6
     }
   ],
   "zombies": [
