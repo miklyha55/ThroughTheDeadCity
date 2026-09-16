@@ -126,6 +126,8 @@ export class Player extends Figure {
     // круг отмеряется временем, и механика работает вся, только без анимации.
     this.refillFor = this.lengthOf('Reloading', CFG.reloadSpeed, CFG.reloadStep);
 
+    this.blasting = null;  // брошенная бочка, которую он вот-вот подорвёт
+    this.frozenFor = 0;    // с, на которые управление отобрано после подрыва
     this.throwing = null;  // идущий бросок: что в руке, в кого летит, сколько уже длится
     this.throwCooldown = 0; // пауза, чтобы он не хватал предметы очередью
     this._socket = this.root.getObjectByName('Socket_RightHand') ?? null;
@@ -216,6 +218,8 @@ export class Player extends Figure {
   revive() {
     this.diedAt = 0;
     this.restartAt = 0;
+    this.blasting = null;
+    this.frozenFor = 0;
     this._drop();
     this.throwCooldown = 0;
     this.reloading = CFG.startDelay; // с первого кадра не стреляем
@@ -248,7 +252,10 @@ export class Player extends Figure {
     if (this.throwing || this.throwCooldown > 0) return false;
     if (!this.alive || this.frozen || this.jumping || this.helpless || this.reacting > 0) return false;
     if (!this._socket || this.throwLength <= 0) return false;
-    if (item.explosive) return false;
+    // Взрывчатое берётся как любое другое. Есть чем стрелять — герой добьёт его
+    // в полёте; нечем — просто швырнёт, как ящик. Запрещать бросок из-за пустого
+    // магазина незачем: бочка и сама по себе тяжёлая, ею можно сбить с ног.
+
 
     // Кидать имеет смысл только в кого-то: это тот же, кого он держит на прицеле.
     const target = this.spotted;
@@ -343,11 +350,110 @@ export class Player extends Figure {
       }
     }
 
-    debris.launch(
-      item, dirX, dirZ,
-      CFG.throwPower, CFG.throwLift, CFG.throwSpin,
-      this, CFG.throwGrace
-    );
+    // Взрывчатка летит своей дугой: ей нужно дойти до толпы, а не упасть под
+    // ноги. Обычному хламу это ни к чему — ящик и должен падать рядом.
+    const BLAST = CONFIG.explosion;
+    const power = item.explosive ? BLAST.throwPower : CFG.throwPower;
+    const lift = item.explosive ? BLAST.throwLift : CFG.throwLift;
+    const spin = item.explosive ? BLAST.throwSpin : CFG.throwSpin;
+
+    debris.launch(item, dirX, dirZ, power, lift, spin, this, CFG.throwGrace);
+
+    // Бочка ушла из руки — герой добивает её в полёте. Не сразу: пуля,
+    // выпущенная в тот же миг, рванула бы у него под ногами.
+    // Подрыв — только если есть ружьё и патрон. Иначе бочка летит как обычный
+    // предмет и просто падает: никакого выстрела вдогонку не будет.
+    if (item.explosive && this.armed && this.rounds > 0) {
+      this.blasting = { item, at: CONFIG.explosion.shootAfter, done: false };
+      this.frozenFor = CONFIG.explosion.holdFor;
+
+      // Ружьё в руках сразу, как бочка ушла: пока она летит, герой уже держит
+      // её на прицеле. Без этого он стоял с пустыми руками и вскидывал оружие
+      // за мгновение до выстрела — выходил рывок вместо прицеливания.
+      this._holdGun(true);
+
+      /**
+       * Поза прицеливания: первый кадр клипа выстрела, и на нём стоп.
+       *
+       * Именно стоп, а не проигрывание. В этом клипе первый кадр — это уже
+       * вскинутое к плечу ружьё, а дальше идёт сам выстрел. Нам нужна поза, но
+       * не выстрел: он случится позже, когда бочка отлетит. Поэтому клип
+       * ставится на нулевое время и замирает, а отмирает в миг выстрела.
+       */
+      this.restart('Shoot', 0.12, CFG.shootSpeed);
+      if (this.current) {
+        this.current.time = 0;
+        this.current.paused = true;
+      }
+    }
+  }
+
+  /**
+   * Подрыв брошенной бочки: выстрел вдогонку.
+   *
+   * Стреляет герой по самой вещи, а не по зомби, и пуля всегда находит цель —
+   * промахнуться по бочке, которую сам же и швырнул, было бы издевательством.
+   * Патрон при этом тратится настоящий: бросок взрывчатки стоит боеприпаса.
+   *
+   * @param {number} dt
+   * @param {import('../world/Location.js').Location} location
+   */
+  _blastStep(dt, location) {
+    const shot = this.blasting;
+    shot.at -= dt;
+    if (shot.at > 0 || shot.done) return;
+
+    shot.done = true;
+    this.blasting = null;
+
+    // Вещь могла уже взорваться сама — от чужой пули или другого взрыва.
+    if (!location?.debris.items.includes(shot.item)) return;
+
+    /**
+     * Сперва берём ружьё в руки, и только потом целимся.
+     *
+     * Порядок тут не косметический. Поправка на разворот ствола снимается с
+     * самой модели оружия, а до этого мига ружьё висело за спиной и смотрело
+     * назад: персонаж доворачивался ровно в противоположную сторону от бочки.
+     */
+    this._holdGun(true);
+
+    /**
+     * Доворот к бочке — прямой, без поправки на ствол.
+     *
+     * Поправка снимается с самой модели оружия и годится только когда та уже
+     * стоит в позе стрельбы. Здесь же герой ещё не вскинул ружьё: клип выстрела
+     * запускается строкой ниже, а до него ствол смотрит назад, вдоль спины.
+     * Взятая в этот миг поправка разворачивала героя почти на противоположную
+     * сторону от бочки.
+     *
+     * Поэтому целимся корпусом: доворот на цель, и всё. Ствол сам встанет как
+     * надо, когда клип вскинет руки.
+     */
+    const at = shot.item.object.position;
+    this._setYaw(Math.atan2(at.x - this.root.position.x, at.z - this.root.position.z));
+
+    // Клип уже стоит на первом кадре — просто отпускаем его, и он доиграет
+    // выстрел с той самой позы, в которой герой держал бочку на прицеле.
+    if (this.current?.getClip().name === 'Shoot') this.current.paused = false;
+    else this.restart('Shoot', 0.08, CFG.shootSpeed);
+
+    this._spend();
+    this.sfx?.play('fire', CFG.fireVolume);
+    this.effects?.fire(this._muzzlePoint(), shot.item.object.position);
+
+    location.explode(shot.item, this);
+
+    // Взрыв прогремел — герой ещё мгновение стоит, опуская ружьё. Иначе он тут
+    // же находил следующего зомби и стрелял в него, и со стороны это читалось
+    // как выстрел мимо бочки, в пустоту.
+    this.frozenFor = CONFIG.explosion.settleAfter;
+    this.reloading = Math.max(this.reloading, CONFIG.explosion.settleAfter);
+  }
+
+  /** Откуда вылетает пуля: от груди, если ствол не найден. */
+  _muzzlePoint() {
+    return this._muzzle.copy(this.root.position).setY(this.root.position.y + CFG.hitHeight);
   }
 
   /**
@@ -369,6 +475,8 @@ export class Player extends Figure {
   }
 
   _die() {
+    this.blasting = null; // недоигранный подрыв умирает вместе с ним
+    this.frozenFor = 0;
     this._drop();
     this.velocity.set(0, 0, 0);
 
@@ -491,10 +599,35 @@ export class Player extends Figure {
     // бежит, ни стреляет. Предмет в это время едет в руке вместе с анимацией.
     if (this.throwing) {
       this._throwStep(dt);
+
+      // Бочка вылетела из руки ещё на середине замаха, и подрыв уже пошёл: его
+      // отсчёт нельзя откладывать до конца броска, иначе она успеет упасть.
+      if (this.blasting) this._blastStep(dt, location);
+
       this.mixer.update(dt);
       return;
     }
     if (this.throwCooldown > 0) this.throwCooldown -= dt;
+
+    /**
+     * Подрыв брошенной бочки, и пока он идёт — управление отобрано.
+     *
+     * Так задумано: бросок взрывчатки это одно движение целиком — швырнул,
+     * вскинул, выстрелил. Разорви его управлением, и герой побежит с недоигранным
+     * замахом, а бочка улетит в никуда неподорванной.
+     */
+    if (this.frozenFor > 0) {
+      this.frozenFor -= dt;
+      if (this.blasting) this._blastStep(dt, location);
+
+      // Движение доиграно — ружьё возвращается за спину само, как после
+      // обычного выстрела. Иначе оно осталось бы в руках навсегда.
+      if (this.frozenFor <= 0) this._holdGun(false);
+
+      this.velocity.set(0, 0, 0);
+      this.mixer.update(dt);
+      return;
+    }
 
     // в полёте управление отобрано: траектория уже задана, менять её нечем
     if (this.jumping) {

@@ -468,9 +468,9 @@ export class Location {
       if (zombie.position.distanceTo(at) <= CFG.radius) zombie.crush(at, CFG.gore);
     }
 
-    if (player?.alive && player.position.distanceTo(at) <= CFG.radius) {
-      player.takeDamage(Infinity, at); // из круга не выходят: жизней не считаем
-    }
+    // Героя взрыв не трогает вовсе. Бочка теперь не ловушка, а оружие: он сам
+    // её швыряет и сам подрывает, и гибнуть от собственного броска было бы
+    // наказанием за то, что игра же и предлагает делать.
 
     this.onBlast?.(at); // вспышка и тряска — дело сцены, а не локации
   }

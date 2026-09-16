@@ -254,6 +254,16 @@ const startMessage = new StartMessage(transmission); // пока говорит 
 // выключенное вступление не должно даже начинать замок, а панель появляется позже.
 const NO_INTRO = 'dev:noIntro';
 if (import.meta.env.DEV) startMessage.muted = localStorage.getItem(NO_INTRO) === '1';
+
+/**
+ * Начинать ли игру с оружием. Галочка в панели разработчика.
+ *
+ * Обычно герой безоружен: ружьё лежит в конце вводной локации, и до него надо
+ * дойти. Но проверять стрельбу, каждый раз проходя вводную, — мучение, поэтому
+ * в правке это включается одной галочкой. В собранной игре её нет.
+ */
+const WITH_GUN = 'dev:withGun';
+if (import.meta.env.DEV && localStorage.getItem(WITH_GUN) === '1') player.arm();
 const radio = new Radio(); // и рация в углу: видно, откуда голос и почему нельзя идти
 const ending = new Ending(); // экран, которым игра кончается
 const fog = new BattleFog();  // туман войны: карта открывается по мере хода
@@ -529,6 +539,20 @@ if (import.meta.env.DEV) {
       onChange: (off) => {
         startMessage.mute(off);
         localStorage.setItem(NO_INTRO, off ? '1' : '0');
+      },
+    }, {
+      label: 'с оружием',
+      value: player.armed,
+      onChange: (on) => {
+        localStorage.setItem(WITH_GUN, on ? '1' : '0');
+
+        // Выдать ружьё можно на месте, а вот отобрать — нет: половина игры
+        // уже завязана на то, что оно есть. Поэтому снятая галочка вступает в
+        // силу с ближайшей перезагрузки, о чём панель и говорит.
+        if (on) player.arm();
+
+        aimPointer(); // ружьё появилось или пропало — указателю есть что пересчитать
+        showAmmo();
       },
     }],
     onFinal: (on) => (on ? locations.onFinish() : leaveEnding()),
