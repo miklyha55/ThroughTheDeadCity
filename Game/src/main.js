@@ -430,6 +430,10 @@ engine.add({
     radio.toggle(player.frozen);         // рация висит ровно столько же
     player.update(dt, input.move, camera.moveYaw, locations.current);
     const here = locations.current;
+
+    // Дошёл до вехи — она гаснет, и стрелка ведёт к следующей цели.
+    if (here.reachGuide(player.position)) aimPointer();
+
     if (here.reachedExit(player.position)) {
       locations.advance(); // вышел через проём — следующая локация
     } else {
@@ -501,6 +505,13 @@ function aimPointer() {
   // это единственное, что нужно сделать.
   const gun = gunPickup.object && !player.armed ? gunPickup.object : null;
   if (gun) targets.push({ at: gun, halo: true });
+
+  // Вехи по дороге: то, что важно заметить по пути. Ведём к ним так же, как к
+  // ружью — с кругом на полу и с любого расстояния, — и в том же порядке, в
+  // каком они выписаны в файле уровня. Пройденные из очереди уходят сами.
+  for (const mark of here?.guide ?? []) {
+    if (!mark.done) targets.push({ at: mark.at, halo: true });
+  }
 
   // Выход: без подсветки и только вблизи. Круг под дверью читался бы как «встань
   // сюда», а он и так на виду; напомнить стоит, лишь когда герой рядом.
