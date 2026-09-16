@@ -36,7 +36,20 @@ export class Debris {
    * @param {number} floorY
    */
   add(object, body, floorY, explosive = false) {
+    /**
+     * Габариты берутся по модулю, и ни одна сторона не считается нулевой.
+     *
+     * Зеркальная модель приходит с отрицательным масштабом, и тогда «размер»
+     * выходит отрицательным: радиус такого предмета уводил в минус все проверки
+     * касания и расталкивания. А у вырожденной коробки — плоский щит, лист —
+     * обратный момент инерции обращался в бесконечность, и первый же толчок
+     * превращал разворот предмета в NaN: вещь исчезала из мира навсегда.
+     */
     const size = _tmp.copy(body.boxMax).sub(body.boxMin);
+    size.set(Math.max(Math.abs(size.x), 1e-3),
+      Math.max(Math.abs(size.y), 1e-3),
+      Math.max(Math.abs(size.z), 1e-3));
+
     const mass = Math.max(CFG.minMass, body.volume * CFG.density);
 
     // однородный параллелепипед: этого хватает, чтобы предмет вёл себя правдоподобно
@@ -266,10 +279,16 @@ export class Debris {
       const dy = position.y - at.y;
       const dz = position.z - at.z;
 
-      const distance = Math.hypot(dx, dy, dz);
-      if (distance > radius || distance < 1e-4) continue;
+      // Досягаемость меряется по земле — как и у самого взрыва: рвануло над
+      // головами, а расходится волна по площадке. Направление толчка при этом
+      // остаётся пространственным, иначе всё разлеталось бы строго горизонтально.
+      const reach = Math.hypot(dx, dz);
+      if (reach > radius) continue;
 
-      const share = 1 - distance / radius;
+      const distance = Math.hypot(dx, dy, dz);
+      if (distance < 1e-4) continue;
+
+      const share = 1 - reach / radius;
       _impulse.set(dx / distance, dy / distance + lift, dz / distance)
         .multiplyScalar(power * share * item.mass);
 

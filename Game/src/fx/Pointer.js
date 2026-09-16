@@ -121,18 +121,8 @@ export class Pointer {
       one.at ? one : { at: one, halo: true }
     ));
 
+    this.lit = false; // горит ли стрелка сейчас: по этому и разводятся пороги
     this._show(false); // покажемся в ближайшем кадре, когда посчитаем расстояние
-  }
-
-  /**
-   * Цель взята: переходим к следующей, а если её нет — гаснем.
-   *
-   * @returns {boolean} осталось ли куда вести
-   */
-  next() {
-    this.targets.shift();
-    this._show(false);
-    return this.targets.length > 0;
   }
 
   /** Куда ведём прямо сейчас. */
@@ -160,6 +150,11 @@ export class Pointer {
 
     this.time += dt;
 
+    // Стрелка ездит на персонаже, и без него ей не от чего отмерять направление.
+    // Между пересборкой персонажа и переносом стрелки на нового такой кадр
+    // случается — раньше он падал.
+    if (!this.mesh.parent) return;
+
     const spot = target.at;
     const at = spot.position ?? spot;
     const carrier = this.mesh.parent.position;
@@ -167,11 +162,37 @@ export class Pointer {
     _to.set(at.x - carrier.x, 0, at.z - carrier.z);
     const away = _to.length();
 
-    // Цель с радиусом молчит, пока герой далеко: вести к выходу через всю карту
-    // незачем, а у самой двери напомнить полезно.
-    const near = !target.within || away <= target.within;
-    this._show(near, target.halo !== false);
-    if (!near) return;
+    /**
+     * Стрелка горит в кольце: не слишком далеко и не вплотную.
+     *
+     * Дальняя граница есть не у всех целей — ружьё видно с любого края
+     * площадки, а к выходу вести через всю карту незачем. Ближняя одна на всех:
+     * подойдя к цели, стрелка гаснет, иначе она мечется вокруг ног на каждом
+     * шаге, показывая то влево, то вправо.
+     *
+     * Обе границы двойные: взятое держится дальше, чем берётся, и отпущенное
+     * подбирается ближе, чем отпускается. Иначе на самой черте стрелка мигала
+     * бы на каждом шаге.
+     */
+    const far = target.within
+      ? target.within * (this.lit ? (CFG.exitKeep ?? 1.2) : 1)
+      : Infinity;
+    const near = this.lit ? CFG.hideWithin : CFG.showBeyond;
+
+    const reached = away <= far;
+    this.lit = reached && away >= near;
+
+    /**
+     * Круг под целью гаснет только по дальней границе, ближняя его не касается.
+     *
+     * Это разные подсказки. Стрелка говорит, куда идти, и вплотную мешает;
+     * круг говорит, что вот эта самая вещь — та, за которой шли, и нужен он как
+     * раз вблизи, когда игрок на неё наступает.
+     */
+    this.mesh.visible = this.lit;
+    this.halo.visible = reached && target.halo !== false;
+
+    if (!reached) return;
 
     // Подсветка стоит под самой вещью и дышит — неподвижный круг на полу
     // читается как часть пола.
@@ -180,7 +201,7 @@ export class Pointer {
       this.halo.material.opacity = CFG.haloOpacity + Math.sin(this.time * CFG.pulseSpeed) * CFG.pulse;
     }
 
-    if (away < 1e-3) return;
+    if (!this.lit || away < 1e-3) return;
 
     // Стрелка сидит на герое и вертится вместе с ним, поэтому его собственный
     // разворот вычитаем: в мире она должна смотреть на цель, а не мимо.

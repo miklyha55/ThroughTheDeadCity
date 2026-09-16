@@ -28,6 +28,8 @@ export class SeeThrough {
 
     this.items = [];        // за кем следим: { object, fade }
     this.blocking = new Set();
+    this._objects = [];     // те же вещи списком: по нему бьёт луч, и пересобирать
+                            // его на каждый луч незачем — за кадр их теперь до семи
   }
 
   /**
@@ -72,6 +74,7 @@ export class SeeThrough {
     });
 
     this.items.push(item);
+    this._objects.push(object);
     return true;
   }
 
@@ -91,6 +94,7 @@ export class SeeThrough {
       if (mesh.isMesh && mesh.material?.userData.fade) mesh.material.dispose();
     });
     this.items = this.items.filter((one) => one !== item);
+    this._objects = this._objects.filter((one) => one !== object);
     this.blocking.delete(item);
   }
 
@@ -101,14 +105,26 @@ export class SeeThrough {
       });
     }
     this.items.length = 0;
+    this._objects.length = 0;
     this.blocking.clear();
   }
 
-  update(dt, player) {
+  /**
+   * @param {number} dt
+   * @param {object} player — герой: его заслонившее просвечивает всегда
+   * @param {Array} [others] — кого ещё не стоит терять из виду: живые зомби
+   *   рядом. Прячущий их дом растворяется так же, как прячущий героя, — иначе
+   *   толпа исчезала за углом целиком, и стрелять приходилось в никуда.
+   */
+  update(dt, player, others = null) {
     if (this.items.length === 0) return;
 
     this.blocking.clear();
-    if (player.alive !== false) this._findBlockers(player);
+    if (player.alive !== false) this._findBlockers(player.position);
+
+    if (others) {
+      for (const one of this._nearest(others, player)) this._findBlockers(one.position);
+    }
 
     for (const item of this.items) {
       const wanted = this.blocking.has(item) ? CFG.fadeTo : 1;
@@ -128,16 +144,42 @@ export class SeeThrough {
     }
   }
 
-  /** Кто стоит между камерой и героем. */
-  _findBlockers(player) {
-    _at.copy(player.position).setY(player.position.y + CFG.height);
+  /**
+   * Кого из толпы стоит проверять лучом.
+   *
+   * Всех подряд нельзя: на заправке их под шесть десятков, и луч на каждого
+   * съел бы ровно то, ради чего просвечивание и затевалось. Берём ближайших к
+   * герою и не дальше круга, в котором до них вообще есть дело, — дальний зомби
+   * за домом игрока не занимает.
+   */
+  _nearest(zombies, player) {
+    const near = [];
+
+    for (const one of zombies) {
+      if (one.alive === false) continue;
+
+      const dx = one.position.x - player.position.x;
+      const dz = one.position.z - player.position.z;
+      const away = Math.hypot(dx, dz);
+      if (away > CFG.watchRadius) continue;
+
+      near.push({ one, away });
+    }
+
+    near.sort((a, b) => a.away - b.away);
+    return near.slice(0, CFG.watchLimit).map((item) => item.one);
+  }
+
+  /** Кто стоит между камерой и точкой, за которой следим. */
+  _findBlockers(spot) {
+    _at.copy(spot).setY(spot.y + CFG.height);
     _dir.copy(_at).sub(this.camera.position);
 
     const reach = _dir.length();
     this.raycaster.set(this.camera.position, _dir.normalize());
     this.raycaster.far = reach;
 
-    for (const hit of this.raycaster.intersectObjects(this.items.map((i) => i.object), true)) {
+    for (const hit of this.raycaster.intersectObjects(this._objects, true)) {
       const item = hit.object.userData.fadeItem;
       if (item) this.blocking.add(item);
     }

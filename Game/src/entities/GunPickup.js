@@ -31,6 +31,8 @@ export class GunPickup {
     this.from = new THREE.Vector3();
     this.to = new THREE.Vector3();
     this.onTaken = null;  // кому сказать, что gun поднято
+    this.location = null; // чей это уровень: у него же снимается метка
+    this.editing = false; // в правке расстановки ружьё лежит смирно
   }
 
   /**
@@ -68,6 +70,10 @@ export class GunPickup {
      */
     const gun = sample.clone(true);
     gun.name = 'gun:pickup';
+    // Покачивание начинается с нуля, а не с той фазы, до которой игра докрутила
+    // с прошлого раза: иначе после перезапуска уровня ружьё появлялось в
+    // случайной точке синусоиды и могло родиться ниже пола.
+    this.time = 0;
     gun.position.set(spot[0], CFG.height, spot[1]);
     gun.rotation.set(0, 0, 0);
     gun.scale.setScalar(CFG.scale);
@@ -85,6 +91,14 @@ export class GunPickup {
     // ружьё уходит вместе с уровнем, когда тот сменяется.
     location.group.add(gun);
     this.object = gun;
+
+    // Метка на самой локации: по ней правка расстановки узнаёт ружьё среди
+    // прочего, а сохранение уровня забирает точку, куда его положили мышью.
+    // Без неё сдвинутое ружьё возвращалось на старое место при следующей
+    // загрузке — в файл уходила прежняя запись.
+    this.location = location;
+    this.editing = editing;
+    location.gunMark = gun;
   }
 
   /** Убрать со сцены. Геометрия и материал общие с персонажем — их не трогаем. */
@@ -107,7 +121,22 @@ export class GunPickup {
 
     this.time += dt;
 
+    // В правке расстановки ружьё не живёт своей жизнью: не крутится, не
+    // покачивается и не прыгает в руки подошедшему. Крутящуюся вещь не поймать
+    // гизмо, а улетевшая к герою просто исчезла бы со сцены вместе с местом,
+    // которое и надо было подвинуть.
+    if (this.editing) return;
+
     if (this.flight > 0) {
+      // Погиб на подлёте — ружьё остаётся лежать. Долетев до тела, оно
+      // вооружало покойника и отпирало выход, хотя уровень уже начинался заново.
+      if (!player.alive) {
+        this.object.position.copy(this.from);
+        this.object.scale.setScalar(CFG.scale);
+        this.flight = 0;
+        return;
+      }
+
       this._fly(dt, player);
       return;
     }

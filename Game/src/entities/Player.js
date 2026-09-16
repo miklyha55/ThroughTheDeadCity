@@ -121,6 +121,7 @@ export class Player extends Figure {
     this.rounds = CFG.magazine; // патронов в магазине
     this.refillAt = 0;          // сколько уже длится текущий круг набивки, с
     this.onAmmo = null;         // кому сообщать о смене боезапаса; ставится снаружи
+    this.onShot = null;         // и о самом выстреле: по нему камера получает отдачу
 
     // Один круг клипа — один патрон. Клипа в модели может ещё не быть: тогда
     // круг отмеряется временем, и механика работает вся, только без анимации.
@@ -182,9 +183,10 @@ export class Player extends Figure {
      * момент читается как несправедливость: игрок всё сделал верно, а его сбили
      * из-под ног. Прыжок и задуман как способ уйти от толпы — пусть им и будет.
      *
-     * Взрыв бочки при этом достаёт и в воздухе: он бьёт с запасом по высоте, и
-     * прятаться от него прыжком было бы странно. Его сила приходит бесконечной,
-     * по ней и отличаем.
+     * Проверка на конечность силы осталась от прежнего порядка, когда взрыв
+     * доставал героя и в воздухе, приходя с бесконечным уроном. Сейчас взрыв не
+     * трогает его вовсе — ни на земле, ни в прыжке, — так что отличать некого;
+     * оговорка оставлена на случай, если такой удар когда-нибудь вернётся.
      */
     if (this.jumping && Number.isFinite(amount)) return;
 
@@ -198,6 +200,21 @@ export class Player extends Figure {
       this._die();
       return;
     }
+
+    /**
+     * Удар обрывает всё начатое, а не идёт рядом с ним.
+     *
+     * Бросок и подрыв держат собственную ветку в кадре и сами ставят себе
+     * анимацию. Оставленные жить, они шли поверх реакции: избитый персонаж
+     * доворачивался к цели, дометал предмет и вскидывал ружьё, а сама реакция
+     * была не видна вовсе — её затирал следующий же клип. Сейчас это прикрыто
+     * тем, что одного удара хватает насмерть, но стоит дать больше одной жизни,
+     * и видно сразу.
+     */
+    this._drop();
+    this.blasting = null;
+    this.frozenFor = 0;
+    this._holdGun(false);
 
     // Реакцию персонаж доигрывает целиком: пока его шатает, он не бежит
     // и не стреляет — только потом решает, что делать дальше.
@@ -251,6 +268,10 @@ export class Player extends Figure {
   grab(item, debris) {
     if (this.throwing || this.throwCooldown > 0) return false;
     if (!this.alive || this.frozen || this.jumping || this.helpless || this.reacting > 0) return false;
+    // Пока идёт подрыв, руки заняты: герой держит на прицеле уже брошенное.
+    // Схваченная в этот миг вторая бочка встала бы на место первой, и та
+    // осталась бы висеть в воздухе неподорванной.
+    if (this.blasting || this.frozenFor > 0) return false;
     if (!this._socket || this.throwLength <= 0) return false;
     // Взрывчатое берётся как любое другое. Есть чем стрелять — герой добьёт его
     // в полёте; нечем — просто швырнёт, как ящик. Запрещать бросок из-за пустого
@@ -440,6 +461,7 @@ export class Player extends Figure {
 
     this._spend();
     this.sfx?.play('fire', CFG.fireVolume);
+
     this.effects?.fire(this._muzzlePoint(), shot.item.object.position);
 
     location.explode(shot.item, this);
@@ -449,11 +471,6 @@ export class Player extends Figure {
     // как выстрел мимо бочки, в пустоту.
     this.frozenFor = CONFIG.explosion.settleAfter;
     this.reloading = Math.max(this.reloading, CONFIG.explosion.settleAfter);
-  }
-
-  /** Откуда вылетает пуля: от груди, если ствол не найден. */
-  _muzzlePoint() {
-    return this._muzzle.copy(this.root.position).setY(this.root.position.y + CFG.hitHeight);
   }
 
   /**
@@ -502,9 +519,24 @@ export class Player extends Figure {
     this.restart('Death', 0.15);
   }
 
-  /** Ставит персонажа в точку старта локации, гася движение. */
+  /**
+   * Ставит персонажа в точку старта локации, гася движение.
+   *
+   * Гасится не только шаг, но и всё начатое на прошлом уровне. Уйти через
+   * выход можно посреди любого движения — швырнув бочку, под прицелом, с
+   * недоигранной реакцией на удар, — и всё это приезжало на новый уровень
+   * вместе с героем: управление отобрано на ровном месте, а недоигранный подрыв
+   * искал свою бочку в уже разобранном мире.
+   */
   placeAt(position, yaw = 0) {
     this._drop(); // унести предмет в руке на другой конец карты нельзя
+    this.blasting = null;
+    this.frozenFor = 0;
+    this.throwCooldown = 0;
+    this.reacting = 0;
+    this.spotted = null;
+    this._holdFire();
+    this._holdGun(false);
     this.reloading = CFG.startDelay; // новый уровень начинается не с выстрела
     this.root.position.copy(position);
     this.yaw = yaw;
@@ -1063,7 +1095,16 @@ export class Player extends Figure {
     if (!zombie || !zombie.alive) return;
 
     const from = this.root.position;
-    if (flatDistance(zombie.position, from) > CFG.fireRange) return;
+
+    /**
+     * Дальность тут та же, по которой цель и держится, — с послаблением.
+     *
+     * Раньше здесь стояла голая `fireRange`, а выбор цели отпускал её на
+     * `keepTarget` дальше. В полосе между этими чертями персонаж вскидывал
+     * ружьё, доигрывал выстрел и выжидал перезарядку, а выстрела не было вовсе:
+     * ни пули, ни хлопка, ни патрона. Со стороны — заело оружие.
+     */
+    if (flatDistance(zombie.position, from) > CFG.fireRange * CFG.keepTarget) return;
 
     // Патрон и звук — здесь, вместе с самой пулей, а не при запуске анимации.
     // Между ними проходит `shotDelay`, и за это время выстрел могут отменить:
@@ -1071,6 +1112,7 @@ export class Player extends Figure {
     // ничего — ни хлопка, ни патрона.
     this._spend();
     this.sfx?.play('fire', CFG.fireVolume);
+    this.onShot?.(); // толчок камере: без него ружьё бьёт как пневматика
 
     // Откуда вылетает пуля.
     //
@@ -1094,7 +1136,10 @@ export class Player extends Figure {
     // персонаж бьёт в сторону. Линия должна показывать, куда правда летит пуля.
     const base = Math.atan2(zombie.position.x - muzzle.x, zombie.position.z - muzzle.z);
 
-    const middle = (CFG.pellets - 1) / 2;
+    // Округляем вниз: при чётном числе дробин ровной середины нет, и без этого
+    // сравнение `i === middle` не совпадало ни разу — залп переставал попадать
+    // в собственную цель, молча и без единого признака.
+    const middle = Math.floor((CFG.pellets - 1) / 2);
 
     // Докуда чертить пулю, никого не встретившую. На всю дальность нельзя: в упор
     // боковые пули веера почти всегда мимо, и десятиметровые росчерки разлетались
@@ -1168,7 +1213,7 @@ export class Player extends Figure {
 
     const from = this.root.position;
     let best = null;
-    let bestAlong = CFG.fireRange;
+    let bestAlong = CFG.fireRange * CFG.keepTarget; // та же черта, что и у самого выстрела
 
     for (const other of location.zombies) {
       if (!other.alive) continue; // взрыв мог убрать его прямо этим выстрелом
@@ -1188,6 +1233,27 @@ export class Player extends Figure {
       bestAlong = along; // дальше этого искать незачем: пуля остановится здесь
     }
     return best;
+  }
+
+  /**
+   * Отпустить персонажа целиком: модель больше не нужна.
+   *
+   * Сверх общего для всех фигур освобождения — миксер и скелет — здесь уходит и
+   * геометрия. У персонажа она своя: модель читается с диска заново на каждую
+   * пересборку, и слияние строит по ней новые буферы. Раньше их не освобождал
+   * никто, и каждое нажатие «Обновить» оставляло в видеопамяти ещё одного
+   * персонажа целиком, вопреки тому, что обещал комментарий на месте вызова.
+   *
+   * Материалы при этом общие на всю игру — их трогать нельзя: следующая фигура
+   * собралась бы из уже выброшенного.
+   */
+  dispose() {
+    const geometries = new Set();
+    this.root.traverse((o) => { if (o.isMesh) geometries.add(o.geometry); });
+
+    super.dispose();
+
+    for (const geometry of geometries) geometry.dispose();
   }
 
   /** Точка дула в мировых координатах: конец ствола оружия в руке. */

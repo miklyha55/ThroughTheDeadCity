@@ -57,8 +57,11 @@ export class LocationManager {
     this.splash?.prepare(id);
     this.splash?.show();
 
+    let opened = null;
+
     try {
-      return await this._load(id);
+      opened = await this._load(id);
+      return opened;
     } finally {
       // Уровень начинается, когда заставка УЖЕ ушла, а не когда собрана сцена.
       //
@@ -74,10 +77,18 @@ export class LocationManager {
       await this.splash?.hide();
       this.loading = false;
 
-      // Экран свободен, мир пошёл — вот теперь уровню и можно заговорить.
-      // Всё, что должно случиться на глазах у игрока, а не под картинкой,
-      // вешается сюда.
-      this.onOpened?.(this.current);
+      /**
+       * Экран свободен, мир пошёл — вот теперь уровню и можно заговорить.
+       * Всё, что должно случиться на глазах у игрока, а не под картинкой,
+       * вешается сюда.
+       *
+       * Но только если уровень и правда собрался. Раньше это стояло в `finally`
+       * без оговорок, и на сорванной загрузке — нет файла, оборвалась сеть —
+       * открытым объявлялся тот уровень, что был до: на первом это падение на
+       * пустоте, на остальных игра оживала на прежнем месте, и круг выхода тут
+       * же отправлял её на ту же сорванную загрузку по кругу.
+       */
+      if (opened) this.onOpened?.(opened);
     }
   }
 
@@ -91,6 +102,7 @@ export class LocationManager {
 
     this.current?.dispose();
     this.seeThrough?.clear(); // прежние здания ушли вместе с локацией
+    this.current = null;      // прежнего мира больше нет: на него нельзя ссылаться
 
     const location = new Location(
       data, this.prefabs, this.zombies, this.player?.blood,

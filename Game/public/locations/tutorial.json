@@ -445,9 +445,10 @@
     {
       "prop": "Furn_Dresser",
       "at": [
-        -19.2,
-        6.8
-      ]
+        -19.26,
+        0.98
+      ],
+      "rotation": 90.5
     },
     {
       "prop": "Furn_KitchenCounter",
@@ -659,14 +660,6 @@
     {
       "prop": "Prop_Tires",
       "at": [
-        7.01,
-        0.4
-      ],
-      "rotation": 9.7
-    },
-    {
-      "prop": "Prop_Tires",
-      "at": [
         15.42,
         -2.11
       ],
@@ -691,8 +684,8 @@
     {
       "prop": "Prop_Jerrycan",
       "at": [
-        -1.94,
-        4.94
+        6.39,
+        4.04
       ],
       "rotation": 7.4
     },
@@ -713,26 +706,18 @@
       "rotation": 37.5
     },
     {
-      "prop": "Prop_Jerrycan",
-      "at": [
-        -9.53,
-        -3.52
-      ],
-      "rotation": 61.2
-    },
-    {
       "prop": "Prop_Crate",
       "at": [
-        16.03,
-        1.71
+        15.35,
+        2.28
       ],
       "rotation": -46.2
     },
     {
       "prop": "Prop_Barricade",
       "at": [
-        7,
-        2.93
+        6.86,
+        1
       ],
       "rotation": -14.2
     },
@@ -801,8 +786,8 @@
     {
       "kind": "zombie1",
       "at": [
-        6.03,
-        -2.7
+        16.57,
+        -4.88
       ],
       "rotation": -90
     },
@@ -835,6 +820,14 @@
       "at": [
         14.81,
         -0.41
+      ],
+      "rotation": -102
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        17.11,
+        0.95
       ],
       "rotation": -102
     }

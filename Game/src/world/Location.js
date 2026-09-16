@@ -72,6 +72,11 @@ export class Location {
     this._movers = [];  // кто может задеть разбросанные предметы
     this.statics = []; // неподвижные пропы: их геометрия сливается в общие меши
     this.watched = []; // крупное, что просвечивает: сливается рядами, а не всё разом
+    this.merged = []; // слитые куски: их геометрию создали здесь, здесь же и освобождаем
+    // Слитое мышью не подвинуть, поэтому в правке расстановки локация живёт
+    // несклеенной — и новые вещи в ней тоже ставятся поштучно.
+    this.batched = batched;
+    this.built = false;
     this.group = new THREE.Group();
     this.group.name = `location:${data.id}`;
     this.obstacles = new Obstacles();
@@ -105,16 +110,30 @@ export class Location {
     this._buildZombies();
     this._buildExitMark();
 
+    // Локация собрана: дальше вещи в ней только правят руками, и каждая такая
+    // правка доделывается на месте — просвечивание, проходимость. Пока шла
+    // сборка, всё это делалось разом и по-другому.
+    this.built = true;
+
     if (batched) {
       this._batchStatics();
       this._batchWatched();
     } else {
-      // В правке расстановки ничего не сливаем: слитое мышью не подвинуть.
-      for (const object of this.watched) {
-        this.seeThrough?.watch(object, object.userData.prefab?.size);
-      }
+      for (const object of this.watched) this._watchAlone(object);
       this.watched.length = 0;
     }
+  }
+
+  /**
+   * Отдать одну вещь на просвечивание — как есть, без слияния.
+   *
+   * Габариты берутся у её префаба, а если их там нет — снимаются с самой модели.
+   * @param {THREE.Object3D} object
+   */
+  _watchAlone(object) {
+    const prefab = object.userData.prefab;
+    const size = prefab?.size ?? new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+    this.seeThrough?.watch(object, size);
   }
 
   _buildGround() {
@@ -161,8 +180,22 @@ export class Location {
 
     const { carrier, com } = this._place(entry.prop, obj);
 
+    /**
+     * Крупное, поставленное уже после сборки, отдаём на просвечивание сразу.
+     *
+     * Очередь `watched` разбирается один раз, при сборке локации, и всё, что
+     * попадало в неё позже, оставалось в ней навсегда: копия стены или дома не
+     * просвечивала, когда закрывала героя, и не числилась нигде, кроме этого
+     * списка. Такое бывает только в правке расстановки — там и лечим.
+     */
+    if (this.built && this.watched.length > 0) {
+      for (const one of this.watched) this._watchAlone(one);
+      this.watched.length = 0;
+    }
+
     // связь со строкой в JSON: по ней редактор сохраняет сдвинутое обратно
     this.placed.push({ object: carrier, com, entry, shaped: obj });
+    this._renav();
     return carrier;
   }
 
@@ -207,7 +240,7 @@ export class Location {
    * тратить сотни вызовов там, где хватает десятков.
    */
   _batchStatics() {
-    this._batched = this._merge(this.statics, 0);
+    this._merge(this.statics, 0);
   }
 
   /**
@@ -226,37 +259,71 @@ export class Location {
    * себе: сливать его не с чем.
    */
   _batchWatched() {
-    const rows = new Map();
+    const lines = new Map();
 
     for (const object of this.watched) {
-      // Ряд — это поворот плюс поперечная координата: секции одной стены стоят
-      // на одной линии и смотрят в одну сторону.
+      // Линия — это поворот плюс поперечная координата: секции одной стены стоят
+      // на одной прямой и смотрят в одну сторону.
       const yaw = Math.round(object.rotation.y / DEG / 90) * 90;
       const along = ((yaw % 180) + 180) % 180 === 0;
-      const across = Math.round((along ? object.position.z : object.position.x) * 10) / 10;
+      const across = Math.round((along ? object.position.z : object.position.x) * 2) / 2;
 
       const key = `${along ? 'z' : 'x'}${across}`;
-      if (!rows.has(key)) rows.set(key, []);
-      rows.get(key).push(object);
+      if (!lines.has(key)) lines.set(key, { along, row: [] });
+      lines.get(key).row.push(object);
     }
 
-    for (const row of rows.values()) {
-      if (row.length < 2) {
-        this.seeThrough.watch(row[0], this.prefabs.get(row[0].userData.prefab?.name)?.size
-          ?? new THREE.Box3().setFromObject(row[0]).getSize(new THREE.Vector3()));
-        continue;
+    for (const { along, row } of lines.values()) {
+      for (const run of this._runs(along, row)) {
+        if (run.length < 2) {
+          this._watchAlone(run[0]); // одинокому дому сливаться не с чем
+          continue;
+        }
+
+        const merged = batchStatic(run);
+        for (const object of run) object.removeFromParent();
+        this.group.add(merged);
+        this.merged.push(merged);
+
+        // Габариты слитого ряда считаем по нему самому: своей модели у него нет.
+        const size = new THREE.Box3().setFromObject(merged).getSize(new THREE.Vector3());
+        this.seeThrough.watch(merged, size);
       }
-
-      const merged = batchStatic(row);
-      for (const object of row) object.removeFromParent();
-      this.group.add(merged);
-
-      // Габариты слитого ряда считаем по нему самому: своей модели у него нет.
-      const size = new THREE.Box3().setFromObject(merged).getSize(new THREE.Vector3());
-      this.seeThrough.watch(merged, size);
     }
 
     this.watched.length = 0;
+  }
+
+  /**
+   * Режет линию на сплошные куски: сливается только то, что стоит подряд.
+   *
+   * Одной линии мало. Стены двух разных комнат — или вовсе разных зданий —
+   * запросто оказываются на одной прямой, и слитые вместе они гасли бы разом:
+   * герой заходит в одну комнату, а растворяется и дальняя стена соседней.
+   * Хуже того, сфера отсечения такого куска растягивается на пол-карты, и
+   * отсечь его по кадру уже нельзя — ровно тот выигрыш, ради которого слияние
+   * и затевалось.
+   *
+   * Соседними считаются секции, между которыми меньше двух шагов сетки: стена
+   * набрана впритык, а между зданиями всегда есть проход.
+   *
+   * @param {boolean} along — тянется ли линия вдоль оси X
+   * @param {THREE.Object3D[]} row
+   * @returns {THREE.Object3D[][]}
+   */
+  _runs(along, row) {
+    const reach = CONFIG.locations.mergeGap ?? 8;
+    const at = (one) => (along ? one.position.x : one.position.z);
+
+    const sorted = row.slice().sort((a, b) => at(a) - at(b));
+    const runs = [[sorted[0]]];
+
+    for (let i = 1; i < sorted.length; i++) {
+      const last = runs[runs.length - 1];
+      if (at(sorted[i]) - at(last[last.length - 1]) <= reach) last.push(sorted[i]);
+      else runs.push([sorted[i]]);
+    }
+    return runs;
   }
 
   /** Сливает список пропов в общие меши и ставит им слой отрисовки. */
@@ -273,6 +340,7 @@ export class Location {
 
     batched.traverse((mesh) => { mesh.renderOrder = renderOrder; });
     this.group.add(batched);
+    this.merged.push(batched);
     return batched;
   }
 
@@ -301,8 +369,19 @@ export class Location {
     }
     this.debris.update(dt, this._movers);
 
-    // ушедшие под землю больше не нужны
+    /**
+     * Ушедшие под землю больше не нужны — и отпустить их надо полностью.
+     *
+     * Снять тело со сцены мало: у каждого зомби свой скелет, а под скелет
+     * отведена текстура в видеопамяти. Раньше такой выбывал из списка живым
+     * грузом — уборка локации проходила только по оставшимся, и всё, что игрок
+     * успел перебить, оставалось в памяти до конца игры. На заправке это под
+     * шесть десятков текстур за один проход.
+     */
     if (this.zombies.some((z) => z.removed)) {
+      for (const zombie of this.zombies) {
+        if (zombie.removed) zombie.dispose();
+      }
       this.zombies = this.zombies.filter((z) => !z.removed);
     }
   }
@@ -458,21 +537,31 @@ export class Location {
     const CFG = CONFIG.explosion;
     const at = item.object.position.clone();
 
+    // Сцене вещь отдаётся до того, как её убирают: по ней берётся цвет осколков,
+    // а снятую со сцены модель спрашивать уже не о чем.
+    this.onBlast?.(at, item.object); // вспышка, осколки и тряска — дело сцены
+
     this.debris.remove(item);
     this.debris.blast(at, CFG.kickRadius, CFG.kick, CFG.lift);
 
-    // Взрыв не разбирает, кто его устроил: в круге не выживает никто. Бочка —
-    // это не вторая пушка, а решение, с какого расстояния по ней стрелять.
+    /**
+     * Взрыв не разбирает, кто его устроил: в круге не выживает никто. Бочка —
+     * это не вторая пушка, а решение, с какого расстояния по ней стрелять.
+     *
+     * Круг меряется по земле, а не по прямой в пространстве. Бочку подрывают в
+     * полёте, метрах в двух над головами, и прямое расстояние до зомби выходило
+     * заметно больше, чем видно на глаз: взрыв гремел прямо над толпой, а
+     * крайние оставались целы. Особенно на бегущих — те как раз и оказывались с
+     * краю.
+     */
     for (const zombie of this.zombies) {
       if (!zombie.alive) continue;
-      if (zombie.position.distanceTo(at) <= CFG.radius) zombie.crush(at, CFG.gore);
+      if (flatDistance(zombie.position, at) <= CFG.radius) zombie.crush(at, CFG.gore);
     }
 
     // Героя взрыв не трогает вовсе. Бочка теперь не ловушка, а оружие: он сам
     // её швыряет и сам подрывает, и гибнуть от собственного броска было бы
     // наказанием за то, что игра же и предлагает делать.
-
-    this.onBlast?.(at); // вспышка и тряска — дело сцены, а не локации
   }
 
   /**
@@ -567,10 +656,25 @@ export class Location {
 
     this.vaults = this.vaults.filter((box) => box.owner !== shaped);
     this.statics = this.statics.filter((one) => one !== shaped);
+    this.watched = this.watched.filter((one) => one !== shaped);
     this.placed = this.placed.filter((one) => one !== entry);
 
     target.removeFromParent();
+    this._renav();
     return true;
+  }
+
+  /**
+   * Пересчитать проходимость после правки расстановки.
+   *
+   * В игре локация после сборки не меняется, и сетка считается один раз. А в
+   * правке предметы ставят и убирают руками — и без пересчёта зомби продолжали
+   * обходить снесённую стену и ходили сквозь только что поставленную.
+   */
+  _renav() {
+    if (!this.built || this.batched) return; // сборка считает сетку сама, в игре она не меняется
+    this.nav.build(this.obstacles, CONFIG.zombies.radius);
+    this._navAge = Infinity;
   }
 
   /**
@@ -601,17 +705,25 @@ export class Location {
     // вещь могли только что подвинуть и повернуть, и копия должна это повторить.
     const com = entry.com;
     const prefab = this.prefabs.get(entry.entry.prop);
-    const shaped = entry.shaped ?? target;
 
+    /**
+     * Поворот и размер снимаются с того же узла, что и точка, — с `target`.
+     *
+     * У подвижной вещи это не сама модель, а контейнер вокруг неё: поворот при
+     * сборке переезжает на него, а модель внутри остаётся стоять прямо. Гизмо в
+     * правке цепляется тоже за контейнер. Раньше здесь читалась модель, и копия
+     * развёрнутой бочки вставала неразвёрнутой, а растянутая копировалась
+     * обычного размера.
+     */
     const copy = {
       prop: entry.entry.prop,
       at: [
         round(target.position.x - (com?.x ?? 0)),
         round(target.position.z - (com?.z ?? 0)),
       ],
-      rotation: yawOf(shaped),
+      rotation: yawOf(target),
       y: round(target.position.y - (com?.y ?? 0) + sinkOf(prefab)),
-      scale: [round(shaped.scale.x), round(shaped.scale.y), round(shaped.scale.z)],
+      scale: [round(target.scale.x), round(target.scale.y), round(target.scale.z)],
     };
 
     if (!copy.rotation) delete copy.rotation;
@@ -656,9 +768,9 @@ export class Location {
       // и та же цифра на все три, и стена, растянутая только вдоль, после
       // перезагрузки оказывалась ещё и вдвое толще и выше.
       const s = object.scale;
-      const ровно = Math.abs(s.x - s.y) < 1e-3 && Math.abs(s.x - s.z) < 1e-3;
+      const uniform = Math.abs(s.x - s.y) < 1e-3 && Math.abs(s.x - s.z) < 1e-3;
 
-      if (ровно) {
+      if (uniform) {
         if (Math.abs(s.x - 1) > 1e-3) saved.scale = round(s.x);
       } else {
         saved.scale = [round(s.x), round(s.y), round(s.z)];
@@ -709,9 +821,13 @@ export class Location {
   /**
    * Метка выхода — круг, по которому уровень и сменяется.
    *
-   * Она же и подсветка выхода в игре: куда бежать, видно сразу. Отдельной
-   * картинки под это больше нет — один объект и показывает место, и задаёт
-   * область перехода, и правится мышью.
+   * В игре её не видно: место перехода игрок узнаёт по стрелке под ногами, а
+   * круг на полу дублировал её и при этом то появлялся, то пропадал — он гаснет
+   * вместе с запертым выходом и тонет под настилом. Логика при этом целиком его:
+   * и центр, и радиус читаются отсюда.
+   *
+   * Видимой она становится только в правке расстановки: там её двигают гизмо, а
+   * невидимое мышью не поймать.
    *
    * Радиус задаётся размером метки: растянули гизмо — вырос и сам триггер.
    */
@@ -728,6 +844,7 @@ export class Location {
 
     mark.name = 'exit';
     mark.material.opacity = CONFIG.exit.openOpacity;
+    mark.visible = !this.batched; // в игре круг не рисуется, только считается
     mark.position.copy(at).setY(0.05);
     mark.scale.set(radius, 1, radius);
     mark.castShadow = false;
@@ -754,8 +871,11 @@ export class Location {
    * Запереть или отпереть выход.
    *
    * На вводной локации он заперт, пока не поднято ружьё: уйти, не взяв его,
-   * значит прийти на ферму безоружным. Запертый выход ещё и гаснет — по кругу
-   * на полу видно, что туда пока рано.
+   * значит прийти на ферму безоружным.
+   *
+   * В игре запор ничего не рисует: круга на полу не видно, а куда идти, говорит
+   * стрелка — она и молчит, пока выход заперт. Тускнеет метка только в правке
+   * расстановки, где её видно.
    *
    * @param {boolean} locked
    */
@@ -796,8 +916,11 @@ export class Location {
     for (const zombie of this.zombies) zombie.dispose();
     this.zombies.length = 0;
 
-    // слитая геометрия принадлежит локации — её больше никто не переиспользует
-    this._batched?.traverse((o) => o.isMesh && o.geometry.dispose());
+    // Слитая геометрия принадлежит локации — её больше никто не переиспользует.
+    // Сюда идут и общий меш неподвижного, и ряды крупного: ряды рождаются тем же
+    // слиянием, и без этого каждый перезапуск уровня оставлял их в видеопамяти.
+    for (const batch of this.merged) batch.traverse((o) => o.isMesh && o.geometry.dispose());
+    this.merged.length = 0;
 
     // Освобождаем только то, что создала сама локация: пол и метку выхода.
     // Геометрия и материалы пропов общие с библиотекой — их трогать нельзя,

@@ -39,8 +39,11 @@ const _toss = new THREE.Vector3();
  * мусора в самый неподходящий момент.
  */
 export class GunEffects {
-  constructor(scene) {
+  constructor(scene, camera = null) {
     this.scene = scene;
+    // Искры и дым — плоские: без разворота к камере они исчезали бы, встав к ней
+    // ребром.
+    this.camera = camera;
     this.tracers = [];
     this.flashes = [];
 
@@ -107,6 +110,57 @@ export class GunEffects {
       });
     }
 
+    /**
+     * Искры из ствола: горсть мелких огоньков, уходящих вперёд по линии огня.
+     *
+     * Они и делают выстрел выстрелом. Одна вспышка у дула читается как щелчок
+     * лампочки: вспыхнуло и погасло на месте. Искры летят, и по ним видно
+     * направление удара и его силу.
+     */
+    const sparkGeometry = new THREE.PlaneGeometry(1, 1);
+    this.sparks = [];
+
+    for (let i = 0; i < CFG.sparkPool; i++) {
+      const material = new THREE.MeshBasicMaterial({
+        color: CFG.sparkColor,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+
+      const mesh = new THREE.Mesh(sparkGeometry, material);
+      mesh.visible = false;
+      mesh.frustumCulled = false;
+      scene.add(mesh);
+
+      this.sparks.push({ mesh, life: 0, full: 1, size: 1, velocity: new THREE.Vector3() });
+    }
+
+    // Дымок у дула: поднимается и расплывается, когда всё остальное уже погасло.
+    // Он не additive: дым не светится, он загораживает.
+    this.smokes = [];
+
+    for (let i = 0; i < CFG.smokePool; i++) {
+      const material = new THREE.MeshBasicMaterial({
+        color: CFG.smokeColor,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+
+      const mesh = new THREE.Mesh(sparkGeometry, material);
+      mesh.visible = false;
+      mesh.frustumCulled = false;
+      scene.add(mesh);
+
+      this.smokes.push({ mesh, life: 0, drift: new THREE.Vector3() });
+    }
+
+    this.sparkGeometry = sparkGeometry;
+
     // Подсветка дула. Одна на все выстрелы: между ними пауза в полсекунды, а
     // лишний источник света в сцене стоит куда дороже, чем даёт.
     this.light = new THREE.PointLight(CFG.lightColor, 0, CFG.lightRange, 1.4);
@@ -159,6 +213,55 @@ export class GunEffects {
     this.light.intensity = CFG.lightPower;
     this.lightLife = CFG.lightLife;
 
+    this._sparkle(from, to);
+    this._smoke(from);
+  }
+
+  /** Горсть искр вперёд по линии огня, с разбросом. */
+  _sparkle(from, to) {
+    _side.subVectors(to, from).setY(0);
+    if (_side.lengthSq() < 1e-8) return;
+    _side.normalize();
+
+    const count = CFG.sparkMin + Math.floor(Math.random() * (CFG.sparkMax - CFG.sparkMin + 1));
+
+    for (let i = 0; i < count; i++) {
+      const spark = this._take(this.sparks);
+      const size = CFG.sparkMinSize + Math.random() * (CFG.sparkMaxSize - CFG.sparkMinSize);
+
+      spark.size = size;
+      spark.mesh.position.copy(from);
+      spark.mesh.scale.setScalar(size);
+      spark.mesh.visible = true;
+      spark.mesh.material.opacity = CFG.sparkOpacity;
+
+      const spread = () => (Math.random() - 0.5) * CFG.sparkSpread;
+      const speed = CFG.sparkMinSpeed + Math.random() * (CFG.sparkMaxSpeed - CFG.sparkMinSpeed);
+
+      spark.velocity
+        .copy(_side).multiplyScalar(speed)
+        .add(_toss.set(spread(), spread() * 0.6 + CFG.sparkRise, spread()));
+
+      spark.full = CFG.sparkLife * (0.6 + Math.random() * 0.8);
+      spark.life = spark.full;
+    }
+  }
+
+  /** Облачко дыма у самого дула. */
+  _smoke(from) {
+    const smoke = this._take(this.smokes);
+
+    smoke.mesh.position.copy(from);
+    smoke.mesh.scale.setScalar(CFG.smokeSize);
+    smoke.mesh.visible = true;
+    smoke.mesh.material.opacity = CFG.smokeOpacity;
+
+    smoke.drift.set(
+      (Math.random() - 0.5) * CFG.smokeDrift,
+      CFG.smokeRise,
+      (Math.random() - 0.5) * CFG.smokeDrift
+    );
+    smoke.life = CFG.smokeLife;
   }
 
   /**
@@ -244,6 +347,43 @@ export class GunEffects {
     if (this.lightLife > 0) {
       this.lightLife -= dt;
       this.light.intensity = CFG.lightPower * Math.max(0, this.lightLife / CFG.lightLife);
+    }
+
+    for (const spark of this.sparks) {
+      if (spark.life <= 0) continue;
+
+      spark.life -= dt;
+      spark.velocity.y -= CFG.sparkGravity * dt;
+      spark.mesh.position.addScaledVector(spark.velocity, dt);
+
+      // Искра гаснет и вытягивается по ходу: так она читается как след, а не
+      // как висящая в воздухе точка.
+      // Искра гаснет быстрее, чем живёт: к середине от неё остаётся четверть
+      // яркости, и горсть выглядит осыпающейся, а не тающей разом.
+      const t = Math.max(0, spark.life / spark.full);
+      spark.mesh.material.opacity = CFG.sparkOpacity * t * t;
+
+      const size = spark.size * (CFG.sparkShrink + (1 - CFG.sparkShrink) * t);
+      spark.mesh.scale.setScalar(size);
+
+      // Плоскость всегда лицом к камере: боком искра исчезала бы на глазах.
+      if (this.camera) spark.mesh.quaternion.copy(this.camera.quaternion);
+
+      if (spark.life <= 0) spark.mesh.visible = false;
+    }
+
+    for (const smoke of this.smokes) {
+      if (smoke.life <= 0) continue;
+
+      smoke.life -= dt;
+      smoke.mesh.position.addScaledVector(smoke.drift, dt);
+
+      const t = Math.max(0, smoke.life / CFG.smokeLife);
+      smoke.mesh.material.opacity = CFG.smokeOpacity * t;
+      smoke.mesh.scale.setScalar(CFG.smokeSize * (1 + (1 - t) * CFG.smokeGrowth));
+      if (this.camera) smoke.mesh.quaternion.copy(this.camera.quaternion);
+
+      if (smoke.life <= 0) smoke.mesh.visible = false;
     }
 
     for (const shell of this.shells) {

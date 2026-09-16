@@ -37,13 +37,19 @@ export class Boot {
 
     this.shownAt = 0;
     this._timer = null;
+    this._share = 0; // докуда дошла полоса: загрузка идёт ещё до показа экрана
     this._at = Math.floor(Math.random() * CFG.lines.length);
   }
 
   show() {
     this.root.hidden = false;
     this.shownAt = performance.now();
-    this.setProgress(0);
+
+    // Полоса продолжает с того места, где загрузка на самом деле идёт, а не с
+    // нуля. Считается она с самого начала, ещё под кнопкой «Играть», и на
+    // горячем кэше к нажатию всё давно готово: обнулившись, полоса стояла пустой
+    // весь экран и прыгала на сотню в последний миг.
+    this.setProgress(this._share);
     this._say();
 
     clearInterval(this._timer);
@@ -52,7 +58,8 @@ export class Boot {
 
   /** @param {number} share — доля от 0 до 1 */
   setProgress(share) {
-    this.fill.style.width = `${Math.round(Math.min(1, Math.max(0, share)) * 100)}%`;
+    this._share = Math.min(1, Math.max(0, share));
+    this.fill.style.width = `${Math.round(this._share * 100)}%`;
   }
 
   /**
@@ -65,6 +72,7 @@ export class Boot {
   async hide() {
     clearInterval(this._timer);
     this._timer = null;
+    clearTimeout(this._fade); // реплика больше не сменится: экран уже уходит
     this.setProgress(1);
 
     const shown = performance.now() - this.shownAt;
@@ -82,7 +90,8 @@ export class Boot {
   /** Реплика меняется через прозрачность: подмена текста в лоб читается как сбой. */
   _say() {
     this.line.style.opacity = '0';
-    setTimeout(() => {
+    clearTimeout(this._fade);
+    this._fade = setTimeout(() => {
       this.line.textContent = CFG.lines[this._at];
       this.line.style.opacity = '1';
     }, CFG.fade);

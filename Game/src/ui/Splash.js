@@ -58,6 +58,9 @@ export class Splash {
    * экран, и он тем заметнее, чем дольше грузится.
    */
   show() {
+    // Каждый показ свой: по нему уход и узнаёт, его ли ещё очередь.
+    this.turn = (this.turn ?? 0) + 1;
+
     if (!this.root.hidden) return; // уже идёт
 
     this.progress = 0;
@@ -154,7 +157,10 @@ export class Splash {
 
   /** Довести полосу до конца и убрать заставку — не раньше, чем истечёт `minTime`. */
   async hide() {
+    const turn = this.turn;
+
     clearInterval(this._timer);
+    this._timer = null;
 
     this.progress = 1;
     this._draw();
@@ -162,6 +168,11 @@ export class Splash {
     const shown = performance.now() - this.shownAt;
     const left = Math.max(CFG.holdFull, CFG.minTime - shown);
     await new Promise((done) => setTimeout(done, left));
+
+    // Пока мы выжидали, мог начаться следующий уровень — и заставка на экране
+    // уже его, а не наша. Гасить её нельзя: под ней собирается сцена, и игрок
+    // увидел бы её недостроенной.
+    if (turn !== this.turn) return;
 
     this.root.hidden = true;
   }

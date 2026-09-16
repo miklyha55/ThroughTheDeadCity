@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
-import { listener, wakeAudio, audioGreeted } from './audio.js';
+import { listener, resumeAudio, audioGreeted } from './audio.js';
 
 const CFG = CONFIG.startMessage;
 
@@ -94,8 +94,8 @@ export class StartMessage {
     this.played = true;
 
     // Дорожка звучит через общий граф, а спящий контекст его не выпускает
-    // наружу. Будим отсюда: сюда мы попали из обработчика касания.
-    wakeAudio();
+    // наружу. Поднимаем отсюда: сюда мы попали из обработчика касания.
+    resumeAudio();
 
     this.audio.addEventListener('ended', () => this._release(), { once: true });
     this.audio.addEventListener('error', () => this._release(), { once: true });
@@ -105,7 +105,15 @@ export class StartMessage {
     this._timer = setTimeout(() => this._release(), CFG.maxLock * 1000);
 
     this.text?.start(this.audio); // текст идёт за дорожкой, а не за таймером
-    this.audio.play().catch(() => this._release()); // браузер отказал — не держим игрока
+
+    // Браузер отказал — не держим игрока. И не считаем речь состоявшейся:
+    // отказ означает, что её не слышали вовсе, а `played` запретил бы ей
+    // завестись потом, когда звук разрешат. Уровень начнётся молча, зато
+    // следующий заход на него голос всё-таки подаст.
+    this.audio.play().catch(() => {
+      this.played = false;
+      this._release();
+    });
 
     this._armTap();
   }

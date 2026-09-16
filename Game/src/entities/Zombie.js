@@ -30,9 +30,16 @@ const CHASE_STEP_MIN = 0.02;
  * Тронуться сложнее, чем встать: чтобы снова побежать, нужно заметно больше
  * места, чем нужно потерять, чтобы остановиться. Между порогами держится то,
  * что уже выбрано.
+ *
+ * Отсчитываются они от той самой точки, до которой зомби доходит, — от черты
+ * удара, отодвинутой внутрь на `attackMargin`. Поэтому и берутся от неё же, с
+ * запасом сверху: голые 0.15 и 0.05 стояли ровно на `attackMargin` и ниже, а до
+ * них зомби не добирается никогда — ближе черты удара он уже бьёт, а не гонится.
+ * Стойка была недостижима, и подошедший вплотную перебирал ногами на месте —
+ * ровно то, против чего эти пороги и заведены.
  */
-const CHASE_RUN_ON = 0.15;  // с этого запаса стоящий снова трогается
-const CHASE_RUN_OFF = 0.05; // и до этого идущий останавливается
+const CHASE_RUN_ON = CFG.attackMargin + 0.25;  // с этого запаса стоящий снова трогается
+const CHASE_RUN_OFF = CFG.attackMargin + 0.08; // и до этого идущий останавливается
 
 const _hit = new THREE.Vector3();
 const _toPlayer = new THREE.Vector3();
@@ -238,7 +245,26 @@ export class Zombie extends Figure {
    */
   _inSight(player, distance, location) {
     if (distance > CFG.loseRadius) return false;
+
+    /**
+     * Укрытие решает раньше всего остального.
+     *
+     * Зашёл за машину или за дом — и тебя не видно, кем бы зомби ни был поднят
+     * и как бы близко ни стоял. Это единственное правило, которое не знает
+     * исключений: иначе поднятый выстрелом видел сквозь стены, и спрятаться от
+     * толпы было нельзя вовсе.
+     */
     if (this._hidden(player, location)) return false;
+
+    /**
+     * А дальше — два послабления, иначе зомби терял цель и тут же находил снова.
+     *
+     * Поднятый выстрелом идёт по следу, пока цель в пределах интереса, а
+     * вплотную он чует её и спиной. Без этого достаточно было встать
+     * преследователю за спину: каждые `loseAfter` он бросал погоню, переносил
+     * свой дом, разворачивался и с окриком начинал её заново.
+     */
+    if (this.alerted || distance <= CFG.alertRadius) return true;
 
     const forward =
       (Math.sin(this.yaw) * _toPlayer.x + Math.cos(this.yaw) * _toPlayer.z) / (distance || 1);
@@ -405,15 +431,14 @@ export class Zombie extends Figure {
   _sees(player, distance, location) {
     if (!player.alive) return false;
 
-    // подняли выстрелом — идёт на цель, пока та в пределах интереса
-    if (this.alerted) return distance <= CFG.loseRadius;
+    if (distance > (this.alerted ? CFG.loseRadius : CFG.senseRadius)) return false;
 
-    if (distance > CFG.senseRadius) return false;
-
-    // Заслоняет обзор только то, что выше пояса: через дом и машину зомби
-    // персонажа не увидит, а поверх бочки — вполне.
+    // Укрытие решает первым и для поднятого выстрелом тоже: раньше он шёл на
+    // цель через что угодно, и уйти от поднятой толпы за машину было нельзя.
+    // Через дом и машину зомби персонажа не видит, а поверх бочки — вполне.
     if (this._hidden(player, location)) return false;
 
+    if (this.alerted) return true;              // поднят выстрелом и идёт по следу
     if (distance <= CFG.alertRadius) return true; // так близко, что слышит
 
     // угол между взглядом и направлением на цель
@@ -578,7 +603,12 @@ export class Zombie extends Figure {
     if (this.attackTime < this.attackLength) return;
 
     // Замах доигран: цела цель — идём за ней снова, нет — успокаиваемся.
+    //
+    // Стоящему вплотную незачем ронять себя в погоню: на следующем же кадре он
+    // вернулся бы в удар, а между ними успевал вклиниться кадр бега — в замах
+    // постоянно подмешивался рывок ногами.
     if (!player.alive) this._enter(STATE.IDLE);
+    else if (distance <= CFG.attackRadius) this._enter(STATE.ATTACK, true);
     else this._enter(STATE.CHASE);
   }
 

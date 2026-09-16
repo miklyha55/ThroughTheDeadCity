@@ -241,7 +241,16 @@ export function batchStatic(objects, cache = materialCache) {
     object.traverse((mesh) => {
       if (!mesh.isMesh) return;
 
-      const key = groupKey(mesh.material);
+      /**
+       * Тени входят в ключ группы — иначе они пропадают при слиянии.
+       *
+       * Мелочь вроде конусов и покрышек намеренно не бросает тень: пятно от неё
+       * в пару пикселей, а стоит она целого прохода по сцене. Слитый меш раньше
+       * объявлялся отбрасывающим тень безусловно, и вся эта настройка в игре не
+       * работала вовсе — действовала только на подвижные вещи и одиночные
+       * крупные. Теперь тенящее сливается с тенящим, а нетенящее отдельно.
+       */
+      const key = `${groupKey(mesh.material)}|${mesh.castShadow ? 1 : 0}${mesh.receiveShadow ? 1 : 0}`;
       if (!groups.has(key)) groups.set(key, { sample: mesh, geometries: [] });
 
       const geometry = prepare(mesh, keep);
@@ -259,8 +268,8 @@ export function batchStatic(objects, cache = materialCache) {
     if (!merged) continue;
 
     const mesh = new THREE.Mesh(merged, sharedMaterial(sample.material, cache));
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    mesh.castShadow = sample.castShadow;
+    mesh.receiveShadow = sample.receiveShadow;
     batched.add(mesh);
   }
   return batched;

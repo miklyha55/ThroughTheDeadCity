@@ -65,7 +65,12 @@ export class Figure {
    * @param {string} name @param {number} [speed] @param {number} [fallback] — с
    */
   lengthOf(name, speed = 1, fallback = 1) {
-    return (this.actions.get(name)?.getClip().duration ?? fallback) / speed;
+    // Темп делит только настоящую длительность клипа. Запасное значение —
+    // это уже готовый ответ в секундах, и делить его было неверно: заданные в
+    // настройках полсекунды на реакцию превращались в треть, а девять десятых
+    // на патрон — в неполные полсекунды, то есть числа в настройках врали.
+    const clip = this.actions.get(name)?.getClip();
+    return clip ? clip.duration / speed : fallback;
   }
 
   /**
@@ -110,6 +115,14 @@ export class Figure {
    * @param {string} name @param {number} fade @param {number} [speed] — темп клипа
    */
   restart(name, fade = this.fade, speed = 1) {
+    // Клипа с таким именем в модели нет — уходим, ничего не трогая.
+    //
+    // Без этой проверки `play` молча оставлял текущим ПРЕЖНИЙ клип, а строки
+    // ниже перезапускали его с нуля и вешали на него чужой темп: просьба
+    // проиграть отсутствующий выстрел вместо этого гоняла стойку в полтора раза
+    // быстрее обычного.
+    if (!this.actions.has(name)) return;
+
     this.play(name, fade);
     if (!this.current) return;
 

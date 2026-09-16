@@ -318,13 +318,13 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
       return;
     }
 
-    const имя = picked.name || 'предмет';
-    const убрано = location.removeZombie(picked) || location.removeObject(picked);
+    const name = picked.name || 'предмет';
+    const removed = location.removeZombie(picked) || location.removeObject(picked);
 
     gizmo.detach();
     picked = null;
 
-    status(убрано ? `убран ${имя} · Enter — сохранить` : 'этот предмет не убирается');
+    status(removed ? `убран ${name} · Enter — сохранить` : 'этот предмет не убирается');
   }
 
   /**
@@ -389,7 +389,6 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
 
     // пересобираем локацию: в правке нужна несклеенная геометрия, в игре — склеенная
     await locations.load(locations.current.data.id);
-    if (locations.current.exitMark) locations.current.exitMark.visible = active;
     if (active && chain.length === 0) await loadChain();
     onToggle?.(active);
     status('щёлкни по предмету');

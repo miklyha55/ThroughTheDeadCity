@@ -35,6 +35,7 @@ import { Dust } from './fx/Dust.js';
 import { Puffs } from './fx/Puffs.js';
 import { HealthBars } from './fx/HealthBars.js';
 import { Explosions } from './fx/Explosions.js';
+import { Shards } from './fx/Shards.js';
 import { CONFIG } from './config.js';
 
 const engine = new Engine(document.getElementById('app'));
@@ -63,6 +64,39 @@ unlockAudio();
 if (import.meta.env.PROD) new UpdatePrompt();
 
 const params = new URLSearchParams(window.location.search);
+
+/**
+ * Игра не собралась: сказать об этом вслух.
+ *
+ * Раньше сорванная загрузка — нет файла уровня, оборвалась сеть на модели —
+ * оставляла игроку чёрный экран навсегда: цикл отрисовки не запускался, а
+ * единственным следом была строка в консоли, которую он никогда не откроет.
+ * Теперь поверх всего поднимается короткая надпись, и игрок хотя бы знает, что
+ * перезагрузка страницы имеет смысл.
+ *
+ * Собственных стилей у неё нет намеренно: она должна встать даже тогда, когда
+ * не собралось вообще ничего.
+ */
+function reportBreak(error) {
+  console.error(error);
+
+  let box = document.getElementById('break');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'break';
+    box.style.cssText = 'position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;'
+      + 'align-items:center;justify-content:center;gap:1em;padding:2em;text-align:center;'
+      + 'background:#07090a;color:#c8ccd0;font:16px/1.5 system-ui,sans-serif';
+    document.body.appendChild(box);
+  }
+
+  box.textContent = 'Игра не загрузилась. Проверьте соединение и обновите страницу.';
+}
+
+// Сборка модуля идёт через ожидание загрузки, и любой её срыв обрывает весь
+// запуск целиком: дальше по файлу не выполнится ни строки. Ловим это здесь —
+// другого места, где сказать об этом игроку, уже не будет.
+addEventListener('unhandledrejection', (event) => reportBreak(event.reason));
 
 /**
  * Какой уровень открыть и где его запомнить.
@@ -190,11 +224,12 @@ gate.hide(); // сперва подставляем следующий экра�
 
 let [gltf, prefabs, zombies] = await loading;
 
-const gunEffects = new GunEffects(engine.scene);
+const gunEffects = new GunEffects(engine.scene, engine.camera);
 const blood = new Blood(engine.scene);
 const playerBlood = new Blood(engine.scene, CONFIG.blood.playerColor, CONFIG.blood.playerPool);
 const healthBars = new HealthBars(engine.scene);
 const explosions = new Explosions(engine.scene);
+const shards = new Shards(engine.scene); // обломки взорванного: летят, падают, пропадают
 const dust = new Dust(engine.scene);
 const puffs = new Puffs(engine.scene);
 const ammo = new Ammo(CONFIG.player.magazine); // патроны вверху по центру
@@ -210,6 +245,8 @@ player.ownBlood = playerBlood;
 player.sfx = sfx;
 player.puffs = puffs;
 player.onAmmo = (left) => { ammo.set(left); showAmmo(); };
+// Отдача: камера коротко вздрагивает на каждом выстреле.
+player.onShot = () => camera.shake(CONFIG.player.kick, CONFIG.player.kickFor);
 ammo.set(player.rounds);
 engine.scene.add(player.root);
 
@@ -228,9 +265,11 @@ const gunPickup = new GunPickup(engine.scene);
 gunPickup.onTaken = () => {
   showAmmo();
 
-  // Ружьё взято: указатель переходит к выходу, а сам выход отпирается.
-  pointer.next();
-  locations.current?.lockExit(false);
+  // Очередь целей пересобирается целиком, а не сдвигается на одну вперёд.
+  // Сдвиг снимал то, что сейчас первое, — а это не всегда подобранное ружьё:
+  // в правке расстановки оно лежит и у вооружённого, в очередь не попадает, и
+  // сдвиг выбрасывал из неё выход. Пересборка заодно сама отпирает выход.
+  aimPointer();
 };
 
 /**
@@ -293,6 +332,10 @@ function leaveEnding() {
 
   finished = false;
   ending.hide();
+
+  // Финал звучал своей дорожкой — возвращаем ту, что положена уровню. Иначе
+  // музыка конца игры играла дальше, пока уровень не сменится.
+  music.play(locations.current?.data.number ?? 1);
 }
 
 /**
@@ -322,6 +365,20 @@ if (!params.has('hold')) {
   splash.uncovered(); // с этого мгновения её и правда видно, отсюда и её время
 }
 
+/**
+ * Цикл отрисовки пускается ДО сборки первого уровня, а не последней строкой.
+ *
+ * Пока идёт заставка, кадры уже идут, и вся долгая работа первого кадра —
+ * сборка шейдеров под свет и туман — приходится на закрытый экран. Раньше
+ * старт стоял в самом конце: между уходом заставки и первым кадром экран
+ * оставался голым, и вся эта работа ложилась ровно на то мгновение, когда
+ * игрок впервые видит игру.
+ */
+engine.start();
+
+// Без перехвата: сорвалась сборка первого уровня — дальше идти некуда, и
+// запуск обрывается целиком. Сказать об этом игроку успеет общий перехватчик
+// наверху файла.
 await locations.load(firstLevel);
 
 let editor = null; // правка расстановки: появляется только на dev-сервере
@@ -360,6 +417,7 @@ engine.add({
     blood.update(dt);
     playerBlood.update(dt);
     explosions.update(dt);
+    shards.update(dt);
     gunPickup.update(dt, player); // лежащее ружьё: крутится, а подошёл — летит в руки
     pointer.update(dt, player.yaw); // стрелка под ногами держит цель
     dust.update(dt, player.position);
@@ -367,7 +425,8 @@ engine.add({
     camera.update(dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     visibility.update(here); // ушедшее за край экрана не рисуем вовсе
-    locations.seeThrough.update(dt, player); // заслонившее героя — просвечивает
+    // заслонившее героя или ближних зомби — просвечивает
+    locations.seeThrough.update(dt, player, here?.zombies);
     dayNight.update(dt); // сутки идут своим ходом: свет, небо и тени
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
     fog.update(engine.camera, player, dt); // за героем остаётся прорезанная дорожка
@@ -458,10 +517,11 @@ if (params.get('debug') === 'input') {
 }
 /** Что сцена делает со взрывом: вспышка на месте и толчок камере. */
 function wireBlasts(location) {
-  location.onBlast = (at) => {
+  location.onBlast = (at, object = null) => {
     const CFG = CONFIG.explosion;
 
     explosions.burst(at);
+    shards.burst(at, object); // и сама вещь разлетается кусками своего цвета
     camera.shake(CFG.shake, CFG.shakeFor);
 
     // Дальний взрыв слышно тише: иначе бочка на том конце площадки грохочет
@@ -470,7 +530,6 @@ function wireBlasts(location) {
     if (near > 0) sfx.play('explosion', CFG.volume * near, CFG.layers);
   };
 }
-wireBlasts(locations.current);
 
 /**
  * После смерти уровень начинается заново по любому нажатию.
@@ -483,6 +542,11 @@ for (const event of ['pointerdown', 'keydown', 'touchstart']) {
   addEventListener(event, () => {
     if (player.alive || locations.loading) return;
 
+    // В правке расстановки уровень не перезапускается: там по клавишам двигают
+    // предметы, и погибший под редактором персонаж уводил бы уровень из-под рук
+    // на первом же нажатии.
+    if (editor?.active) return;
+
     // Мгновение смерти и конец падения считает сам персонаж, в тот же миг, когда
     // его убили. Игра раньше засекала смерть своим кадром — то есть на кадр
     // позже удара, — и касание, попавшее в эту щель, перезапускало уровень
@@ -491,7 +555,7 @@ for (const event of ['pointerdown', 'keydown', 'touchstart']) {
     if (performance.now() < player.restartAt) return;
 
     player.revive();
-    locations.load(locations.current.data.id);
+    locations.load(locations.current.data.id).catch(reportBreak);
   });
 }
 
@@ -518,14 +582,16 @@ locations.onChange = (location) => {
 locations.onOpened = (location) => {
   startMessage.arm(location.data.number ?? 1);
 };
-gunPickup.place(locations.current, player, locations.editing); // первый уровень: onChange ещё не привязан
-aimPointer();
-showAmmo();
-showHud();
-updateDebugView();
-fog.reset(locations.current.width, locations.current.depth);
-music.play(locations.current.data.number ?? 1);
-locations.onOpened(locations.current); // первый уровень: onOpened ещё не был привязан
+/**
+ * Первый уровень собрался раньше, чем эти двое были привязаны, — догоняем.
+ *
+ * Зовём именно их, а не повторяем список дел рядом. Раньше он был выписан здесь
+ * второй раз, и два списка уже разошлись: подписка на взрывы в одном была, в
+ * другом нет. Всякая новая строка в `onChange` точно так же оставалась бы за
+ * бортом первого уровня — того самого, с которого игра и начинается.
+ */
+locations.onChange(locations.current);
+locations.onOpened(locations.current);
 
 if (import.meta.env.DEV) {
   // Tab — правка расстановки мышью; пока она открыта, игра стоит на паузе
@@ -598,6 +664,12 @@ if (import.meta.env.DEV) {
       // Прежнего персонажа отпускаем целиком, а не просто снимаем со сцены: у
       // него свой миксер и свой скелет, а под скелет отведена текстура костей.
       // Без этого каждое нажатие оставляло в видеопамяти ещё одного персонажа.
+      // Ружьё, лежащее на уровне, — это копия узлов прежнего персонажа, и
+      // геометрия у неё с ним общая. Убираем его до того, как ту геометрию
+      // освободят, иначе оно осталось бы стоять на выброшенных буферах.
+      // Положит его заново `onChange` при пересборке локации ниже.
+      gunPickup.clear();
+
       player.dispose();
       player = new Player(freshPlayer);
       player.effects = gunEffects;
@@ -606,6 +678,7 @@ if (import.meta.env.DEV) {
       player.sfx = sfx;
       player.puffs = puffs;
       player.onAmmo = (left) => { ammo.set(left); showAmmo(); };
+      player.onShot = () => camera.shake(CONFIG.player.kick, CONFIG.player.kickFor);
       ammo.set(player.rounds);
       player.placeAt(spot, yaw);
       engine.scene.add(player.root);
@@ -643,9 +716,8 @@ if (import.meta.env.DEV) {
 
   window.__game = {
     engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash, fog,
+    gunPickup, pointer,
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),
   };
 }
-
-engine.start();
