@@ -859,8 +859,8 @@
     {
       "prop": "Prop_Barrel",
       "at": [
-        -23.31,
-        -14.56
+        -22.52,
+        -16.75
       ],
       "rotation": -34.6
     },
@@ -891,8 +891,8 @@
     {
       "prop": "Prop_Barrel",
       "at": [
-        -8.77,
-        -11.57
+        -6.47,
+        -12.84
       ],
       "rotation": -18.3
     },
@@ -939,8 +939,8 @@
     {
       "prop": "Prop_Pallet",
       "at": [
-        -8,
-        -14.05
+        -8.19,
+        -11.92
       ],
       "rotation": -38.6
     },
@@ -1080,15 +1080,15 @@
     {
       "prop": "Weapon_Cleaver",
       "at": [
-        3.99,
-        -15.99
+        -2.52,
+        -16.99
       ],
       "rotation": 49.7
     },
     {
       "prop": "Weapon_Cleaver",
       "at": [
-        19.77,
+        19.85,
         -8.67
       ],
       "rotation": 96
@@ -1096,11 +1096,19 @@
     {
       "prop": "Weapon_Cleaver",
       "at": [
-        -29.76,
-        -4.53
+        -29.58,
+        -3.5
       ],
       "rotation": 50,
       "y": 0.06
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        31.4,
+        -17.04
+      ],
+      "rotation": 96
     }
   ],
   "zombies": [

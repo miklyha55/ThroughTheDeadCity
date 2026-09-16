@@ -676,8 +676,8 @@
     {
       "prop": "Prop_Jerrycan",
       "at": [
-        6.39,
-        4.04
+        6.58,
+        3.9
       ],
       "rotation": 7.4
     },
@@ -701,7 +701,7 @@
       "prop": "Furn_Sofa",
       "at": [
         -4.95,
-        5.54
+        5.35
       ],
       "rotation": -101.1,
       "scale": 1.1
