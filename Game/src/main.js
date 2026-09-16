@@ -23,6 +23,8 @@ import { Music } from './core/Music.js';
 import { attachListener, unlockAudio, wakeAudio } from './core/audio.js';
 import { StartMessage } from './core/StartMessage.js';
 import { ControlsHint } from './ui/ControlsHint.js';
+import { SkipHint } from './ui/SkipHint.js';
+import { DeathScreen } from './ui/DeathScreen.js';
 import { Transmission } from './ui/Transmission.js';
 import { Radio } from './ui/Radio.js';
 import { Ammo } from './ui/Ammo.js';
@@ -295,7 +297,15 @@ const startMessage = new StartMessage(transmission); // пока говорит 
  * от него требуется. Один раз за сеанс и только на том уровне, где звучала речь.
  */
 const controlsHint = new ControlsHint();
-startMessage.onDone = () => controlsHint.show();
+
+/** Сноска о том, что речь можно пропустить: живёт ровно столько, сколько речь. */
+const skipHint = new SkipHint(transmission.root);
+
+startMessage.onSpeak = () => skipHint.arm();
+startMessage.onDone = () => {
+  skipHint.hide();
+  controlsHint.show();
+};
 
 // Галочка из панели разработчика. Читается до первой постановки на уровень:
 // выключенное вступление не должно даже начинать замок, а панель появляется позже.
@@ -409,6 +419,7 @@ engine.add({
     if (locations.loading || finished) return;
 
     input.update();
+    watchDeath(); // упал и долежал — поднимаем экран с кнопкой
     player.frozen = startMessage.locked; // пока звучит вступление, он только слушает
     radio.toggle(player.frozen);         // рация висит ровно столько же
     player.update(dt, input.move, camera.moveYaw, locations.current);
@@ -543,34 +554,43 @@ function wireBlasts(location) {
 }
 
 /**
- * После смерти уровень начинается заново по любому нажатию.
+ * Смерть: экран с кнопкой, и уровень начинается заново только по ней.
  *
- * Ждём секунду, прежде чем слушать: иначе тот самый выстрел или касание стика,
- * на котором персонаж и погиб, тут же перезапустил бы игру, и падения никто бы
- * не увидел.
+ * Раньше сгодилось бы любое нажатие, и это выходило боком: игрок погибал, не
+ * отпустив стика, и первое же его движение начинало уровень заново — падения он
+ * не видел вовсе. Кнопка эту случайность убирает.
  */
-for (const event of ['pointerdown', 'keydown', 'touchstart']) {
-  addEventListener(event, () => {
-    if (player.alive || locations.loading) return;
+const deathScreen = new DeathScreen();
 
-    // В правке расстановки уровень не перезапускается: там по клавишам двигают
-    // предметы, и погибший под редактором персонаж уводил бы уровень из-под рук
-    // на первом же нажатии.
-    if (editor?.active) return;
+deathScreen.onRestart = () => {
+  player.revive();
+  locations.load(locations.current.data.id).catch(reportBreak);
+};
 
-    // Мгновение смерти и конец падения считает сам персонаж, в тот же миг, когда
-    // его убили. Игра раньше засекала смерть своим кадром — то есть на кадр
-    // позже удара, — и касание, попавшее в эту щель, перезапускало уровень
-    // мгновенно. А удар как раз и приходит на касание: игрок жал стик, когда
-    // его убили.
-    if (performance.now() < player.restartAt) return;
+/**
+ * Пора ли поднимать экран смерти. Зовётся каждый кадр из игрового цикла.
+ *
+ * Мгновение смерти и конец падения считает сам персонаж, в тот же миг, когда
+ * его убили: он отмеряет длину падения по своей анимации. Игра раньше засекала
+ * смерть своим кадром — то есть на кадр позже удара, — и экран успевал выскочить
+ * прежде, чем персонаж коснулся земли.
+ */
+function watchDeath() {
+  // В правке расстановки уровень не перезапускается: там двигают предметы, и
+  // погибший под редактором персонаж уводил бы уровень из-под рук.
+  if (editor?.active || locations.loading || finished) {
+    deathScreen.hide();
+    return;
+  }
 
-    player.revive();
-    locations.load(locations.current.data.id).catch(reportBreak);
-  });
+  if (player.alive) return;
+  if (performance.now() < player.restartAt) return;
+
+  deathScreen.show();
 }
 
 locations.onChange = (location) => {
+  deathScreen.hide(); // уровень начинается заново — экрану смерти тут не место
   wireBlasts(location);
   gunPickup.place(location, player, locations.editing); // в правке лежит всегда
   aimPointer();
@@ -613,7 +633,11 @@ if (import.meta.env.DEV) {
       showHud();
       // В правке те же WASD водят камеру — персонажу они на это время не свои.
       input.enabled = !on;
-      if (on) controlsHint.hide(); // и подсказка по управлению там ни к чему
+      if (on) {
+        controlsHint.hide();  // и подсказка по управлению там ни к чему
+        skipHint.hide();
+        deathScreen.hide();   // и экран смерти: в правке уровень не перезапускают
+      }
     },
     toggles: [{
       label: 'без вступления',
@@ -732,7 +756,7 @@ if (import.meta.env.DEV) {
 
   window.__game = {
     engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash, fog,
-    gunPickup, pointer, controlsHint,
+    gunPickup, pointer, controlsHint, skipHint, deathScreen,
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),
   };

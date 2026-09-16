@@ -215,6 +215,104 @@
       }
       .editor__toggle input { cursor: pointer; }
 
+      /* Сноска о пропуске речи: мелкая строка прямо над плашкой субтитров.
+
+         Живёт она внутри самого блока субтитров, а не сама по себе на экране.
+         Поставленная отдельно, она налезала на плашку: та прижата к низу, но
+         высота у неё своя на каждом экране — под длинную реплику резервируется
+         несколько строк, — и угадать место над ней снаружи нельзя.
+
+         Нажатий не ловит: пропуск ловят сама речь и её обработчики, а эта
+         строка только сообщает о нём. */
+      .skip {
+        margin: 0 0 6px;
+        text-align: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 400ms ease;
+      }
+      .skip[hidden] { display: none; }
+      .skip--on { opacity: 1; }
+
+      /* Подложка только под самими буквами, а не во всю ширину плашки: широкая
+         полоса читалась бы как вторая строка речи. И она обязательна — под
+         сноской идёт сцена, и на светлой стене или на песке серые буквы без неё
+         пропадали совсем. */
+      .skip__label {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 8px;
+        background: rgba(7, 9, 10, 0.55);
+        color: rgba(232, 238, 244, 0.62);
+        font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.1em; text-transform: uppercase;
+      }
+
+      /* Экран смерти: тёмная пелена и кнопка «начать заново».
+
+         Не глухая заливка, а полупрозрачная: сквозь неё видно место, где всё
+         кончилось, — это одна неудачная попытка, а не выход из игры. */
+      .death {
+        position: fixed; inset: 0; z-index: 80;
+        display: flex; align-items: center; justify-content: center;
+        padding: 0 16px;
+        background: radial-gradient(circle at 50% 45%, rgba(7, 9, 10, 0.55), rgba(7, 9, 10, 0.88));
+        opacity: 0;
+        transition: opacity 450ms ease;
+      }
+      .death[hidden] { display: none; }
+      .death--on { opacity: 1; }
+
+      .death__card {
+        display: flex; flex-direction: column; align-items: center; gap: 12px;
+        text-align: center;
+      }
+
+      /* Карточка чуть подаётся вверх на появлении: неподвижная читается как
+         картинка, подъехавшая — как то, что сейчас произошло.
+
+         Именно разовой анимацией, а не переходом между состояниями. С переходом
+         смещение снималось вместе с классом, и на нажатии «начать заново» весь
+         экран уезжал вниз, пока таял. Анимация же играет только на появлении, а
+         в покое карточка стоит там, где ей и место. */
+      @keyframes death-rise {
+        from { transform: translateY(10px); }
+        to   { transform: translateY(0); }
+      }
+      .death--on .death__card { animation: death-rise 450ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+
+      .death__title {
+        margin: 0;
+        color: #e8d08f;
+        font: 600 26px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.14em; text-transform: uppercase;
+      }
+      .death__note {
+        margin: 0 0 6px;
+        color: rgba(232, 238, 244, 0.55);
+        font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      /* Кнопка та же, что и на воротах: одна игра — один язык кнопок. */
+      .death__again {
+        font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        color: #e8d08f;
+        padding: 15px 38px;
+        border-radius: 99px;
+        border: 1px solid rgba(232, 208, 143, 0.5);
+        background: rgba(232, 208, 143, 0.06);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 160ms ease, transform 120ms ease;
+      }
+      .death__again:hover { background: rgba(232, 208, 143, 0.14); }
+      .death__again:active { transform: scale(0.96); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .death--on .death__card { animation: none; }
+      }
+
       /* Подсказка по управлению: карточка внизу экрана, один раз за сеанс.
 
          Лежит она над игрой, но нажатий не ловит: pointer-events отключены на

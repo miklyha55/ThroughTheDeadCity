@@ -29,7 +29,8 @@ export class StartMessage {
   /** @param {import('../ui/Transmission.js').Transmission} [text] — субтитры */
   constructor(text = null) {
     this.text = text;
-    this.onDone = null; // кому сказать, что вступление кончилось: подсказке по управлению
+    this.onDone = null;  // кому сказать, что вступление кончилось: подсказке по управлению
+    this.onSpeak = null; // и что оно началось: сноске о пропуске
     this.audio = new Audio(CFG.file);
     this.audio.preload = 'auto';
 
@@ -93,6 +94,7 @@ export class StartMessage {
 
     this.state = 'speaking';
     this.played = true;
+    this.onSpeak?.(); // речь пошла — можно сказать, что её разрешено пропустить
 
     // Дорожка звучит через общий граф, а спящий контекст его не выпускает
     // наружу. Поднимаем отсюда: сюда мы попали из обработчика касания.
