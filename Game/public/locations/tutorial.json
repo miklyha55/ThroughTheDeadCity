@@ -676,34 +676,10 @@
     {
       "prop": "Prop_Jerrycan",
       "at": [
-        18.83,
-        6.37
-      ],
-      "rotation": 48.7
-    },
-    {
-      "prop": "Prop_Jerrycan",
-      "at": [
         6.39,
         4.04
       ],
       "rotation": 7.4
-    },
-    {
-      "prop": "Prop_Jerrycan",
-      "at": [
-        14.25,
-        5.74
-      ],
-      "rotation": -78.4
-    },
-    {
-      "prop": "Prop_Jerrycan",
-      "at": [
-        16.21,
-        6.6
-      ],
-      "rotation": 37.5
     },
     {
       "prop": "Prop_Crate",

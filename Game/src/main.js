@@ -22,6 +22,7 @@ import { asset } from './core/paths.js';
 import { Music } from './core/Music.js';
 import { attachListener, unlockAudio, wakeAudio } from './core/audio.js';
 import { StartMessage } from './core/StartMessage.js';
+import { ControlsHint } from './ui/ControlsHint.js';
 import { Transmission } from './ui/Transmission.js';
 import { Radio } from './ui/Radio.js';
 import { Ammo } from './ui/Ammo.js';
@@ -288,6 +289,13 @@ locations.seeThrough = new SeeThrough(engine.camera);
 const music = new Music();
 const transmission = new Transmission(); // текст вступления по букве внизу экрана
 const startMessage = new StartMessage(transmission); // пока говорит — персонаж стоит
+
+/**
+ * Подсказка по управлению: как только вступление отговорило, игрок узнаёт, что
+ * от него требуется. Один раз за сеанс и только на том уровне, где звучала речь.
+ */
+const controlsHint = new ControlsHint();
+startMessage.onDone = () => controlsHint.show();
 
 // Галочка из панели разработчика. Читается до первой постановки на уровень:
 // выключенное вступление не должно даже начинать замок, а панель появляется позже.
@@ -605,6 +613,7 @@ if (import.meta.env.DEV) {
       showHud();
       // В правке те же WASD водят камеру — персонажу они на это время не свои.
       input.enabled = !on;
+      if (on) controlsHint.hide(); // и подсказка по управлению там ни к чему
     },
     toggles: [{
       label: 'без вступления',
@@ -723,7 +732,7 @@ if (import.meta.env.DEV) {
 
   window.__game = {
     engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash, fog,
-    gunPickup, pointer,
+    gunPickup, pointer, controlsHint,
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),
   };

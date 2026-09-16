@@ -29,6 +29,7 @@ export class StartMessage {
   /** @param {import('../ui/Transmission.js').Transmission} [text] — субтитры */
   constructor(text = null) {
     this.text = text;
+    this.onDone = null; // кому сказать, что вступление кончилось: подсказке по управлению
     this.audio = new Audio(CFG.file);
     this.audio.preload = 'auto';
 
@@ -174,6 +175,11 @@ export class StartMessage {
   }
 
   _release() {
+    // Речь и правда звучала — значит игрок уже в игре, и подсказке самое время.
+    // Выключенное галочкой в панели вступление сюда не идёт: там ничего не
+    // говорили, а подсказка выпрыгивала бы прямо на щелчок по галочке.
+    const spoke = this.state === 'speaking';
+
     clearTimeout(this._timer);
     this._timer = null;
 
@@ -186,5 +192,10 @@ export class StartMessage {
 
     this.text?.stop();
     this.state = 'done';
+
+    // Речь отговорила — можно сказать игроку, как играть. Раньше этого мига
+    // нельзя: подсказка легла бы поверх субтитров, и читать пришлось бы оба
+    // текста разом.
+    if (spoke) this.onDone?.();
   }
 }
