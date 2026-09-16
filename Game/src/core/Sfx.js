@@ -70,27 +70,39 @@ export class Sfx {
    * @param {number} [loudness] — доля от общей громкости
    * @param {number} [layers] — сколько дорожек пустить разом
    * @param {number} [pitch] — сдвиг высоты тона: ниже единицы — ниже и глуше
+   * @param {{echo?: boolean, spread?: boolean}} [opts] — отзвук от стен и разброс
+   *   между дорожками
    *
    * По-настоящему громкое — взрыв — пускается в несколько дорожек сразу: они
-   * складываются по амплитуде, а лёгкий разброс высоты между ними делает звук
-   * плотнее, а не просто громче.
+   * складываются по амплитуде и звучат выше потолка одной.
+   *
+   * Разброс высоты и громкости между дорожками подходит не всякому звуку. Для
+   * короткого сэмпла он даёт плотность, а для долгого раската дорожки, пущенные
+   * с разной скоростью, расходятся на слух — и вместо одного взрыва слышно два
+   * подряд. Такому звуку разброс выключают, и тогда дорожки складываются точно.
+   *
+   * Отзвук — та же история. Выстрелу он читается как отражение от стен, а у
+   * взрыва приходит, когда собственный хвост ещё звучит, и снова слышится
+   * вторым взрывом.
    */
-  play(name, loudness = 1, layers = 1, pitch = 1) {
+  play(name, loudness = 1, layers = 1, pitch = 1, opts = {}) {
     // Пока звук не разрешён, запускать нечего: голос всё равно был бы выброшен,
     // а отзвук прилетел бы в тишину уже после того, как всё началось.
     if (!audioReady()) return;
 
-    for (let i = 0; i < layers; i++) this._once(name, loudness, pitch);
+    const { echo = true, spread = true } = opts;
+
+    for (let i = 0; i < layers; i++) this._once(name, loudness, pitch, spread);
 
     // Отзвук: тот же выстрел, но тише, глуше и с небольшим опозданием — будто
     // отразился от стен. Приходит он не всегда и каждый раз через разное время,
     // поэтому два выстрела подряд звучат по-разному, даже если сэмпл один.
-    if (Math.random() > CFG.echoChance) return;
+    if (!echo || Math.random() > CFG.echoChance) return;
 
     const delay = CFG.echoDelay + Math.random() * CFG.echoSpread;
     const timer = setTimeout(() => {
       this.echoes.delete(timer);
-      this._once(name, loudness * CFG.echoVolume, CFG.echoPitch * pitch);
+      this._once(name, loudness * CFG.echoVolume, CFG.echoPitch * pitch, spread);
     }, delay);
     this.echoes.add(timer);
   }
@@ -115,9 +127,9 @@ export class Sfx {
   }
 
   /** Одно срабатывание: случайный файл, своя высота тона и громкость. */
-  _once(name, loudness, pitchShift = 1) {
-    const spread = (range) => 1 + (Math.random() - 0.5) * 2 * range;
-    this._voice(name, loudness * spread(CFG.loudnessSpread), spread(CFG.pitchSpread) * pitchShift);
+  _once(name, loudness, pitchShift = 1, vary = true) {
+    const off = (range) => 1 + (Math.random() - 0.5) * 2 * (vary ? range : 0);
+    this._voice(name, loudness * off(CFG.loudnessSpread), off(CFG.pitchSpread) * pitchShift);
   }
 
   /** Завести голос: свободная дорожка из пула, своя громкость, свой темп. */

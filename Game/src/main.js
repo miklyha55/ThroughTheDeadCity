@@ -527,7 +527,10 @@ function wireBlasts(location) {
     // Дальний взрыв слышно тише: иначе бочка на том конце площадки грохочет
     // так же, как та, что рванула под ногами.
     const near = Math.max(0, 1 - at.distanceTo(player.position) / CFG.hearing);
-    if (near > 0) sfx.play('explosion', CFG.volume * near, CFG.layers);
+    // Без отзвука и без разброса между дорожками: у взрыва свой длинный хвост,
+    // и повтор сэмпла вдогонку слышался не как эхо, а как второй взрыв через
+    // долю секунды. Дорожки с разной скоростью расходились так же.
+    if (near > 0) sfx.play('explosion', CFG.volume * near, CFG.layers, 1, { echo: false, spread: false });
   };
 }
 
@@ -598,7 +601,11 @@ if (import.meta.env.DEV) {
   const { createEditor } = await import('./dev/editor.js');
   editor = createEditor({
     engine, locations, joystick, camera,
-    onToggle: () => showHud(),
+    onToggle: (on) => {
+      showHud();
+      // В правке те же WASD водят камеру — персонажу они на это время не свои.
+      input.enabled = !on;
+    },
     toggles: [{
       label: 'без вступления',
       value: startMessage.muted,
