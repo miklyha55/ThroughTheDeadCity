@@ -345,9 +345,6 @@ engine.add({
       if (!player.jumping) here.obstacles.resolve(player.position, CONFIG.player.radius);
       here.clampPosition(player.position); // и за забор тоже
     }
-    if (!player.alive && !diedAt) diedAt = performance.now();
-    if (player.alive) diedAt = 0;
-
     here.update(dt, player); // зомби: заметить, дойти, ударить
     gunEffects.update(dt);
     blood.update(dt);
@@ -472,11 +469,16 @@ wireBlasts(locations.current);
  * на котором персонаж и погиб, тут же перезапустил бы игру, и падения никто бы
  * не увидел.
  */
-let diedAt = 0;
 for (const event of ['pointerdown', 'keydown', 'touchstart']) {
   addEventListener(event, () => {
     if (player.alive || locations.loading) return;
-    if (performance.now() - diedAt < CONFIG.player.restartAfter * 1000) return;
+
+    // Мгновение смерти и конец падения считает сам персонаж, в тот же миг, когда
+    // его убили. Игра раньше засекала смерть своим кадром — то есть на кадр
+    // позже удара, — и касание, попавшее в эту щель, перезапускало уровень
+    // мгновенно. А удар как раз и приходит на касание: игрок жал стик, когда
+    // его убили.
+    if (performance.now() < player.restartAt) return;
 
     player.revive();
     locations.load(locations.current.data.id);
