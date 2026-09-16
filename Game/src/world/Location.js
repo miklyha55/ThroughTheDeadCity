@@ -176,6 +176,10 @@ export class Location {
     // закрыть проём, и толстеть и расти при этом она не должна.
     if (Array.isArray(entry.scale)) obj.scale.set(...entry.scale);
     else if (entry.scale) obj.scale.setScalar(entry.scale);
+
+    // У клинка размер один на всю игру и в файле не хранится: игрок узнаёт его
+    // по виду, и на разных локациях он обязан выглядеть одинаково.
+    if (CONFIG.blades.props.includes(entry.prop)) obj.scale.setScalar(CONFIG.blades.scale);
     this.group.add(obj);
 
     const { carrier, com } = this._place(entry.prop, obj);
@@ -515,7 +519,10 @@ export class Location {
       boxMin: body.boxMin.clone().multiply(scale),
       boxMax: body.boxMax.clone().multiply(scale),
       volume: body.volume * scale.x * scale.y * scale.z,
-    }, 0, CONFIG.explosion.props.includes(prefab.name));
+    }, 0, {
+      explosive: CONFIG.explosion.props.includes(prefab.name),
+      blade: CONFIG.blades.props.includes(prefab.name),
+    });
 
     // По сцене такой предмет носит контейнер, а модель сидит внутри со сдвигом
     // в центр масс. Редактору нужен контейнер: двигая модель, он возил бы её
@@ -774,10 +781,15 @@ export class Location {
       // Оси сохраняем порознь, если их растянули по-разному. Раньше уезжала одна
       // и та же цифра на все три, и стена, растянутая только вдоль, после
       // перезагрузки оказывалась ещё и вдвое толще и выше.
+      //
+      // У клинка размер общий на всю игру и в файл не уходит вовсе: иначе
+      // случайная правка гизмо на одной локации развела бы его с остальными.
       const s = object.scale;
       const uniform = Math.abs(s.x - s.y) < 1e-3 && Math.abs(s.x - s.z) < 1e-3;
 
-      if (uniform) {
+      if (CONFIG.blades.props.includes(entry.prop)) {
+        // ничего не пишем: размер берётся из настроек
+      } else if (uniform) {
         if (Math.abs(s.x - 1) > 1e-3) saved.scale = round(s.x);
       } else {
         saved.scale = [round(s.x), round(s.y), round(s.z)];

@@ -3,6 +3,7 @@ import { CONFIG } from '../config.js';
 import { Figure } from './Figure.js';
 
 const CFG = CONFIG.zombies;
+const BLADES = CONFIG.blades;
 
 /**
  * Состояния зомби. Как и у персонажа — конечный автомат: каждое состояние само
@@ -42,6 +43,11 @@ const CHASE_RUN_ON = CFG.attackMargin + 0.25;  // с этого запаса с�
 const CHASE_RUN_OFF = CFG.attackMargin + 0.08; // и до этого идущий останавливается
 
 const _hit = new THREE.Vector3();
+const _blade = new THREE.Vector3();
+const _bonePoint = new THREE.Vector3();
+// Длинная ось клинка в его собственных осях: от рукояти к острию модель вытянута
+// по X — так она и выгружена из Blender.
+const _alongAxis = new THREE.Vector3(1, 0, 0);
 const _toPlayer = new THREE.Vector3();
 const _push = new THREE.Vector3();
 const _step = new THREE.Vector3();
@@ -131,6 +137,96 @@ export class Zombie extends Figure {
     this.health = 0;
     this._enter(STATE.DEAD);
     return true;
+  }
+
+  /**
+   * Клинок вошёл в тело — и остаётся торчать в голове.
+   *
+   * Всегда в голову, а не туда, куда пришёлся удар. Попадание в предплечье или
+   * в голень выглядит случайностью, и клинок в них торчит то боком, то плашмя:
+   * кости мелкие и вертятся, и угол выходит какой угодно. Голова же одна, она
+   * крупная, и воткнутый в неё тесак читается сразу.
+   *
+   * Держится он на самой кости головы, поэтому дальше едет и падает вместе с
+   * ней, как и должен.
+   *
+   * @param {THREE.Object3D} object — сам клинок
+   * @param {THREE.Vector3} at — где он коснулся тела
+   * @param {THREE.Vector3} [along] — куда летел: этим направлением он и входит
+   * @param {number} [tip] — вылет от середины клинка до острия, м
+   * @returns {boolean} принял ли зомби клинок — мёртвый не принимает
+   */
+  impale(object, at, along = null, tip = 0.25) {
+    if (this.state === STATE.DEAD) return false;
+
+    const bone = this._headBone();
+    if (!bone) return false;
+
+    bone.getWorldPosition(_bonePoint);
+
+    /**
+     * Куда смотрит клинок.
+     *
+     * По ходу полёта: он пришёл по дуге, чуть сверху, и остаётся под тем же
+     * углом — так это и выглядит ударом, а не подвешенной декорацией. Если
+     * скорости почему-то нет, берём направление от точки касания к голове.
+     */
+    if (along && along.lengthSq() > 1e-6) _blade.copy(along).normalize();
+    else _blade.copy(_bonePoint).sub(at).normalize();
+
+    if (_blade.lengthSq() < 1e-6) _blade.set(0, 0, 1);
+
+    /**
+     * Лезвие внутри головы, рукоять снаружи.
+     *
+     * Своё положение у предмета — середина, поэтому от головы его отодвигают
+     * назад по ходу полёта ровно на вылет до острия. Тогда в голове оказывается
+     * кончик, а наружу торчит рукоять. `headBite` пускает остриё чуть за
+     * середину головы, чтобы оно не стояло вровень с кожей и не вышло насквозь.
+     */
+    object.position.copy(_bonePoint).addScaledVector(_blade, -(tip - BLADES.headBite));
+
+    // Разворот: собственная длинная ось клинка — X, её и совмещаем с ходом
+    // полёта. Иначе он вошёл бы боком, как его ни утапливай.
+    object.quaternion.setFromUnitVectors(_alongAxis, _blade);
+
+    // `attach`, а не `add`: кость едет и вертится вместе с анимацией, и обычное
+    // добавление швырнуло бы клинок в её локальные оси — он бы уехал под землю
+    // или вбок. `attach` пересчитывает положение так, что на глаз ничего не
+    // сдвигается.
+    bone.attach(object);
+
+    this.crush(at, BLADES.gore);
+    return true;
+  }
+
+  /**
+   * Кость головы.
+   *
+   * Ищем по имени: у скелета из Mixamo она называется `Head`, а `HeadTop_End` —
+   * это уже макушка, служебный кончик цепочки, и клинок на ней висел бы над
+   * волосами. Если такой кости нет вовсе, берём самую высокую — выше головы у
+   * фигуры ничего не бывает.
+   */
+  _headBone() {
+    let head = null;
+    let highest = null;
+    let top = -Infinity;
+
+    this.root.traverse((node) => {
+      if (!node.isBone) return;
+
+      const name = node.name || '';
+      if (!head && /head$/i.test(name)) head = node;
+
+      node.getWorldPosition(_bonePoint);
+      if (_bonePoint.y > top) {
+        top = _bonePoint.y;
+        highest = node;
+      }
+    });
+
+    return head ?? highest;
   }
 
   /**

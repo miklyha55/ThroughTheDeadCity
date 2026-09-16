@@ -371,12 +371,21 @@ export class Player extends Figure {
       }
     }
 
-    // Взрывчатка летит своей дугой: ей нужно дойти до толпы, а не упасть под
-    // ноги. Обычному хламу это ни к чему — ящик и должен падать рядом.
+    /**
+     * У каждой вещи своя дуга.
+     *
+     * Взрывчатке нужно дойти до толпы, а не упасть под ноги. Клинок летит ещё
+     * настильнее и быстрее, часто кувыркаясь через лезвие: это бросок в цель, а
+     * не «отпихнуть». Обычному хламу всё это ни к чему — ящик и должен падать
+     * рядом.
+     */
     const BLAST = CONFIG.explosion;
-    const power = item.explosive ? BLAST.throwPower : CFG.throwPower;
-    const lift = item.explosive ? BLAST.throwLift : CFG.throwLift;
-    const spin = item.explosive ? BLAST.throwSpin : CFG.throwSpin;
+    const BLADES = CONFIG.blades;
+    const arc = item.explosive ? BLAST : (item.blade ? BLADES : CFG);
+
+    const power = arc.throwPower;
+    const lift = arc.throwLift;
+    const spin = arc.throwSpin;
 
     debris.launch(item, dirX, dirZ, power, lift, spin, this, CFG.throwGrace);
 

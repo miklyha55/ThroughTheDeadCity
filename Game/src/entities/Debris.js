@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 
 const CFG = CONFIG.debris;
+const BLADES = CONFIG.blades;
+const ZOMBIES = CONFIG.zombies;
+
+const _bite = new THREE.Vector3(); // точка, где клинок вошёл в тело
 
 // рабочие векторы, чтобы не мусорить в куче каждый кадр
 const _r = new THREE.Vector3();
@@ -35,7 +39,7 @@ export class Debris {
    * @param {{boxMin: THREE.Vector3, boxMax: THREE.Vector3, volume: number}} body
    * @param {number} floorY
    */
-  add(object, body, floorY, explosive = false) {
+  add(object, body, floorY, { explosive = false, blade = false } = {}) {
     /**
      * Габариты берутся по модулю, и ни одна сторона не считается нулевой.
      *
@@ -74,6 +78,7 @@ export class Debris {
       ignore: null,  // кого предмет не замечает сразу после броска
       ignoreFor: 0,  // и сколько ещё секунд
       explosive, // бочка: пуля её прошивает — и она детонирует
+      blade,     // нож или тесак: в полёте режет и остаётся торчать в теле
     });
   }
 
@@ -128,7 +133,12 @@ export class Debris {
    */
   _crush(item, mover) {
     if (item.asleep || typeof mover.crush !== 'function') return;
-    if (item.mass < CFG.lethalMass) return;
+
+    const blade = item.blade && typeof mover.impale === 'function';
+
+    // Клинок лёгкий, и по массе он в убийцы не проходит вовсе — режет не вес, а
+    // лезвие. Зато и разогнать его надо: выпавший из руки нож никого не убивает.
+    if (!blade && item.mass < CFG.lethalMass) return;
 
     const position = item.object.position;
     const dx = position.x - mover.position.x;
@@ -139,9 +149,58 @@ export class Debris {
 
     // минус — потому что (dx, dz) смотрит от фигуры к предмету
     const closing = -(item.velocity.x * dx + item.velocity.z * dz) / gap;
-    if (closing < CFG.lethalSpeed) return;
+    if (closing < (blade ? BLADES.biteSpeed : CFG.lethalSpeed)) return;
 
-    mover.crush(position);
+    if (!blade) {
+      mover.crush(position);
+      return;
+    }
+
+    /**
+     * Куда именно вошёл клинок.
+     *
+     * Касание до сих пор считалось только по земле, без высоты, и этого хватало
+     * ящику: он летит низко и бьёт в любом случае. Клинок же уходит настильно и
+     * может пройти над макушкой — а засчитывалось это как попадание, и тесак
+     * повисал над головой, потому что там он в тот миг и был.
+     *
+     * Поэтому высота теперь решает: ниже земли и выше макушки — мимо. А точка
+     * втыкания берётся на самом теле: от его оси в сторону клинка, на радиус
+     * фигуры, и чуть внутрь. Так лезвие оказывается там, где столкновение и
+     * произошло, а не в центре предмета, который к этому мигу мог отлететь.
+     */
+    const high = position.y - mover.position.y;
+    if (high < 0 || high > ZOMBIES.bodyHeight) return;
+
+    _bite.set(
+      mover.position.x + (dx / gap) * (mover.radius - BLADES.sink),
+      mover.position.y + high,
+      mover.position.z + (dz / gap) * (mover.radius - BLADES.sink)
+    );
+
+    /**
+     * Клинок вошёл в тело — и остаётся в нём.
+     *
+     * Физика с этого мгновения им больше не занимается: он теперь часть фигуры,
+     * едет вместе с ней и падает вместе с ней. Снимаем его из списка, но со
+     * сцены не трогаем — фигура сама переняла его себе, и убрать его оттуда
+     * значило бы стереть то, что мы только что воткнули.
+     */
+    // Вылет до острия — это расстояние от середины предмета до его носа: по нему
+    // фигура и решает, насколько отодвинуть клинок, чтобы в тело вошло лезвие, а
+    // не рукоять.
+    if (mover.impale(item.object, _bite, item.velocity, item.boxMax.x)) this.forget(item);
+  }
+
+  /**
+   * Убрать предмет из физики, оставив его на сцене.
+   *
+   * Тем и отличается от `remove`, что модель остаётся жить: воткнувшийся клинок
+   * переехал к фигуре и дальше двигается с ней, а не сам по себе.
+   */
+  forget(item) {
+    const index = this.items.indexOf(item);
+    if (index >= 0) this.items.splice(index, 1);
   }
 
   /**

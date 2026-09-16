@@ -900,15 +900,15 @@
       "prop": "Car_PickupArmored",
       "at": [
         -21,
-        -8.74
+        -8.59
       ],
       "rotation": -19.3
     },
     {
       "prop": "Prop_Pallet",
       "at": [
-        -20,
-        -8.2
+        -23.26,
+        -11.54
       ],
       "rotation": 44.5
     },
@@ -1059,6 +1059,48 @@
         34.03,
         -8.9
       ]
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        -20.14,
+        -11.77
+      ],
+      "rotation": 50,
+      "y": 0.06
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        -4.06,
+        -7.54
+      ],
+      "rotation": 96
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        3.99,
+        -15.99
+      ],
+      "rotation": 49.7
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        19.77,
+        -8.67
+      ],
+      "rotation": 96
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        -29.76,
+        -4.53
+      ],
+      "rotation": 50,
+      "y": 0.06
     }
   ],
   "zombies": [
@@ -1177,7 +1219,7 @@
     {
       "kind": "zombie1",
       "at": [
-        4.86,
+        4.87,
         -7.32
       ],
       "rotation": 51.1

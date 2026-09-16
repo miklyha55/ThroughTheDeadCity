@@ -1216,6 +1216,46 @@
         29.5
       ],
       "rotation": 180
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        0.03,
+        2.27
+      ],
+      "rotation": 34
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        1.99,
+        -6.48
+      ],
+      "rotation": -118
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        15.35,
+        -19.6
+      ],
+      "rotation": 71
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        -10.67,
+        17.14
+      ],
+      "rotation": 34
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        15.92,
+        17.98
+      ],
+      "rotation": 34
     }
   ],
   "zombies": [
