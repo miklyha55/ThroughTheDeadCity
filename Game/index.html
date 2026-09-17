@@ -154,10 +154,12 @@
       }
 
       /* --- панель разработчика --- */
+      /* Панель разработчика сдвинута вниз: в самом углу теперь кнопка карты
+         уровней, а она видна игроку и потому важнее. */
       .devpanel {
         position: fixed;
         right: calc(14px + env(safe-area-inset-right));
-        top: calc(12px + env(safe-area-inset-top));
+        top: calc(64px + env(safe-area-inset-top));
         z-index: 30;
         display: flex;
         flex-direction: column;
@@ -256,6 +258,146 @@
         color: rgba(232, 238, 244, 0.62);
         font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
         letter-spacing: 0.1em; text-transform: uppercase;
+      }
+
+      /* Кнопка карты уровней: уголок вверху справа. */
+      .mapbutton {
+        position: fixed; z-index: 55;
+        right: calc(14px + env(safe-area-inset-right));
+        top: calc(12px + env(safe-area-inset-top));
+        display: flex; flex-direction: column; justify-content: center; gap: 4px;
+        width: 42px; height: 42px; padding: 0 11px;
+        border-radius: 12px;
+        border: 1px solid rgba(232, 208, 143, 0.35);
+        background: rgba(7, 9, 10, 0.72);
+        -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 160ms ease, transform 120ms ease;
+      }
+      .mapbutton[hidden] { display: none; }
+      .mapbutton:hover { background: rgba(20, 24, 26, 0.85); }
+      .mapbutton:active { transform: scale(0.94); }
+
+      /* Три полоски — тот же список сверху вниз, что и на самой карте.
+         Средняя короче: так значок читается как перечень, а не как решётка. */
+      .mapbutton__line {
+        height: 2px; border-radius: 2px;
+        background: #e8d08f;
+      }
+      .mapbutton__line:nth-child(2) { width: 70%; }
+
+      /* Карта уровней: шторка поверх игры со столбцом карточек. */
+      .levelmap {
+        position: fixed; inset: 0; z-index: 85;
+        display: flex; align-items: flex-start; justify-content: center;
+        padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+        background: rgba(7, 9, 10, 0.86);
+        -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+        opacity: 0;
+        transition: opacity 280ms ease;
+      }
+      .levelmap[hidden] { display: none; }
+      .levelmap--on { opacity: 1; }
+
+      .levelmap__sheet {
+        display: flex; flex-direction: column;
+        width: min(520px, 100%);
+        max-height: 100%;
+        /* Заголовок стоит, список едет: иначе на телефоне уезжает и он. */
+        overflow: hidden;
+      }
+
+      .levelmap__head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 4px 12px;
+      }
+      .levelmap__title {
+        margin: 0;
+        color: #e8d08f;
+        font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.14em; text-transform: uppercase;
+      }
+      .levelmap__close {
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(232, 208, 143, 0.3);
+        background: transparent;
+        color: rgba(232, 238, 244, 0.7);
+        font: 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 160ms ease;
+      }
+      .levelmap__close:hover { background: rgba(232, 208, 143, 0.12); }
+
+      .levelmap__list {
+        display: flex; flex-direction: column; gap: 10px;
+        overflow-y: auto;
+        /* Страница целиком прибита к экрану и жесты на ней погашены — список
+           свою прокрутку разрешает отдельно, иначе пальцем его не сдвинуть. */
+        touch-action: pan-y;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding: 2px;
+      }
+
+      .levelmap__card {
+        display: flex; align-items: center; gap: 14px;
+        padding: 10px 14px 10px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(232, 208, 143, 0.18);
+        background: rgba(18, 20, 22, 0.9);
+        color: #e8eef4;
+        text-align: left;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
+      }
+      .levelmap__card:hover { background: rgba(28, 31, 34, 0.95); border-color: rgba(232, 208, 143, 0.4); }
+      .levelmap__card:active { transform: scale(0.99); }
+
+      /* Тот, на котором игрок сейчас: подсвечен рамкой, чтобы не терять место. */
+      .levelmap__card[data-here] {
+        border-color: rgba(232, 208, 143, 0.65);
+        background: rgba(34, 30, 22, 0.95);
+      }
+
+      /* Заставка уровня: по картинке его и узнают, название читают вторым. */
+      .levelmap__shot {
+        flex: none;
+        width: 92px; height: 58px;
+        border-radius: 9px;
+        background: #07090a center/cover no-repeat;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .levelmap__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+      .levelmap__number {
+        color: rgba(232, 208, 143, 0.75);
+        font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.12em; text-transform: uppercase;
+      }
+      .levelmap__name {
+        color: #e8eef4;
+        font: 15px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
+        /* Длинное название не должно распирать карточку. */
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+
+      .levelmap__here {
+        margin-left: auto; flex: none;
+        padding: 4px 9px;
+        border-radius: 99px;
+        background: rgba(232, 208, 143, 0.16);
+        color: #e8d08f;
+        font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.1em; text-transform: uppercase;
+      }
+
+      @media (max-width: 420px) {
+        .levelmap__shot { width: 74px; height: 48px; }
+        .levelmap__name { font-size: 14px; }
       }
 
       /* Экран смерти: тёмная пелена и кнопка «начать заново».

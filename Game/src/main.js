@@ -23,6 +23,7 @@ import { Music } from './core/Music.js';
 import { attachListener, unlockAudio, wakeAudio } from './core/audio.js';
 import { StartMessage } from './core/StartMessage.js';
 import { ControlsHint } from './ui/ControlsHint.js';
+import { LevelMap, LevelMapButton } from './ui/LevelMap.js';
 import { lockViewport } from './core/viewport.js';
 import { SkipHint } from './ui/SkipHint.js';
 import { DeathScreen } from './ui/DeathScreen.js';
@@ -177,7 +178,22 @@ let chain = []; // цепочка уровней: читается один ра
 
 /** Файлы, которых в настройках нет поимённо: они собираются по номеру уровня. */
 async function assetsOfLevels() {
-  chain = await readChain(firstLevel);
+  /**
+   * Цепочку читаем от начала игры, а не от того уровня, с которого её открыли.
+   *
+   * Это одно и то же, пока игра запускается как задумано. Но в разработке
+   * уровень выбирают адресом или панелью, и тогда цепочка от него обрывала всё,
+   * что осталось позади: карта уровней показывала не всю игру, а её хвост, а
+   * заставки пройденных уровней не готовились вовсе.
+   */
+  chain = await readChain(CONFIG.locations.first);
+
+  // Уровня, открытого в обход цепочки, в ней может и не быть — тогда дописываем
+  // его в конец, чтобы игра знала и о нём.
+  if (!chain.some((level) => level.id === firstLevel)) {
+    chain.push(...await readChain(firstLevel));
+  }
+
   const files = [];
 
   for (const level of chain) {
@@ -341,6 +357,10 @@ fog.start();
  */
 let finished = false;
 
+// Открыта ли карта уровней: пока да, мир под ней стоит. Объявлено здесь, рядом
+// с таким же флагом финала, и заведомо раньше игрового цикла — тот читает оба.
+let mapOpen = false;
+
 locations.onFinish = () => {
   if (finished) return;
 
@@ -419,10 +439,11 @@ engine.add({
       return;
     }
 
-    // Под заставкой и на финальном экране мир замер: там либо старый уровень уже
-    // снят со сцены, либо игра кончилась, а бежать по ним персонаж иначе
-    // продолжал бы как ни в чём не бывало.
-    if (locations.loading || finished) return;
+    // Под заставкой, на финальном экране и под картой уровней мир замер: там
+    // либо старый уровень уже снят со сцены, либо игра кончилась, либо игрок
+    // выбирает, куда идти, — а бежать всё это время персонаж иначе продолжал бы
+    // как ни в чём не бывало.
+    if (locations.loading || finished || mapOpen) return;
 
     input.update();
     watchDeath(); // упал и долежал — поднимаем экран с кнопкой
@@ -577,6 +598,39 @@ function wireBlasts(location) {
  * отпустив стика, и первое же его движение начинало уровень заново — падения он
  * не видел вовсе. Кнопка эту случайность убирает.
  */
+/**
+ * Карта уровней и кнопка, которой она открывается.
+ *
+ * Открыты все уровни и всегда: игра короткая, запирать в ней нечего, и ничего о
+ * пройденном она не помнит. Список берётся из уже прочитанной цепочки — читать
+ * файлы второй раз незачем.
+ */
+const levelMap = new LevelMap();
+const mapButton = new LevelMapButton();
+
+mapButton.onPress = () => {
+  levelMap.fill(chain, locations.current?.data?.id);
+  levelMap.show();
+};
+
+levelMap.onPick = (id) => {
+  if (id === locations.current?.data?.id) return; // тот же уровень заново не грузим
+  locations.load(id).catch(reportBreak);
+};
+
+/**
+ * Пока карта открыта, мир под ней стоит.
+ *
+ * Иначе зомби доберутся до героя, пока тот разглядывает список, и возвращаться
+ * будет уже некуда. Тот же приём, что и в правке расстановки: игровой цикл
+ * видит поднятый флаг и не трогает ни персонажа, ни толпу.
+ */
+levelMap.onToggle = (on) => {
+  mapOpen = on;
+  joystick.setEnabled(!on); // и стик под картой не ловит палец
+  input.enabled = !on;
+};
+
 const deathScreen = new DeathScreen();
 
 deathScreen.onRestart = () => {
@@ -654,7 +708,9 @@ if (import.meta.env.DEV) {
         controlsHint.hide();  // и подсказка по управлению там ни к чему
         skipHint.hide();
         deathScreen.hide();   // и экран смерти: в правке уровень не перезапускают
+        levelMap.hide();      // и карта: уровни там переключают стрелками панели
       }
+      mapButton.root.hidden = on;
     },
     toggles: [{
       label: 'без вступления',
