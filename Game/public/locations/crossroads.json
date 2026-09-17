@@ -25,8 +25,8 @@
     ]
   },
   "exitAt": [
-    46,
-    -6,
+    46.86,
+    -0.15,
     4
   ],
   "props": [
@@ -603,8 +603,8 @@
     {
       "prop": "Prop_Jerrycan",
       "at": [
-        14.95,
-        1.12
+        31.21,
+        0.45
       ],
       "rotation": 42.3
     },
@@ -627,8 +627,8 @@
     {
       "prop": "Weapon_Cleaver",
       "at": [
-        17.57,
-        -1.71
+        27.49,
+        -3.08
       ],
       "rotation": -142.7
     },
@@ -1756,6 +1756,54 @@
         2.53
       ],
       "rotation": 34
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -55.93,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -55.93,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -63.83,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -71.77,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -63.88,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -71.74,
+        4
+      ],
+      "rotation": 90
     }
   ],
   "zombies": [
@@ -1906,24 +1954,24 @@
     {
       "kind": "zombie2",
       "at": [
-        28.39,
-        -1.21
+        41.33,
+        -2.96
       ],
       "rotation": -126.5
     },
     {
       "kind": "zombie2",
       "at": [
-        25.95,
-        0.39
+        38.43,
+        1.82
       ],
       "rotation": -9.3
     },
     {
       "kind": "zombie2",
       "at": [
-        29.13,
-        -0.06
+        38.04,
+        -2.54
       ],
       "rotation": -7.1
     },
@@ -1938,8 +1986,8 @@
     {
       "kind": "zombie1",
       "at": [
-        29.33,
-        -2.73
+        36.25,
+        -1.15
       ],
       "rotation": 92.9
     },
@@ -1954,8 +2002,8 @@
     {
       "kind": "zombie1",
       "at": [
-        -0.19,
-        17.94
+        0.61,
+        16.65
       ],
       "rotation": -51.9
     },
@@ -1986,32 +2034,32 @@
     {
       "kind": "zombie2",
       "at": [
-        4.57,
-        -17.34
+        5.08,
+        -15.03
       ],
       "rotation": -151
     },
     {
       "kind": "zombie1",
       "at": [
-        -3.31,
-        -18.29
+        -3.34,
+        -15.95
       ],
       "rotation": -7.4
     },
     {
       "kind": "zombie1",
       "at": [
-        2.09,
-        -14.63
+        3.13,
+        -13.35
       ],
       "rotation": -7.9
     },
     {
       "kind": "zombie2",
       "at": [
-        1.85,
-        -13.31
+        2.79,
+        -11.45
       ],
       "rotation": -148.8
     },
