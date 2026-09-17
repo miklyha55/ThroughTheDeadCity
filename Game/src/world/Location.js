@@ -907,12 +907,18 @@ export class Location {
       ? { ...this.data.gun, at: [round(this.gunMark.position.x), round(this.gunMark.position.z)] }
       : this.data.gun;
 
+    // И коробка патронов — тем же способом.
+    const ammo = this.ammoMark
+      ? { ...this.data.ammo, at: [round(this.ammoMark.position.x), round(this.ammoMark.position.z)] }
+      : this.data.ammo;
+
     // Пол тоже правится мышью: в файл уходит та высота, на которой он стоит.
     const ground = { ...this.data.ground, y: round(this.ground.position.y) };
 
     const data = { ...this.data, ground, spawn, props, zombies };
     if (exitAt) data.exitAt = exitAt;
     if (gun) data.gun = gun;
+    if (ammo) data.ammo = ammo;
 
     return data;
   }

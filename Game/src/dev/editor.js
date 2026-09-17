@@ -185,6 +185,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     if (locations.current.ground) list.push(locations.current.ground);
     if (locations.current.exitMark) list.push(locations.current.exitMark);
     if (locations.current.gunMark) list.push(locations.current.gunMark);
+    if (locations.current.ammoMark) list.push(locations.current.ammoMark);
     return list;
   };
 
@@ -291,6 +292,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     else if (object === locations.current.ground) status('выбран пол: двигается по высоте');
     else if (object === locations.current.exitMark) status('выбрана область перехода: размер — радиус');
     else if (object === locations.current.gunMark) status('выбрано ружьё: где оно лежит на уровне');
+    else if (object === locations.current.ammoMark) status('выбраны патроны: где они лежат на уровне');
     else if (locations.current.zombies.some((z) => z.root === object)) status('выбран зомби');
     else status(`выбран ${object.name || 'проп'}`);
   }
@@ -313,8 +315,9 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
 
     const location = locations.current;
     if (picked === location.ground || picked === location.exitMark
-        || picked === location.gunMark || picked === locations.player?.root) {
-      status('это убрать нельзя: пол, старт, выход и ружьё — часть самой локации');
+        || picked === location.gunMark || picked === location.ammoMark
+        || picked === locations.player?.root) {
+      status('это убрать нельзя: пол, старт, выход, ружьё и патроны — часть самой локации');
       return;
     }
 
@@ -342,8 +345,9 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
 
     const location = locations.current;
     if (picked === location.ground || picked === location.exitMark
-        || picked === location.gunMark || picked === locations.player?.root) {
-      status('это не копируется: пол, старт, выход и ружьё на локации по одному');
+        || picked === location.gunMark || picked === location.ammoMark
+        || picked === locations.player?.root) {
+      status('это не копируется: пол, старт, выход, ружьё и патроны на локации по одному');
       return;
     }
 

@@ -29,6 +29,20 @@ export class Visibility {
     this.sphere = new THREE.Sphere();
   }
 
+  /**
+   * В кадре ли точка — по тому кадру, что посчитан в последнем `update`.
+   *
+   * Строго по краю экрана, без запаса на тени, как у отсечения: тут спрашивают,
+   * видит ли вещь игрок, а не может ли она отбросить тень в кадр.
+   *
+   * @param {THREE.Vector3} at @param {number} [radius] — м
+   */
+  inView(at, radius = 0.5) {
+    this.sphere.center.copy(at);
+    this.sphere.radius = radius;
+    return this.frustum.intersectsSphere(this.sphere);
+  }
+
   /** @param {import('./Location.js').Location} location */
   update(location) {
     // Матрицы камеры пересчитывает рендер, и на этот момент они ещё от прошлого

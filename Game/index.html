@@ -92,7 +92,9 @@
         top: calc(34px + env(safe-area-inset-top));
         max-width: calc(100vw - 24px);
         z-index: 25; pointer-events: none;
-        display: flex; gap: 4px;
+        /* Не больше десяти в ряд: расширенный магазин встаёт вторым рядом. */
+        display: grid; grid-template-columns: repeat(10, auto);
+        justify-content: center; gap: 4px;
       }
       .ammo__round {
         width: 36px; height: auto; min-width: 0;

@@ -118,7 +118,9 @@ export class Player extends Figure {
     this.reloading = 0;    // пауза между выстрелами: в неё зомби и подходят
     this.jumpTime = 0;     // сколько уже длится прыжок, с; ноль — значит стоит на земле
     this.frozen = false;   // управление отобрано снаружи: звучит вступление
-    this.rounds = CFG.magazine; // патронов в магазине
+    this.magazine = CFG.magazine; // сколько вмещает магазин: коробка патронов его расширяет
+    this.rounds = this.magazine;  // патронов в магазине
+    this.onMagazine = null;       // кому сказать, что вместимость сменилась
     this.refillAt = 0;          // сколько уже длится текущий круг набивки, с
     this.onAmmo = null;         // кому сообщать о смене боезапаса; ставится снаружи
     this.onShot = null;         // и о самом выстреле: по нему камера получает отдачу
@@ -240,7 +242,7 @@ export class Player extends Figure {
     this._drop();
     this.throwCooldown = 0;
     this.reloading = CFG.startDelay; // с первого кадра не стреляем
-    this.rounds = CFG.magazine;      // и с полным магазином
+    this.rounds = this.magazine;      // и с полным магазином
     this.refillAt = 0;
     this.onAmmo?.(this.rounds);
     this.lives = CFG.lives;
@@ -976,8 +978,13 @@ export class Player extends Figure {
    * первого шага — весь смысл вводного уровня пропадал.
    */
   disarm() {
+    // Расширенный магазин тоже остаётся в прошлой игре: коробку патронов надо
+    // найти заново.
+    this.magazine = CFG.magazine;
+    this.onMagazine?.(this.magazine);
+
     this.armed = CFG.armed !== false;
-    this.rounds = this.armed ? CFG.magazine : 0;
+    this.rounds = this.armed ? this.magazine : 0;
     this.onAmmo?.(this.rounds);
     this._holdGun(false);
   }
@@ -986,7 +993,7 @@ export class Player extends Figure {
     if (this.armed) return;
 
     this.armed = true;
-    this.rounds = CFG.magazine;
+    this.rounds = this.magazine;
     this.onAmmo?.(this.rounds);
     this._holdGun(false); // появляется сразу — за спиной
 
@@ -997,8 +1004,25 @@ export class Player extends Figure {
     this.reloading = 0;
   }
 
+  /**
+   * Магазин вмещает больше: подобрана коробка патронов.
+   *
+   * Сразу и полный — подобрать патроны и остаться с пустым магазином было бы
+   * странно. Меньше прежнего не делается.
+   *
+   * @param {number} size — сколько теперь вмещает
+   */
+  extendMagazine(size) {
+    if (size <= this.magazine) return;
+
+    this.magazine = size;
+    this.rounds = size;
+    this.onMagazine?.(size);
+    this.onAmmo?.(this.rounds);
+  }
+
   /** Есть ли что набивать: магазин неполон. */
-  get refilling() { return this.rounds < CFG.magazine; }
+  get refilling() { return this.rounds < this.magazine; }
 
   /** Потратить патрон. */
   _spend() {
@@ -1020,7 +1044,7 @@ export class Player extends Figure {
    * @returns {boolean} занят ли персонаж — по этому наверху решают, что играть
    */
   _refill(dt) {
-    if (!this.armed || this.rounds >= CFG.magazine) return false;
+    if (!this.armed || this.rounds >= this.magazine) return false;
 
     // Не `restart`: клип идёт по кругу, и перезапуск его каждый кадр держал бы
     // персонажа на первом кадре набивки. `play` на уже идущем клипе ничего не
@@ -1033,9 +1057,9 @@ export class Player extends Figure {
     // За круг клипа в магазин уходит `roundsPerReload` патронов: персонаж
     // закладывает их пачкой, а не по одному. Последняя пачка не выходит за
     // вместимость — на девяти из десяти круг доложит один патрон, а не два.
-    while (this.refillAt >= this.refillFor && this.rounds < CFG.magazine) {
+    while (this.refillAt >= this.refillFor && this.rounds < this.magazine) {
       this.refillAt -= this.refillFor;
-      this.rounds = Math.min(CFG.magazine, this.rounds + CFG.roundsPerReload);
+      this.rounds = Math.min(this.magazine, this.rounds + CFG.roundsPerReload);
 
       // Щелчок ровно тогда, когда патроны встали в магазин: вместе с ним
       // загораются и гильзы наверху, так что слышно и видно одно и то же.
@@ -1043,7 +1067,7 @@ export class Player extends Figure {
       this.onAmmo?.(this.rounds);
     }
 
-    if (this.rounds >= CFG.magazine) this.refillAt = 0; // магазин полон, круг не нужен
+    if (this.rounds >= this.magazine) this.refillAt = 0; // магазин полон, круг не нужен
     return true;
   }
 

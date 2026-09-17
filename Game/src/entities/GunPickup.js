@@ -3,7 +3,6 @@ import { CONFIG } from '../config.js';
 import { flatDistance } from '../core/ground.js';
 import { arcPoint } from '../core/arc.js';
 
-const CFG = CONFIG.gunPickup;
 
 /**
  * Ружьё, лежащее на уровне: подошёл — подобрал, и дальше играешь со стрельбой.
@@ -23,8 +22,14 @@ const CFG = CONFIG.gunPickup;
  * уходит вместе с уровнем, не переживая его.
  */
 export class GunPickup {
-  constructor(scene) {
+  /**
+   * @param {THREE.Scene} scene
+   * @param {object} [config] — как вещь висит, крутится и летит. Своё у каждой
+   *   лежащей вещи: патроны мельче ружья и висят ниже
+   */
+  constructor(scene, config = CONFIG.gunPickup) {
     this.scene = scene;
+    this.config = config;
     this.object = null;   // меш на сцене, пока gun лежит
     this.time = 0;        // сколько уже крутится: по нему вращение и покачивание
     this.flight = 0;      // сколько длится полёт к герою; ноль — ещё лежит
@@ -45,31 +50,23 @@ export class GunPickup {
    * @param {import('./Player.js').Player} player — у него и берётся модель
    */
   place(location, player, editing = false) {
+    const CFG = this.config;
     this.clear();
 
-    const spot = location.data.gun?.at;
+    const spot = this._spot(location)?.at;
     if (!spot) return;
 
     // Подобранное ружьё на полу больше не лежит — иначе после смерти на этой же
     // локации оно появлялось бы снова и снова. Но в правке расстановки оно
     // нужно всегда: иначе место, куда его класть, было бы не подвинуть.
-    if (player.armed && !editing) return;
+    if (this._taken(player) && !editing) return;
 
-    const sample = player.gun ?? player.gunOnBack;
-    if (!sample) return;
+    const gun = this._model(location, player);
+    if (!gun) return;
 
-    /**
-     * Своя копия ружья.
-     *
-     * Копируется целиком node, а не один меш: gun собрано из нескольких частей
-     * — ствол, цевьё, приклад, — и лежит в модели персонажа отдельной группой.
-     * Геометрия и материалы при этом остаются общими, копируются только узлы.
-     *
-     * Собственное положение узла сбрасывается: в модели он сидит на кости руки и
-     * несёт её разворот, а нам нужна вещь, лежащая сама по себе.
-     */
-    const gun = sample.clone(true);
-    gun.name = 'gun:pickup';
+    // Собственное положение копии сбрасывается: ружьё в модели сидит на кости
+    // руки и несёт её разворот, а нам нужна вещь, лежащая сама по себе.
+    gun.name = this._name;
     // Покачивание начинается с нуля, а не с той фазы, до которой игра докрутила
     // с прошлого раза: иначе после перезапуска уровня ружьё появлялось в
     // случайной точке синусоиды и могло родиться ниже пола.
@@ -98,14 +95,41 @@ export class GunPickup {
     // загрузке — в файл уходила прежняя запись.
     this.location = location;
     this.editing = editing;
-    location.gunMark = gun;
+    location[this._mark] = gun;
   }
+
+  // ─── чем одна лежащая вещь отличается от другой ─────────────────────────────
+
+  /** Имя на сцене и имя метки на локации: по метке её узнаёт правка. */
+  get _name() { return 'gun:pickup'; }
+  get _mark() { return 'gunMark'; }
+
+  /** Запись в файле уровня: где лежит. */
+  _spot(location) { return location.data.gun; }
+
+  /** Уже взято: класть незачем. */
+  _taken(player) { return player.armed; }
+
+  /**
+   * Своя копия ружья.
+   *
+   * Копируется целиком узел, а не один меш: ружьё собрано из нескольких частей
+   * — ствол, цевьё, приклад, — и лежит в модели персонажа отдельной группой.
+   * Геометрия и материалы при этом остаются общими, копируются только узлы.
+   */
+  _model(location, player) {
+    const sample = player.gun ?? player.gunOnBack;
+    return sample ? sample.clone(true) : null;
+  }
+
+  /** Долетело до героя. */
+  _give(player) { player.arm(); }
 
   /** Убрать со сцены. Геометрия и материал общие с персонажем — их не трогаем. */
   clear() {
     this.object?.removeFromParent();
 
-    if (this.location?.gunMark === this.object) this.location.gunMark = null;
+    if (this.location?.[this._mark] === this.object) this.location[this._mark] = null;
 
     this.object = null;
     this.location = null;
@@ -117,6 +141,7 @@ export class GunPickup {
    * @param {import('./Player.js').Player} player
    */
   update(dt, player) {
+    const CFG = this.config;
     if (!this.object) return;
 
     this.time += dt;
@@ -158,6 +183,7 @@ export class GunPickup {
 
   /** Полёт к герою. Цель берётся каждый кадр: он может идти дальше. */
   _fly(dt, player) {
+    const CFG = this.config;
     this.flight += dt;
 
     const share = Math.min(1, this.flight / CFG.flyFor);
@@ -174,7 +200,7 @@ export class GunPickup {
     if (share < 1) return;
 
     this.clear();
-    player.arm();
+    this._give(player);
     this.onTaken?.();
   }
 }

@@ -11,6 +11,7 @@ import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
 import { GunPickup } from './entities/GunPickup.js';
+import { AmmoPickup } from './entities/AmmoPickup.js';
 import { Pointer } from './fx/Pointer.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
@@ -317,6 +318,7 @@ player.ownBlood = playerBlood;
 player.sfx = sfx;
 player.puffs = puffs;
 player.onAmmo = (left) => { ammo.set(left); showAmmo(); };
+player.onMagazine = (size) => ammo.resize(size); // коробка патронов: гильз стало больше
 // Отдача: камера коротко вздрагивает на каждом выстреле.
 player.onShot = () => camera.shake(CONFIG.player.kick, CONFIG.player.kickFor);
 ammo.set(player.rounds);
@@ -327,6 +329,13 @@ engine.scene.add(player.root);
  * персонажа за спиной, поэтому заводится только после него.
  */
 const gunPickup = new GunPickup(engine.scene);
+
+/**
+ * Коробка патронов на последнем уровне: подобрал — магазин на двадцать.
+ * Взята — стрелка идёт к следующей цели, как и после ружья.
+ */
+const ammoPickup = new AmmoPickup(engine.scene);
+ammoPickup.onTaken = () => aimPointer();
 
 /**
  * Ружьё подобрано.
@@ -516,11 +525,13 @@ engine.add({
     explosions.update(dt);
     shards.update(dt);
     gunPickup.update(dt, player); // лежащее ружьё: крутится, а подошёл — летит в руки
+    ammoPickup.update(dt, player); // и коробка патронов — точно так же
     pointer.update(dt, player.yaw); // стрелка под ногами держит цель
     puffs.update(dt);
     camera.update(dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     visibility.update(here); // ушедшее за край экрана не рисуем вовсе
+    watchAmmo();
     // заслонившее героя или ближних зомби — просвечивает
     locations.seeThrough.update(dt, player, here?.zombies);
     dayNight.update(dt); // сутки идут своим ходом: свет, небо и тени
@@ -573,6 +584,11 @@ function aimPointer() {
   const gun = gunPickup.object && !player.armed ? gunPickup.object : null;
   if (gun) targets.push({ at: gun, halo: true });
 
+  // Коробка патронов: с кругом, как ружьё, — пока игрок её не проигнорировал.
+  // В очереди её держит только это: выход она не запирает, брать необязательно.
+  const shells = ammoPickup.object && !ammoPickup.skipped ? ammoPickup.object : null;
+  if (shells) targets.push({ at: shells, halo: true });
+
   // Вожак: пока жив, стрелка ведёт только на него — с любого расстояния и без
   // круга на полу, под таким великаном его всё равно не видно. Выход за ним в
   // очереди и сам откроется, когда вожак упадёт.
@@ -598,6 +614,30 @@ function aimPointer() {
   // уровень безоружным.
   // И пока жив вожак: уйти, не победив его, нельзя.
   here?.lockExit(Boolean(gun) || Boolean(boss));
+}
+
+/**
+ * Прошёл ли игрок мимо патронов.
+ *
+ * Стрелка ведёт к коробке, пока та на экране. Побывала в кадре и ушла из него
+ * невзятой — значит игрок решил не брать, и стрелка переходит к следующей цели.
+ * Вернуться к ней можно, но уже без подсказки.
+ *
+ * Считается именно «была и ушла», а не просто «не видно»: в начале уровня
+ * коробка может ещё не попасть в кадр, и забыть её сразу было бы неверно.
+ */
+function watchAmmo() {
+  if (!ammoPickup.object || ammoPickup.skipped || ammoPickup.flight > 0) return;
+
+  const inView = visibility.inView(ammoPickup.object.position);
+  if (inView) {
+    ammoPickup.seen = true;
+    return;
+  }
+  if (!ammoPickup.seen) return;
+
+  ammoPickup.skipped = true;
+  aimPointer();
 }
 
 /** Название нынешнего уровня на языке игры. */
@@ -784,6 +824,7 @@ locations.onChange = (location) => {
   // Вожак заметил героя — его круг разом проступает из тумана.
   location.onBossSpotted = (boss) => fog.reveal(boss.position.x, boss.position.z, CONFIG.boss.senseRadius);
   gunPickup.place(location, player, locations.editing); // в правке лежит всегда
+  ammoPickup.place(location, player, locations.editing);
   aimPointer();
   showAmmo();
   showHud();
@@ -914,6 +955,7 @@ if (import.meta.env.DEV) {
       // освободят, иначе оно осталось бы стоять на выброшенных буферах.
       // Положит его заново `onChange` при пересборке локации ниже.
       gunPickup.clear();
+      ammoPickup.clear(); // модель у неё из библиотеки уровня, которую сейчас сменят
 
       player.dispose();
       player = new Player(freshPlayer);
@@ -923,6 +965,9 @@ if (import.meta.env.DEV) {
       player.sfx = sfx;
       player.puffs = puffs;
       player.onAmmo = (left) => { ammo.set(left); showAmmo(); };
+      player.onMagazine = (size) => ammo.resize(size);
+      ammo.resize(player.magazine);
+player.onMagazine = (size) => ammo.resize(size); // коробка патронов: гильз стало больше
       player.onShot = () => camera.shake(CONFIG.player.kick, CONFIG.player.kickFor);
       ammo.set(player.rounds);
       player.placeAt(spot, yaw);
@@ -961,7 +1006,7 @@ if (import.meta.env.DEV) {
 
   window.__game = {
     engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash, fog,
-    gunPickup, pointer, controlsHint, skipHint, deathScreen, levelMap,
+    gunPickup, ammoPickup, pointer, controlsHint, skipHint, deathScreen, levelMap,
     yandex, progress, // площадка и сохранения: их удобно щупать из консоли
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),

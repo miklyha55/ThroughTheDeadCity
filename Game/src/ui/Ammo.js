@@ -20,7 +20,22 @@ export class Ammo {
     this.root.className = 'ammo';
 
     this.cells = [];
-    for (let i = 0; i < size; i++) {
+    this.resize(size);
+
+    container.appendChild(this.root);
+  }
+
+  /**
+   * Сколько гильз показывать: магазин может вырасти посреди игры.
+   *
+   * Ряд — не больше десятка: двадцать в строку не влезают на телефон, и два
+   * ровных ряда по десять читаются с одного взгляда. Сетка задаётся стилями,
+   * здесь только число гильз.
+   *
+   * @param {number} size
+   */
+  resize(size) {
+    while (this.cells.length < size) {
       const cell = document.createElement('img');
       cell.className = 'ammo__round';
       cell.src = CFG.image;
@@ -30,9 +45,9 @@ export class Ammo {
       this.root.appendChild(cell);
       this.cells.push(cell);
     }
+    while (this.cells.length > size) this.cells.pop().remove();
 
-    container.appendChild(this.root);
-    this.shown = -1;
+    this.shown = -1; // заново раскрасить при следующем `set`
   }
 
   /** @param {number} loaded — сколько патронов в магазине сейчас */
