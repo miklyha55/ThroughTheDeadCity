@@ -29,6 +29,7 @@ export const LANGUAGES = ['ru', 'en'];
  */
 const EN = {
   'gate.label': 'Play',
+  'gate.keyBefore': 'or press',
 
   'boot.lines': [
     'Loading ammo… and a little optimism.',
