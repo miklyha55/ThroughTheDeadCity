@@ -1101,6 +1101,7 @@ export const CONFIG = {
     openLabel: 'Открыть карту уровней',
     closeLabel: 'Закрыть карту',
     hereLabel: 'здесь',
+    passedLabel: 'пройден',
     numberLabel: (number) => (number === 0 ? 'Начало' : `Уровень ${number}`),
     fadeFor: 0.28, // с на растворение: столько же длится переход в стилях
   },

@@ -74,9 +74,31 @@ export class DeathScreen {
 
     this._fade = null;
 
-    // Именно на нажатии, а не на отпускании: касание должно засчитаться в тот
-    // же миг, когда палец лёг на кнопку.
-    this._press(this.again, () => this.onAgain?.());
+    /**
+     * Именно на нажатии, а не на отпускании: касание должно засчитаться в тот
+     * же миг, когда палец лёг на кнопку.
+     *
+     * Второе нажатие не проходит, пока идёт первое. Между ним и перезапуском
+     * уровня стоит рекламный ролик — это секунды, экран смерти всё это время на
+     * месте, и нетерпеливый игрок успевает нажать ещё раз. Каждое такое нажатие
+     * заказывало свой ролик и свою загрузку уровня, и они мешали друг другу:
+     * уровень начинался заново только с третьего раза.
+     */
+    this.busy = false;
+    this._press(this.again, async () => {
+      // `shown` здесь проверять нельзя: `_press` убирает экран до вызова, и
+      // такая проверка не пропускала бы вообще ничего.
+      if (this.busy) return;
+
+      this.busy = true;
+      this.again.disabled = true;
+      try {
+        await this.onAgain?.();
+      } finally {
+        this.busy = false;
+        this.again.disabled = false;
+      }
+    });
 
     /**
      * Сброс сам по себе ничего не запускает: сперва вопрос, и всегда.
@@ -123,6 +145,8 @@ export class DeathScreen {
     if (this.shown) return;
 
     this.shown = true;
+    this.busy = false;
+    this.again.disabled = false;
     clearTimeout(this._fade);
     this.root.hidden = false;
 

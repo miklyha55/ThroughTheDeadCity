@@ -363,6 +363,23 @@
       .levelmap__card:hover { background: rgba(28, 31, 34, 0.95); border-color: rgba(232, 208, 143, 0.4); }
       .levelmap__card:active { transform: scale(0.99); }
 
+      /* Пройденный уровень: карточка приглушена, а заставка на ней выцветает —
+         сразу видно, где игрок уже был, и куда идти дальше. */
+      .levelmap__card[data-passed] { opacity: 0.72; }
+      .levelmap__card[data-passed] .levelmap__shot { filter: saturate(0.5) brightness(0.78); }
+      .levelmap__card[data-passed]:hover { opacity: 1; }
+
+      /* Метка «пройден»: там же, где «здесь», но своим цветом. */
+      .levelmap__passed {
+        margin-left: auto; flex: none;
+        padding: 4px 9px;
+        border-radius: 99px;
+        background: rgba(101, 158, 108, 0.18);
+        color: #9fd2a4;
+        font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.1em; text-transform: uppercase;
+      }
+
       /* Тот, на котором игрок сейчас: подсвечен рамкой, чтобы не терять место. */
       .levelmap__card[data-here] {
         border-color: rgba(232, 208, 143, 0.65);

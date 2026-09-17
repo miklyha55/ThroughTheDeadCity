@@ -21,7 +21,7 @@ const CFG = CONFIG.yandex;
  */
 class Progress {
   constructor() {
-    this.state = { level: null };
+    this.state = { level: null, passed: [] };
     this._pending = null;
     this._loaded = false;
   }
@@ -36,12 +36,38 @@ class Progress {
     // Сливаем с настройками по умолчанию: отсутствующих ключей в ответе не
     // будет вовсе, а игре нужен полный объект.
     this.state = { ...this.state, ...saved };
+
+    // Список пройденного мог прийти чем угодно — записи в облаке переживают
+    // смену версий игры. Чужому виду тут доверять нельзя: по нему потом ходят
+    // как по списку.
+    if (!Array.isArray(this.state.passed)) this.state.passed = [];
     this._loaded = true;
     return this.state;
   }
 
   /** На каком уровне игрок остановился; пусто, если ещё нигде. */
   get level() { return this.state.level; }
+
+  /** Какие уровни уже пройдены. */
+  get passed() { return this.state.passed; }
+
+  /** Пройден ли уровень. */
+  isPassed(id) { return this.state.passed.includes(id); }
+
+  /**
+   * Отметить уровень пройденным.
+   *
+   * Второй раз тот же уровень не пишем: игрок может проходить его сколько
+   * угодно, а запись в облако у площадки на счету.
+   *
+   * @param {string} id
+   */
+  pass(id) {
+    if (!id || this.state.passed.includes(id)) return;
+
+    this.state.passed = [...this.state.passed, id];
+    this._save();
+  }
 
   /**
    * Запомнить уровень.
@@ -65,7 +91,7 @@ class Progress {
    * оно не должно потеряться, если он тут же закроет вкладку.
    */
   reset() {
-    this.state = { level: null };
+    this.state = { level: null, passed: [] };
     this._save(true);
   }
 

@@ -439,6 +439,8 @@ let mapOpen = false;
  * картинка с итогом пути. Порядок именно такой: разговор — это конец истории, а
  * картинка — то, что после него остаётся.
  */
+locations.onPassed = (id) => progress.pass(id);
+
 locations.onFinish = () => {
   if (finished) return;
 
@@ -832,7 +834,7 @@ const levelMap = new LevelMap();
 const mapButton = new LevelMapButton();
 
 mapButton.onPress = () => {
-  levelMap.fill(chain, locations.current?.data?.id);
+  levelMap.fill(chain, locations.current?.data?.id, (id) => progress.isPassed(id));
   levelMap.show();
 };
 
@@ -888,9 +890,23 @@ yandex.onResume = () => { pausedByHost = false; };
 deathScreen.onAgain = async () => {
   await yandex.showRewarded();
 
+  /**
+   * Пауза площадки снимается здесь же, а не ждёт её сигнала.
+   *
+   * Показывая ролик, площадка присылает «встать», а по его концу — «идти
+   * дальше». Второе приходит не всегда: ролик закрыли слишком быстро, сеть
+   * подвела, ролика не нашлось вовсе. Игра в этом случае молча стояла: уровень
+   * собирался, картинка была, а мир не двигался, и со стороны это выглядело как
+   * «перезапуск не сработал».
+   *
+   * Ролик кончился — значит игра идёт. Это мы знаем наверняка, и ждать
+   * подтверждения не от кого.
+   */
+  pausedByHost = false;
+
   tally.resume();
   player.revive();
-  locations.load(locations.current.data.id).catch(reportBreak);
+  await locations.load(locations.current.data.id).catch(reportBreak);
 };
 
 /**

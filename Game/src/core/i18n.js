@@ -61,6 +61,7 @@ const EN = {
   'levelMap.openLabel': 'Open the level map',
   'levelMap.closeLabel': 'Close the map',
   'levelMap.hereLabel': 'here',
+  'levelMap.passedLabel': 'cleared',
   // Не строка, а способ её собрать: у нулевого уровня номера нет, у остальных есть.
   'levelMap.numberLabel': (number) => (number === 0 ? 'Start' : `Level ${number}`),
 

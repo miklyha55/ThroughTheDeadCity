@@ -68,19 +68,25 @@ export class LevelMap {
    * @param {Array<{id: string, number: number, name: string}>} levels — цепочка
    * @param {string} [current] — на каком уровне игрок сейчас: он помечается
    */
-  fill(levels, current = null) {
+  /**
+   * @param {Array} levels — цепочка уровней
+   * @param {string} [current] — на каком игрок сейчас
+   * @param {(id: string) => boolean} [passed] — пройден ли уровень
+   */
+  fill(levels, current = null, passed = () => false) {
     this.list.textContent = '';
 
     for (const level of levels) {
-      this.list.appendChild(this._card(level, level.id === current));
+      this.list.appendChild(this._card(level, level.id === current, passed(level.id)));
     }
   }
 
-  _card(level, here) {
+  _card(level, here, done = false) {
     const card = document.createElement('button');
     card.className = 'levelmap__card';
     card.type = 'button';
     if (here) card.dataset.here = '1';
+    if (done) card.dataset.passed = '1';
 
     // Заставка уровня: та же картинка, что показывается перед входом в него.
     // По ней уровень и узнают — название читают уже вторым.
@@ -104,10 +110,11 @@ export class LevelMap {
     text.append(number, name);
     card.append(shot, text);
 
-    if (here) {
+    // Метка одна: «здесь» важнее «пройден», иначе на карточке их две подряд.
+    if (here || done) {
       const mark = document.createElement('span');
-      mark.className = 'levelmap__here';
-      mark.textContent = CFG.hereLabel;
+      mark.className = here ? 'levelmap__here' : 'levelmap__passed';
+      mark.textContent = here ? CFG.hereLabel : CFG.passedLabel;
       card.appendChild(mark);
     }
 
