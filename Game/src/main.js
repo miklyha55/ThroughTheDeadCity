@@ -11,6 +11,8 @@ import { ZombieLibrary } from './world/ZombieLibrary.js';
 import { LocationManager } from './world/LocationManager.js';
 import { Player } from './entities/Player.js';
 import { GunPickup } from './entities/GunPickup.js';
+import { EndMessage } from './core/EndMessage.js';
+import { tally } from './core/tally.js';
 import { AmmoPickup } from './entities/AmmoPickup.js';
 import { Pointer } from './fx/Pointer.js';
 import { Joystick } from './ui/Joystick.js';
@@ -251,6 +253,11 @@ async function assetsOfLevels() {
     files.push(`${CONFIG.music.folder}${level.number}.mp3`);
   }
   files.push(`${CONFIG.music.folder}${CONFIG.ending.track}.mp3`);
+
+  // Финальная картинка и ответная передача: они нужны в самом конце, но греются
+  // здесь же. Ждать их загрузки после последнего уровня значило бы показать
+  // игроку пустой чёрный экран ровно на том месте, где ему отвечают.
+  files.push(CONFIG.ending.image, CONFIG.endMessage.file);
   return files;
 }
 
@@ -401,6 +408,13 @@ const WITH_GUN = 'dev:withGun';
 if (import.meta.env.DEV && localStorage.getItem(WITH_GUN) === '1') player.arm();
 const radio = new Radio(); // и рация в углу: видно, откуда голос и почему нельзя идти
 const ending = new Ending(); // экран, которым игра кончается
+
+// Ответная передача: тот же голос по рации, но уже после города. Субтитры у неё
+// свои — другая запись, другие реплики и другие паузы.
+// Ответная передача: свои субтитры — другая запись, другие реплики и паузы, —
+// и своя сноска о пропуске над ними.
+const endText = new Transmission(document.body, CONFIG.endMessage, true);
+const endMessage = new EndMessage(endText, radio, null, new SkipHint(endText.root));
 const fog = new BattleFog();  // туман войны: карта открывается по мере хода
 fog.start();
 
@@ -417,13 +431,45 @@ let finished = false;
 // с таким же флагом финала, и заведомо раньше игрового цикла — тот читает оба.
 let mapOpen = false;
 
+/**
+ * Игра пройдена — но финал показывается не сразу.
+ *
+ * Сперва отвечает та, что звала героя через весь город: чёрный экран, рация,
+ * речь. Только когда она отговорит, из-под чёрного проступает финальная
+ * картинка с итогом пути. Порядок именно такой: разговор — это конец истории, а
+ * картинка — то, что после него остаётся.
+ */
 locations.onFinish = () => {
   if (finished) return;
 
   finished = true;
+  tally.pause();                    // путь кончился: часы больше не идут
   sfx.silence();                    // мир замер — его звуки замолкают вместе с ним
-  music.play(CONFIG.ending.track);
-  ending.show();
+  music.silence();                  // и музыка тоже: под передачей слышен один голос
+
+  // Музыка финала начинается вместе с картинкой, а не под речью.
+  endMessage.onDone = () => {
+    music.play(CONFIG.ending.track);
+    ending.show();
+  };
+  endMessage.play();
+};
+
+// Кнопка оценки на финале появляется, только если площадка её примет.
+yandex.canReview().then((can) => ending.offerRate(can));
+ending.onRate = () => yandex.requestReview();
+
+/** Пройти город заново — прямо с финального экрана. */
+ending.onAgain = () => {
+  finished = false;
+  ending.hide();
+  endMessage.skip();
+
+  tally.reset();
+  progress.reset();
+  player.revive();
+  player.disarm();
+  locations.load(CONFIG.locations.first).catch(reportBreak);
 };
 
 /** Вернуться с финала в игру. Нужно только панели разработчика. */
@@ -613,6 +659,16 @@ function aimPointer() {
   // перебиты, стрелка ведёт к нему с любого расстояния.
   const clearing = Boolean(here?.mustClear);
 
+  /**
+   * Заграждение впереди: пока герой до него не дошёл, стрелка ведёт туда.
+   *
+   * Иначе на этом уровне вести некуда вовсе — выход заперт, пока не перебита
+   * толпа, — и игрок стоит на въезде, не понимая, куда идти. Круга под целью
+   * нет: заграждение и так во всю дорогу, подсвечивать его незачем.
+   */
+  const barrier = here?.hordeMark ?? null;
+  if (barrier) targets.push({ at: barrier, halo: false });
+
   // Вехи по дороге: то, что важно заметить по пути. Ведём к ним так же, как к
   // ружью — с кругом на полу и с любого расстояния, — и в том же порядке, в
   // каком они выписаны в файле уровня. Пройденные из очереди уходят сами.
@@ -706,6 +762,7 @@ function wireHorde(location) {
   location.onHorde = (at) => {
     fog.revealAll(); // толпа бежит по всей дороге — прятать в тумане больше нечего
     camera.show(at.clone(), 1.4, { pause: false, timing: CFG.camera });
+    aimPointer();    // к заграждению больше не ведём: герой его уже нашёл
   };
 
   location.onHordeWake = () => {
@@ -793,10 +850,15 @@ levelMap.onPick = (id) => {
  */
 levelMap.onToggle = (on) => {
   mapOpen = on;
+  if (on) tally.pause(); else tally.resume(); // под картой время пути стоит
   if (on) yandex.pause(); else yandex.play(); // открытая карта — это пауза
   joystick.setEnabled(!on); // и стик под картой не ловит палец
   input.enabled = !on;
 };
+
+// Под ответной передачей кнопки карты быть не должно: игра уже кончилась, и
+// уходить с финала на уровень некуда.
+endMessage.mapButton = mapButton;
 
 const deathScreen = new DeathScreen();
 
@@ -826,6 +888,7 @@ yandex.onResume = () => { pausedByHost = false; };
 deathScreen.onAgain = async () => {
   await yandex.showRewarded();
 
+  tally.resume();
   player.revive();
   locations.load(locations.current.data.id).catch(reportBreak);
 };
@@ -842,6 +905,7 @@ deathScreen.onFromStart = () => {
   // Пройденное стирается: игрок согласился на это в отдельном окне, и с этой
   // минуты игра для него начинается с чистого листа.
   progress.reset();
+  tally.reset();
 
   player.revive();
   player.disarm();
@@ -867,7 +931,11 @@ function watchDeath() {
   if (player.alive) return;
   if (performance.now() < player.restartAt) return;
 
-  if (!deathScreen.shown) yandex.pause(); // попытка кончилась — геймплей встал
+  if (!deathScreen.shown) {
+    yandex.pause();   // попытка кончилась — геймплей встал
+    tally.deaths += 1;
+    tally.pause();    // и часы пути вместе с ней: под экраном смерти никто не идёт
+  }
   deathScreen.show();
 }
 
@@ -878,7 +946,10 @@ function watchDeath() {
  * надо в тот же миг, когда игра и правда встала. Под заставкой мир не живёт,
  * значит и отметка ставится здесь, а не после сборки нового уровня.
  */
-locations.onLoading = () => yandex.pause();
+locations.onLoading = () => {
+  yandex.pause();
+  tally.pause(); // под заставкой герой не идёт — и время ему не идёт
+};
 
 locations.onChange = (location) => {
   deathScreen.hide(); // уровень начинается заново — экрану смерти тут не место
@@ -887,6 +958,7 @@ locations.onChange = (location) => {
   progress.setLevel(location.data.id);
 
   wireBlasts(location);
+  location.onKill = () => { tally.kills += 1; };
   location.onBossDown = () => aimPointer(); // вожак упал — стрелка к выходу, выход открыт
   wireHorde(location);
   // Вожак заметил героя — его круг разом проступает из тумана, а камера плывёт
@@ -915,6 +987,7 @@ locations.onChange = (location) => {
  * время шли под закрытым экраном.
  */
 locations.onOpened = (location) => {
+  tally.resume(); // уровень открылся — путь пошёл
   startMessage.arm(location.data.number ?? 1);
 
   /**

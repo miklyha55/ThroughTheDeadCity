@@ -81,6 +81,7 @@ export class Zombie extends Figure {
     this.deadTime = 0;
     this.hurtTime = 0;
     this.removed = false; // локация уберёт такого из списка
+    this.onDeath = null;  // кому сказать, что его убили: счёту пути
 
     this.yaw = 0;
     this.home = new THREE.Vector3();   // вокруг неё бродит, пока не увидит персонажа
@@ -518,6 +519,7 @@ export class Zombie extends Figure {
 
       case STATE.DEAD:
         this.deadTime = 0;
+        this.onDeath?.();
         this._voice('zombieDead', CFG.deathVolume, 1, CFG.deathPitch); // хрип слышно всегда
         this.restart('Death', 0.15);
         break;

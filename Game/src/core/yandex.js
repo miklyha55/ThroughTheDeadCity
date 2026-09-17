@@ -148,6 +148,37 @@ class Yandex {
   }
 
   /**
+   * Готова ли площадка принять оценку игры.
+   *
+   * Спрашивать надо заранее: тот, кто уже оценил, второй раз окно не увидит, и
+   * кнопку ему показывать незачем.
+   *
+   * @returns {Promise<boolean>}
+   */
+  async canReview() {
+    try {
+      const { value } = (await this.sdk?.feedback?.canReview?.()) ?? {};
+      return Boolean(value);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Показать окно оценки. Ставит её сама площадка — мы только просим открыть.
+   *
+   * @returns {Promise<boolean>} оценил ли игрок
+   */
+  async requestReview() {
+    try {
+      const { feedbackSent } = (await this.sdk?.feedback?.requestReview?.()) ?? {};
+      return Boolean(feedbackSent);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Прочитать сохранённое.
    *
    * Один раз при запуске. Игрок может быть и неавторизован — данные всё равно

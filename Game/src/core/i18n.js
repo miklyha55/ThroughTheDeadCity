@@ -65,6 +65,25 @@ const EN = {
   'levelMap.numberLabel': (number) => (number === 0 ? 'Start' : `Level ${number}`),
 
   'ending.title': 'Finale',
+  'ending.caption': 'Through the Dead City',
+  'ending.killsLabel': 'Put down',
+  'ending.deathsLabel': 'Deaths',
+  'ending.timeLabel': 'On the road',
+  'ending.againLabel': 'Play again',
+  'ending.rateLabel': 'Rate the game',
+
+  'endMessage.file': asset('assets/audio/end_message_eng.mp3'),
+  'endMessage.lines': [
+    'I hear you. God, I hear you.',
+    'You made it out. You really made it out.',
+    "I see a light at the northern post — that's you, isn't it? Wave at me. Just wave.",
+    'I called into nothing so many times I stopped believing anyone would answer.',
+    'There are people here. There are children, can you believe it. They kept asking if anyone else would come.',
+    "Walk to the gate, they're waiting for you. You don't have to go anywhere alone anymore.",
+    'You made it.',
+  ],
+  // Своя запись — свои паузы, замеренные по ней же.
+  'endMessage.times': [0.04, 3.66, 8.6, 14.64, 18.2, 23.12, 25.62],
 
   // Голос вступления и его субтитры: своя дорожка и свой текст.
   'startMessage.file': asset('assets/audio/start_message_en.mp3'),

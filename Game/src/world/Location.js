@@ -238,6 +238,7 @@ export class Location {
 
     const { speedSpread } = CONFIG.zombies;
 
+    zombie.onDeath = () => this.onKill?.(zombie);
     zombie.blood = this.blood;
     zombie.sfx = this.sfx;
     zombie.root.position.set(x, 0, z);
@@ -550,6 +551,16 @@ export class Location {
    *
    * Сцене кусок отдаётся до того, как его снимут: осколки берут цвет с модели.
    */
+  /**
+   * Куда вести героя, пока толпа не поднялась: к заграждению.
+   *
+   * Пусто, когда вести уже некуда — черта пройдена или заграждения нет вовсе.
+   */
+  get hordeMark() {
+    if (!this.horde || this.horde.clock >= 0 || this.breachable.length === 0) return null;
+    return this._breachCenter();
+  }
+
   /** Середина заграждения: туда и смотрит камера. */
   _breachCenter() {
     const at = new THREE.Vector3();

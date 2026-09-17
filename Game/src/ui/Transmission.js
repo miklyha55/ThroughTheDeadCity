@@ -1,6 +1,6 @@
 import { CONFIG } from '../config.js';
 
-const CFG = CONFIG.startMessage;
+const INTRO = CONFIG.startMessage;
 
 /**
  * Текст вступления, набирающийся по букве внизу экрана.
@@ -15,9 +15,17 @@ const CFG = CONFIG.startMessage;
  * примерно ровно, и длинная фраза занимает больше короткой.
  */
 export class Transmission {
-  constructor(container = document.body) {
+  /**
+   * @param {HTMLElement} [container]
+   * @param {object} [cfg] — чью речь набирать: у вступления и у финальной
+   *   передачи свои строки, свои отметки и свой темп
+   */
+  constructor(container = document.body, cfg = INTRO, alone = false) {
+    this.cfg = cfg;
+
     this.root = document.createElement('div');
-    this.root.className = 'radiotext';
+    // Один на экране — стоит посреди него, а не над игровым интерфейсом.
+    this.root.className = alone ? 'radiotext radiotext--alone' : 'radiotext';
 
     this.line = document.createElement('p');
     this.line.className = 'radiotext__line';
@@ -54,14 +62,14 @@ export class Transmission {
    * экрана и шрифта, и посчитать это по числу букв нельзя.
    */
   _reserve() {
-    if (!CFG.lines?.length || this._width === innerWidth) return;
+    if (!this.cfg.lines?.length || this._width === innerWidth) return;
     this._width = innerWidth;
 
     const keep = [this.typed.textContent, this.rest.textContent];
     this.line.style.minHeight = '';
 
     let tallest = 0;
-    for (const text of CFG.lines) {
+    for (const text of this.cfg.lines) {
       this.typed.textContent = text;
       this.rest.textContent = '';
       tallest = Math.max(tallest, this.line.getBoundingClientRect().height);
@@ -76,7 +84,7 @@ export class Transmission {
    * @param {HTMLAudioElement} audio — по ней и сверяемся
    */
   start(audio) {
-    if (!CFG.lines?.length) return;
+    if (!this.cfg.lines?.length) return;
 
     this.audio = audio;
     this.root.classList.add('radiotext--on');
@@ -103,14 +111,14 @@ export class Transmission {
    * отметки начала каждой фразы в записи, и лучше них ничего нет.
    */
   _schedule(duration) {
-    const end = Math.max(0.1, duration - CFG.tailOut);
+    const end = Math.max(0.1, duration - this.cfg.tailOut);
     const starts = this._starts(duration);
 
-    return CFG.lines.map((text, i) => {
+    return this.cfg.lines.map((text, i) => {
       const from = starts[i];
       const span = Math.max(0.1, (starts[i + 1] ?? end) - from);
       // хвост реплики — пауза перед следующей: печатаем чуть быстрее, чем длится
-      return { text, from, to: from + span * CFG.typeShare };
+      return { text, from, to: from + span * this.cfg.typeShare };
     });
   }
 
@@ -128,15 +136,15 @@ export class Transmission {
    * такая раскладка уходила вперёд больше чем на секунду.
    */
   _starts(duration) {
-    const measured = CFG.times;
-    if (Array.isArray(measured) && measured.length === CFG.lines.length) return measured;
+    const measured = this.cfg.times;
+    if (Array.isArray(measured) && measured.length === this.cfg.lines.length) return measured;
 
-    const speech = Math.max(0.1, duration - CFG.leadIn - CFG.tailOut);
-    const weights = CFG.lines.map((text) => text.length + CFG.linePause);
+    const speech = Math.max(0.1, duration - this.cfg.leadIn - this.cfg.tailOut);
+    const weights = this.cfg.lines.map((text) => text.length + this.cfg.linePause);
     const total = weights.reduce((sum, w) => sum + w, 0);
 
-    let at = CFG.leadIn;
-    return CFG.lines.map((_, i) => {
+    let at = this.cfg.leadIn;
+    return this.cfg.lines.map((_, i) => {
       const from = at;
       at += (weights[i] / total) * speech;
       return from;
@@ -156,7 +164,7 @@ export class Transmission {
 
     // Текст идёт чуть впереди звука: пока глаз добежит до конца строки, ухо
     // как раз её услышит. Ноль в ноль читается как задержка.
-    const now = audio.currentTime + CFG.advance;
+    const now = audio.currentTime + this.cfg.advance;
     const line = this.plan.findLast((l) => now >= l.from) ?? this.plan[0];
 
     const share = line.to > line.from ? (now - line.from) / (line.to - line.from) : 1;
