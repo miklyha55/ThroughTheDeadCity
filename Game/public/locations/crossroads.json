@@ -1824,14 +1824,6 @@
       "rotation": 158.6
     },
     {
-      "kind": "zombie2",
-      "at": [
-        -16.99,
-        2.68
-      ],
-      "rotation": -158.8
-    },
-    {
       "kind": "zombie1",
       "at": [
         -13.75,
@@ -1936,14 +1928,6 @@
       "rotation": -7.1
     },
     {
-      "kind": "zombie2",
-      "at": [
-        25.13,
-        -0.51
-      ],
-      "rotation": 86.5
-    },
-    {
       "kind": "zombie1",
       "at": [
         20.74,
@@ -1974,14 +1958,6 @@
         17.94
       ],
       "rotation": -51.9
-    },
-    {
-      "kind": "zombie2",
-      "at": [
-        0.58,
-        18.34
-      ],
-      "rotation": 49.1
     },
     {
       "kind": "zombie1",
@@ -2022,14 +1998,6 @@
         -18.29
       ],
       "rotation": -7.4
-    },
-    {
-      "kind": "zombie1",
-      "at": [
-        -2.46,
-        -18.47
-      ],
-      "rotation": 120.5
     },
     {
       "kind": "zombie1",
@@ -2094,14 +2062,6 @@
         1.81
       ],
       "rotation": 157.7
-    },
-    {
-      "kind": "zombie1",
-      "at": [
-        3.66,
-        -0.5
-      ],
-      "rotation": -107.4
     },
     {
       "kind": "zombie2",

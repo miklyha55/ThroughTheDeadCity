@@ -34,6 +34,9 @@ export class FollowCamera {
     this._shake = 0;      // сколько тряски осталось, с
     this._shakeFor = 1;   // за сколько она затухает
     this._shakePower = 0; // и с какой амплитуды начиналась
+    this._show = null;    // пролёт к чему-то другому и обратно: { at, time }
+    this._from = new THREE.Vector3();
+    this._there = new THREE.Vector3();
 
     // Дальше камеру ведёт только `update`: облёт погибшего и тряска живут там.
     // Здесь их не повторяем — кадра ещё не было, и вычитать из него нечего.
@@ -120,8 +123,30 @@ export class FollowCamera {
   /** Направление «вперёд по камере» для управления персонажем. */
   get moveYaw() { return this.yaw + Math.PI; }
 
+  /** Идёт ли сейчас пролёт: пока да, игра стоит. */
+  get showing() { return this._show !== null; }
+
+  /**
+   * Плавно показать что-то другое и вернуться к герою.
+   *
+   * Камера уезжает на точку, стоит на ней и едет обратно — всё с мягким
+   * разгоном и торможением. Ракурс не меняется, только то, куда смотрим.
+   *
+   * @param {THREE.Vector3} at — что показать; точка читается каждый кадр
+   * @param {number} [height] — на какую высоту над ней смотреть, м
+   */
+  show(at, height = CFG.lookAtHeight) {
+    this._show = { at, height, time: 0 };
+    this._from.copy(this._focus);
+  }
+
   update(dt) {
     this._desiredFocus.copy(this.target.position).setY(this.target.position.y + CFG.lookAtHeight);
+
+    if (this._show) {
+      this._showStep(dt);
+      return;
+    }
 
     // Линейно: камера идёт к цели с постоянной скоростью и останавливается,
     // как только пришла. Затухание оставляло бы за персонажем шлейф — кажется,
@@ -159,6 +184,33 @@ export class FollowCamera {
       if (this._shake === 0) this._shakePower = 0;
     }
 
+    this.camera.lookAt(this._focus);
+  }
+
+  /** Ход пролёта: туда, постоять, обратно. */
+  _showStep(dt) {
+    const show = this._show;
+    const { toFor, holdFor, backFor } = CFG.show;
+    show.time += dt;
+
+    this._there.copy(show.at).setY(show.at.y + show.height);
+
+    const smooth = (k) => k * k * (3 - 2 * k);
+    const t = show.time;
+
+    if (t < toFor) {
+      this._focus.lerpVectors(this._from, this._there, smooth(t / toFor));
+    } else if (t < toFor + holdFor) {
+      this._focus.copy(this._there);
+    } else if (t < toFor + holdFor + backFor) {
+      // Обратно — к тому месту, где герой сейчас, а не где он был: цель едет.
+      this._focus.lerpVectors(this._there, this._desiredFocus, smooth((t - toFor - holdFor) / backFor));
+    } else {
+      this._focus.copy(this._desiredFocus);
+      this._show = null;
+    }
+
+    this.camera.position.copy(this._focus).add(this._offset);
     this.camera.lookAt(this._focus);
   }
 }

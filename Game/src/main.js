@@ -501,6 +501,20 @@ engine.add({
     // как ни в чём не бывало.
     if (locations.loading || finished || mapOpen || pausedByHost) return;
 
+    /**
+     * Камера показывает вожака — мир стоит.
+     *
+     * Работает только то, без чего картинки нет: сама камера, отсечение по
+     * кадру и туман, который проецируется от камеры. Музыка идёт своим ходом,
+     * ей цикл не нужен. Персонаж, зомби, физика и указатель ждут.
+     */
+    if (camera.showing) {
+      camera.update(dt);
+      visibility.update(locations.current);
+      fog.update(engine.camera, player, dt);
+      return;
+    }
+
     input.update();
     watchDeath(); // упал и долежал — поднимаем экран с кнопкой
     player.frozen = startMessage.locked; // пока звучит вступление, он только слушает
@@ -821,8 +835,12 @@ locations.onChange = (location) => {
 
   wireBlasts(location);
   location.onBossDown = () => aimPointer(); // вожак упал — стрелка к выходу, выход открыт
-  // Вожак заметил героя — его круг разом проступает из тумана.
-  location.onBossSpotted = (boss) => fog.reveal(boss.position.x, boss.position.z, CONFIG.boss.senseRadius);
+  // Вожак заметил героя — его круг разом проступает из тумана, а камера плывёт
+  // к нему, показывает и возвращается. Смотрим на уровень груди великана.
+  location.onBossSpotted = (boss) => {
+    fog.reveal(boss.position.x, boss.position.z, CONFIG.boss.senseRadius);
+    camera.show(boss.position, boss.bodyHeight * 0.5);
+  };
   gunPickup.place(location, player, locations.editing); // в правке лежит всегда
   ammoPickup.place(location, player, locations.editing);
   aimPointer();
