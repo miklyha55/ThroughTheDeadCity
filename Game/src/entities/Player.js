@@ -285,7 +285,8 @@ export class Player extends Figure {
     // Докуда он тянется за предметом — та же черта, что и у выстрела. Долей от
     // радиуса огня, а не своим числом: две дальности, живущие порознь, рано или
     // поздно разъезжаются, а игрок различает только одну.
-    const reach = CFG.fireRange * CFG.throwRange;
+    // По вожаку и швыряют дальше — ровно во столько же раз, во сколько дальше бьют.
+    const reach = CFG.fireRange * target.fireReach * CFG.throwRange;
     if (flatDistance(target.position, this.root.position) > reach) return false;
 
     // Сквозь стену, машину и шкаф не кидают: предмет просто воткнётся в
@@ -1101,7 +1102,9 @@ export class Player extends Figure {
       //
       // Послабление тут ровно одно и только это: прежней цели позволено быть
       // чуть дальше. На то, КОГО выбрать из годных, оно не влияет никак.
-      const limit = zombie === held ? CFG.fireRange * CFG.keepTarget : CFG.fireRange;
+      // Дальность у каждой цели своя: по вожаку бьют дальше обычного.
+      const range = CFG.fireRange * zombie.fireReach;
+      const limit = zombie === held ? range * CFG.keepTarget : range;
 
       const distance = flatDistance(zombie.position, from);
       if (distance >= limit) continue;
@@ -1145,7 +1148,7 @@ export class Player extends Figure {
      * ружьё, доигрывал выстрел и выжидал перезарядку, а выстрела не было вовсе:
      * ни пули, ни хлопка, ни патрона. Со стороны — заело оружие.
      */
-    if (flatDistance(zombie.position, from) > CFG.fireRange * CFG.keepTarget) return;
+    if (flatDistance(zombie.position, from) > CFG.fireRange * zombie.fireReach * CFG.keepTarget) return;
 
     // Патрон и звук — здесь, вместе с самой пулей, а не при запуске анимации.
     // Между ними проходит `shotDelay`, и за это время выстрел могут отменить:
@@ -1187,7 +1190,7 @@ export class Player extends Figure {
     // бы веером в стороны, будто персонаж палит куда попало. Тянем чуть дальше
     // цели — тогда промах виден, но не спорит с тем, куда он на самом деле целил.
     const range = Math.min(
-      CFG.fireRange,
+      CFG.fireRange * zombie.fireReach,
       flatDistance(zombie.position, muzzle) * CFG.missReach
     );
 
@@ -1254,7 +1257,7 @@ export class Player extends Figure {
 
     const from = this.root.position;
     let best = null;
-    let bestAlong = CFG.fireRange * CFG.keepTarget; // та же черта, что и у самого выстрела
+    let bestAlong = Infinity;
 
     for (const other of location.zombies) {
       if (!other.alive) continue; // взрыв мог убрать его прямо этим выстрелом
@@ -1264,9 +1267,11 @@ export class Player extends Figure {
 
       const along = ox * dirX + oz * dirZ;          // сколько по лучу до него
       if (along <= 0 || along >= bestAlong) continue;
+      // та же черта, что и у самого выстрела, — своя у каждой цели
+      if (along >= CFG.fireRange * CFG.keepTarget * other.fireReach) continue;
 
       const aside = Math.abs(ox * dirZ - oz * dirX); // и насколько он в стороне
-      if (aside > CONFIG.zombies.bodyRadius) continue;
+      if (aside > other.bodyRadius) continue; // у вожака тело втрое шире
 
       if (location.obstacles.blocksLine(from.x, from.z, other.position.x, other.position.z)) continue;
 

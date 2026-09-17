@@ -83,6 +83,8 @@ export class Debris {
       explosive, // бочка: пуля её прошивает — и она детонирует
       blade,     // нож или тесак: в полёте режет и остаётся торчать в теле
       flight: null, // полёт клинка в цель: ведётся по дуге, а не физикой
+      lethalTo: null, // кого убьёт, если долетит: только бросок вожака в героя
+      lethalFor: 0,   // и сколько ещё секунд это в силе
     });
   }
 
@@ -110,10 +112,20 @@ export class Debris {
       // бросок гаснет, не начавшись.
       if (item.ignoreFor > 0) item.ignoreFor -= dt;
 
+      // Бросок вожака опасен, пока летит: упавший и откатившийся ящик уже
+      // обычный хлам.
+      if (item.lethalTo) {
+        item.lethalFor -= dt;
+        if (item.lethalFor <= 0) item.lethalTo = null;
+      }
+
       for (const mover of movers) {
         if (!mover) continue;
         if (item.ignoreFor > 0 && mover === item.ignore) continue;
 
+        // Попавший бросок дальше не разбирается: пойманным или отпнутым он уже
+        // не станет — удар засчитан.
+        if (mover === item.lethalTo && this._strike(item, mover)) continue;
         this._crush(item, mover);
         if (this._grabbed(item, mover)) break; // ушёл в руку — пинать уже нечего
         this._kick(item, mover.position, mover.radius, mover.speed);
@@ -127,6 +139,40 @@ export class Debris {
       this._checkSleep(item, dt);
     }
     this._separate();
+  }
+
+  /**
+   * Бросок вожака попал в героя.
+   *
+   * Единственный случай, когда летящий предмет героя убивает. Весь прочий хлам —
+   * пнутый толпой, отброшенный взрывом, брошенный им самим — ему не опасен: иначе
+   * бочка, которую он сам подорвал, валила бы его отлетевшими ящиками.
+   *
+   * Условия похожи на `_crush`: касание, скорость и высота тела. Масса не в
+   * счёт — вожак швыряет с такой силой, что убивает и покрышка.
+   *
+   * @returns {boolean} попал ли
+   */
+  _strike(item, mover) {
+    if (item.asleep || !mover.alive) return false;
+
+    const position = item.object.position;
+    const dx = position.x - mover.position.x;
+    const dz = position.z - mover.position.z;
+
+    const gap = Math.hypot(dx, dz);
+    if (gap > item.radius + mover.radius || gap < 1e-4) return false;
+
+    const high = position.y - mover.position.y;
+    if (high < -item.radius || high > CONFIG.boss.hitHeight) return false;
+
+    // Скорость полная, а не сближение по земле: с высокой дуги предмет падает
+    // почти отвесно, и по горизонтали на героя он едва движется.
+    if (item.velocity.length() < CONFIG.boss.lethalSpeed) return false;
+
+    item.lethalTo = null; // один бросок — один удар
+    mover.takeDamage(CONFIG.boss.damage, position);
+    return true;
   }
 
   /**
@@ -164,7 +210,7 @@ export class Debris {
     if (closing < (blade ? BLADES.biteSpeed : CFG.lethalSpeed)) return;
 
     if (!blade) {
-      mover.crush(position);
+      mover.crush(position, 1, 'impact');
       return;
     }
 
@@ -182,7 +228,7 @@ export class Debris {
      * произошло, а не в центре предмета, который к этому мигу мог отлететь.
      */
     const high = position.y - mover.position.y;
-    if (high < 0 || high > ZOMBIES.bodyHeight) return;
+    if (high < 0 || high > (mover.bodyHeight ?? ZOMBIES.bodyHeight)) return;
 
     _bite.set(
       mover.position.x + (dx / gap) * (mover.radius - BLADES.sink),
@@ -345,6 +391,7 @@ export class Debris {
    */
   launch(item, dirX, dirZ, speed, lift, spin, by = null, grace = 0) {
     item.held = false;
+    item.lethalTo = null; // опасным его делает только сам вожак, уже после запуска
     item.ignore = by;
     item.ignoreFor = grace;
     item.flight = null;  // обычный бросок физикой: ведут только клинок в цель
@@ -617,6 +664,7 @@ export class Debris {
     item.velocity.set(0, 0, 0);
     item.angular.set(0, 0, 0);
     item.asleep = true;
+    item.lethalTo = null; // улёгся — больше никого не убьёт
   }
 
   /** Предметы расталкивают друг друга — куча разлетается целиком. */

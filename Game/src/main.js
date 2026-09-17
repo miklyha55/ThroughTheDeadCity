@@ -573,6 +573,12 @@ function aimPointer() {
   const gun = gunPickup.object && !player.armed ? gunPickup.object : null;
   if (gun) targets.push({ at: gun, halo: true });
 
+  // Вожак: пока жив, стрелка ведёт только на него — с любого расстояния и без
+  // круга на полу, под таким великаном его всё равно не видно. Выход за ним в
+  // очереди и сам откроется, когда вожак упадёт.
+  const boss = here?.boss?.alive ? here.boss : null;
+  if (boss) targets.push({ at: boss, halo: false });
+
   // Вехи по дороге: то, что важно заметить по пути. Ведём к ним так же, как к
   // ружью — с кругом на полу и с любого расстояния, — и в том же порядке, в
   // каком они выписаны в файле уровня. Пройденные из очереди уходят сами.
@@ -590,7 +596,8 @@ function aimPointer() {
 
   // Выход заперт, пока не взято ружьё: уйти без него значит прийти на следующий
   // уровень безоружным.
-  here?.lockExit(Boolean(gun));
+  // И пока жив вожак: уйти, не победив его, нельзя.
+  here?.lockExit(Boolean(gun) || Boolean(boss));
 }
 
 /** Название нынешнего уровня на языке игры. */
@@ -773,6 +780,9 @@ locations.onChange = (location) => {
   progress.setLevel(location.data.id);
 
   wireBlasts(location);
+  location.onBossDown = () => aimPointer(); // вожак упал — стрелка к выходу, выход открыт
+  // Вожак заметил героя — его круг разом проступает из тумана.
+  location.onBossSpotted = (boss) => fog.reveal(boss.position.x, boss.position.z, CONFIG.boss.senseRadius);
   gunPickup.place(location, player, locations.editing); // в правке лежит всегда
   aimPointer();
   showAmmo();

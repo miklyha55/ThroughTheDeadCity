@@ -29,6 +29,7 @@ const EXPORTS = [
   { blend: 'Player/Player.blend', script: 'tools/export_player.py', what: 'персонаж' },
   { blend: 'Zombie1/Zombie.blend', script: 'tools/export_zombie.py', what: 'зомби 1' },
   { blend: 'Zombie2/Zombie.blend', script: 'tools/export_zombie.py', what: 'зомби 2' },
+  { blend: 'ZombieBoss/Zombie.blend', script: 'tools/export_zombie.py', what: 'босс' },
 ];
 
 /** Сколько файлов легло в папку, считая вложенные. */

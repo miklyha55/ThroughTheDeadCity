@@ -72,19 +72,23 @@ export class HealthBars {
       // Целым и мёртвым полоска не нужна. Полный запас у каждого свой: живучесть
       // зависит от вида, и общий потолок показывал бы слабого вечно раненым,
       // ещё до первой пули.
-      if (!zombie.alive || zombie.health >= zombie.maxHealth) continue;
+      if (!zombie.alive) continue;
+      if (zombie.health >= zombie.maxHealth && !zombie.alwaysBar) continue;
 
       const at = zombie.position;
       if (flatDistance(at, player.position) > CFG.drawRange) continue;
 
       const share = Math.max(0, Math.min(1, zombie.health / zombie.maxHealth));
-      _center.set(at.x, at.y + CFG.offset, at.z);
+      // Над вожаком полоска выше — он втрое крупнее — и длиннее: жизней много.
+      const size = zombie.sizeScale ?? 1;
+      const width = size > 1 ? CONFIG.boss.barWidth : CFG.width;
+      _center.set(at.x, at.y + CFG.offset * size, at.z);
 
       _color.set(CFG.backColor);
-      vertex = this._quad(vertex, _center, -0.5, 0.5, _color);
+      vertex = this._quad(vertex, _center, -0.5, 0.5, _color, width);
 
       _color.set(CFG.fillColor);
-      vertex = this._quad(vertex, _center, -0.5, -0.5 + share, _color);
+      vertex = this._quad(vertex, _center, -0.5, -0.5 + share, _color, width);
     }
 
     this.mesh.geometry.setDrawRange(0, vertex);
@@ -96,10 +100,10 @@ export class HealthBars {
    * Прямоугольник от `left` до `right` в долях ширины полоски, где 0 — середина.
    * @returns {number} номер вершины, на которой прямоугольник кончился
    */
-  _quad(vertex, center, left, right, color) {
+  _quad(vertex, center, left, right, color, width = CFG.width) {
     const halfHeight = CFG.height / 2;
-    const x0 = left * CFG.width;
-    const x1 = right * CFG.width;
+    const x0 = left * width;
+    const x1 = right * width;
 
     // углы: левый низ, правый низ, правый верх, левый верх
     const corner = (alongX, alongY) => {

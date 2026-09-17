@@ -68,6 +68,7 @@ export class Location {
     // без её мелких деталей — зеркала и колёса прыжку не помеха.
     this.vaults = [];
     this.zombies = [];
+    this.boss = null;        // вожак, если он на этом уровне есть: пока жив, выход заперт
     this.exitLocked = false; // заперт ли выход: на вводной — пока не взято ружьё
     this.guide = [];         // вехи на пути к выходу: что заметить по дороге
     this._movers = [];  // кто может задеть разбросанные предметы
@@ -235,6 +236,12 @@ export class Location {
 
     this.group.add(zombie.root);
     this.zombies.push(zombie);
+
+    if (kind === CONFIG.boss.kind) {
+      this.boss = zombie;
+      zombie.onDown = () => this.onBossDown?.(); // сцене пора открыть выход
+      zombie.onSpotted = () => this.onBossSpotted?.(zombie);
+    }
     return zombie;
   }
 
@@ -366,6 +373,7 @@ export class Location {
     for (const zombie of this.zombies) zombie.update(dt, player, this, this.zombies);
 
     this._blockPlayer(player);
+    this._clearBoss();
 
     // предметы разлетаются и от зомби: толпа проходит — ящики расходятся
     this._movers.length = 0;
@@ -402,12 +410,17 @@ export class Location {
   _blockPlayer(player) {
     if (!player.alive) return;
 
-    const gap = CONFIG.zombies.bodyRadius + CONFIG.player.radius;
     const position = player.position;
 
     for (const zombie of this.zombies) {
       if (!zombie.alive) continue; // через труп можно перешагнуть
 
+      if (zombie === this.boss) {
+        this._keepFromBoss(player);
+        continue;
+      }
+
+      const gap = zombie.bodyRadius + CONFIG.player.radius;
       const dx = position.x - zombie.position.x;
       const dz = position.z - zombie.position.z;
       const distance = Math.hypot(dx, dz);
@@ -418,6 +431,70 @@ export class Location {
       const push = (gap - distance) / distance;
       zombie.position.x -= dx * push;
       zombie.position.z -= dz * push;
+    }
+  }
+
+  /**
+   * К вожаку герой не подходит ближе `boss.keepOut`.
+   *
+   * Здесь, в отличие от толпы, упирается сам герой, а не расходится вожак: его
+   * не растолкать, и вплотную под ним делать нечего — бросок оттуда не
+   * увидеть, а стрелять в упор по великану было бы слишком просто. Круг
+   * заметно шире его тела, поэтому ощущается как невидимая стена вокруг него.
+   */
+  _keepFromBoss(player) {
+    const boss = this.boss;
+    const position = player.position;
+    const gap = CONFIG.boss.keepOut;
+
+    const dx = position.x - boss.position.x;
+    const dz = position.z - boss.position.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance >= gap) return;
+
+    // Точно в центре — направления нет, выставляем куда-нибудь.
+    const nx = distance > 1e-4 ? dx / distance : 1;
+    const nz = distance > 1e-4 ? dz / distance : 0;
+
+    position.x = boss.position.x + nx * gap;
+    position.z = boss.position.z + nz * gap;
+
+    // Выставленный на край может оказаться в стене или за забором: в прыжке
+    // его из препятствия не выталкиваем — он над ним летит.
+    if (!player.jumping) this.obstacles.resolve(position, CONFIG.player.radius);
+    this.clampPosition(position);
+  }
+
+  /**
+   * Толпа не лезет внутрь вожака.
+   *
+   * Мягкого расхождения, которым зомби делят место между собой, тут мало:
+   * вожак идёт напролом, втрое шире любого, и толпа, напирающая на героя,
+   * вдавливала бы в него и себя. Поэтому здесь жёстко — всякого, кто оказался
+   * внутри его тела, выставляем на край. Сдвигается зомби, а не вожак: он
+   * тяжелее, и сбить его с шага толпой было бы странно.
+   */
+  _clearBoss() {
+    const boss = this.boss;
+    if (!boss?.alive) return;
+
+    for (const zombie of this.zombies) {
+      if (zombie === boss || !zombie.alive) continue;
+
+      const gap = boss.bodyRadius + zombie.bodyRadius;
+      const dx = zombie.position.x - boss.position.x;
+      const dz = zombie.position.z - boss.position.z;
+      const distance = Math.hypot(dx, dz);
+      if (distance >= gap) continue;
+
+      // Точно в центре — направления нет, выталкиваем куда-нибудь.
+      const nx = distance > 1e-4 ? dx / distance : 1;
+      const nz = distance > 1e-4 ? dz / distance : 0;
+
+      zombie.position.x = boss.position.x + nx * gap;
+      zombie.position.z = boss.position.z + nz * gap;
+      this.obstacles.resolve(zombie.position, CONFIG.zombies.radius);
+      this.clampPosition(zombie.position);
     }
   }
 
@@ -572,7 +649,7 @@ export class Location {
      */
     for (const zombie of this.zombies) {
       if (!zombie.alive) continue;
-      if (flatDistance(zombie.position, at) <= CFG.radius) zombie.crush(at, CFG.gore);
+      if (flatDistance(zombie.position, at) <= CFG.radius) zombie.crush(at, CFG.gore, 'blast');
     }
 
     // Героя взрыв не трогает вовсе. Бочка теперь не ловушка, а оружие: он сам
@@ -762,6 +839,7 @@ export class Location {
 
     zombie.dispose();
     this.zombies = this.zombies.filter((one) => one !== zombie);
+    if (zombie === this.boss) this.boss = null;
     return true;
   }
 

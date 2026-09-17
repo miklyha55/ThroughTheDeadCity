@@ -40,8 +40,11 @@ export class Visibility {
     this.frustum.setFromProjectionMatrix(this.matrix);
 
     for (const zombie of location.zombies) {
-      this.sphere.center.set(zombie.position.x, CFG.height, zombie.position.z);
-      this.sphere.radius = CFG.figureRadius;
+      // Крупная фигура и сферу получает крупнее: вожака иначе гасило бы, пока
+      // его голова ещё в кадре.
+      const size = zombie.sizeScale ?? 1;
+      this.sphere.center.set(zombie.position.x, CFG.height * size, zombie.position.z);
+      this.sphere.radius = CFG.figureRadius * size;
       zombie.root.visible = this._seen();
     }
 

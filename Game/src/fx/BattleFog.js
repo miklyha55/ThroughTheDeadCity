@@ -133,8 +133,15 @@ export class BattleFog extends ScreenShader {
     this.set('field', width, depth);
   }
 
-  /** Прорезать круг вокруг точки. Мягкий край, чтобы дорожка не была штампом. */
-  reveal(x, z) {
+  /**
+   * Прорезать круг вокруг точки. Мягкий край, чтобы дорожка не была штампом.
+   *
+   * @param {number} x @param {number} z
+   * @param {number} [radius] — м, докуда открыть начисто. Без него — дальность
+   *   огня героя: так прорезается дорожка за ним. Своя мера нужна разовым
+   *   вскрытиям, вроде круга вожака, когда тот заметил героя.
+   */
+  reveal(x, z, radius = null) {
     if (!this.field.width) return;
 
     // Кладём без переворота по вертикали: WebGL берёт верхнюю строку холста за
@@ -153,8 +160,15 @@ export class BattleFog extends ScreenShader {
      * бы наполовину в тумане.
      */
     const reach = CONFIG.player.fireRange;
-    const clear = reach * CFG.clearShare * CFG.pixelsPerMetre;
-    const soft = reach * CFG.sightShare * CFG.pixelsPerMetre;
+    let clear = reach * CFG.clearShare * CFG.pixelsPerMetre;
+    let soft = reach * CFG.sightShare * CFG.pixelsPerMetre;
+
+    // Свой радиус — та же ширина мягкого края, только снаружи заданного круга.
+    if (radius) {
+      const edge = soft - clear;
+      clear = radius * CFG.pixelsPerMetre;
+      soft = clear + edge;
+    }
 
     // Кисть непрозрачна по всей длине, а гаснет цветом от белого к чёрному.
     // Будь у края прозрачность, «максимум» считался бы поверх полупрозрачного

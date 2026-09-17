@@ -106,6 +106,20 @@ export class Zombie extends Figure {
   /** Чем он задевает предметы: телом такого радиуса и с такой скоростью. */
   get radius() { return CFG.bodyRadius; }
 
+  /**
+   * Размер тела: сквозь него не проходят ни персонаж, ни соседи, и в него же
+   * попадает пуля. Геттерами, а не прямым чтением настроек: вожак втрое крупнее,
+   * и всё, что меряет тело, должно спрашивать у самой фигуры.
+   */
+  get bodyRadius() { return CFG.bodyRadius; }
+  get bodyHeight() { return CFG.bodyHeight; }
+
+  /** Во сколько раз фигура крупнее обычной: по этому поднимается полоска жизни. */
+  get sizeScale() { return 1; }
+
+  /** Во сколько раз дальше обычного по нему стреляют. */
+  get fireReach() { return 1; }
+
   /** Идёт ли он по следу: в этом состоянии обзор уже круговой. */
   get chasing() { return this.state === STATE.CHASE || this.state === STATE.ATTACK; }
 
@@ -124,8 +138,10 @@ export class Zombie extends Figure {
    * @param {THREE.Vector3} [from] — откуда прилетело: туда же летят капли
    * @param {number} [gore] — во сколько раз гуще кровь: разрыв взрывом не то же
    *   самое, что удар бочкой
+   * @param {'blast'|'blade'|'impact'} [cause] — чем убило. Обычному зомби всё
+   *   равно, он гибнет от любого; вожак от разного теряет разное
    */
-  crush(from = null, gore = 1) {
+  crush(from = null, gore = 1, cause = 'impact') {
     if (this.state === STATE.DEAD) return false;
 
     this.blood?.splash(
@@ -196,7 +212,7 @@ export class Zombie extends Figure {
     // сдвигается.
     bone.attach(object);
 
-    this.crush(at, BLADES.gore);
+    this.crush(at, BLADES.gore, 'blade');
     return true;
   }
 
@@ -763,12 +779,16 @@ export class Zombie extends Figure {
     for (const other of crowd) {
       if (other === this || other.state === STATE.DEAD) continue;
 
+      // Дистанция растёт вместе с телами: обычная пара держит `separation`, а
+      // рядом с вожаком его тело втрое шире, и расходиться надо раньше.
+      const apart = CFG.separation * (this.bodyRadius + other.bodyRadius) / (2 * CFG.bodyRadius);
+
       const dx = position.x - other.position.x;
       const dz = position.z - other.position.z;
       const gap = Math.hypot(dx, dz);
-      if (gap >= CFG.separation || gap < 1e-4) continue;
+      if (gap >= apart || gap < 1e-4) continue;
 
-      const force = (CFG.separation - gap) / CFG.separation;
+      const force = (apart - gap) / apart;
       step.x += (dx / gap) * force * limit;
       step.z += (dz / gap) * force * limit;
     }

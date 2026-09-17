@@ -1,7 +1,7 @@
 """
-Экспорт зомби из Zombie1/Zombie.blend или Zombie2/Zombie.blend в GLB.
+Экспорт зомби из Zombie1, Zombie2 или ZombieBoss (…/Zombie.blend) в GLB.
 
-Имя выходного файла берётся из имени папки: Zombie1 → zombie1.glb.
+Имя выходного файла берётся из имени папки: Zombie1 → zombie1.glb, ZombieBoss → zombieboss.glb.
 Никаких правок геометрии и анимаций: что в .blend, то и уезжает в игру.
 
 Запуск:

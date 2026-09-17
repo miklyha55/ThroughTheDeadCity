@@ -1,6 +1,8 @@
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { loadGLTF } from '../core/AssetLoader.js';
 import { Zombie } from '../entities/Zombie.js';
+import { Boss } from '../entities/Boss.js';
+import { CONFIG } from '../config.js';
 import { batchSkinned } from './batching.js';
 
 /**
@@ -62,6 +64,8 @@ export class ZombieLibrary {
       console.warn(`[zombies] нет вида «${name}»`);
       return null;
     }
-    return new Zombie(cloneSkinned(kind.scene), kind.animations, name);
+    // Вожак — та же фигура с другим поведением: отличает его только вид.
+    const Kind = name === CONFIG.boss.kind ? Boss : Zombie;
+    return new Kind(cloneSkinned(kind.scene), kind.animations, name);
   }
 }
