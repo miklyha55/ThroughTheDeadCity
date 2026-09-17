@@ -713,20 +713,6 @@ function aimPointer() {
   const clearing = Boolean(here?.mustClear);
 
   /**
-   * Пока уровень не зачищен, стрелка ведёт к ближайшему живому.
-   *
-   * Выход в это время заперт, и без указателя игрок ходил бы по площадке,
-   * разыскивая последних: толпа после прорыва расходится широко, и двое
-   * оставшихся легко оказываются в разных её концах.
-   *
-   * Цель пересчитывается на каждой смерти — там же, где считаются убитые.
-   */
-  if (clearing) {
-    const left = here.nearestAlive(player.position);
-    if (left) targets.push({ at: left.root, halo: false });
-  }
-
-  /**
    * Выход: с любого расстояния, но без круга на полу.
    *
    * Расстояния тут больше нет. Оно было: стрелка подхватывала выход за
@@ -735,7 +721,9 @@ function aimPointer() {
    * наугад. Круг под ним по-прежнему не рисуем: он читался бы как «встань
    * сюда», а выход и так на виду, когда до него дошли.
    */
-  if (here?.exitMark && !clearing) {
+  // Показываем его и на зачищаемом уровне: идти всё равно туда, а что он
+  // заперт, видно по самой метке — она тускнеет, пока не перебиты все.
+  if (here?.exitMark) {
     targets.push({ at: here.exitMark, halo: false });
   }
 
@@ -1030,12 +1018,7 @@ locations.onChange = (location) => {
   progress.setLevel(location.data.id);
 
   wireBlasts(location);
-  location.onKill = () => {
-    tally.kills += 1;
-    // На зачищаемом уровне стрелка ведёт к ближайшему живому — значит после
-    // каждой смерти ей нужна новая цель.
-    if (location.mustClear) aimPointer();
-  };
+  location.onKill = () => { tally.kills += 1; };
   location.onBossDown = () => aimPointer(); // вожак упал — стрелка к выходу, выход открыт
 
   /**

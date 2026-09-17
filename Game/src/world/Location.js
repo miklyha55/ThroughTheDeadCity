@@ -54,6 +54,19 @@ const round = (value) => Math.round(value * 100) / 100;
  * Локация, собранная по JSON-описанию: площадка, глухой забор по периметру
  * с единственным проёмом-выходом, расставленные пропы и точка старта.
  */
+/**
+ * Попала ли точка в область: центр, размер по X и по Z, плюс толщина тела.
+ *
+ * Размеры порознь, потому что метки тянут гизмо по осям: вытянутой поперёк
+ * прохода вехой его и перекрывают.
+ */
+function inside(p, at, alongX, alongZ, body = 0) {
+  const dx = (p.x - at.x) / (alongX + body);
+  const dz = (p.z - at.z) / (alongZ + body);
+
+  return dx * dx + dz * dz <= 1;
+}
+
 export class Location {
   constructor(data, prefabs, zombieLibrary, blood = null,
     { batched = true, sfx = null, seeThrough = null } = {}) {
@@ -602,31 +615,6 @@ export class Location {
   }
 
   /**
-   * Ближайший живой зомби: к нему ведёт указатель, пока уровень не зачищен.
-   *
-   * Без этого конец уровня превращался в обход площадки: выход заперт, идти
-   * некуда, а последние двое разбрелись по разным её углам — и игрок ищет их
-   * вслепую, не понимая, заперт выход по делу или сломался.
-   *
-   * @param {THREE.Vector3} from — откуда искать, обычно герой
-   */
-  nearestAlive(from) {
-    let best = null;
-    let bestAway = Infinity;
-
-    for (const zombie of this.zombies) {
-      if (!zombie.alive) continue;
-
-      const away = flatDistance(zombie.position, from);
-      if (away < bestAway) {
-        best = zombie;
-        bestAway = away;
-      }
-    }
-    return best;
-  }
-
-  /**
    * К вожаку герой не подходит ближе `boss.keepOut`.
    *
    * Здесь, в отличие от толпы, упирается сам герой, а не расходится вожак: его
@@ -855,6 +843,29 @@ export class Location {
     // Героя взрыв не трогает вовсе. Бочка теперь не ловушка, а оружие: он сам
     // её швыряет и сам подрывает, и гибнуть от собственного броска было бы
     // наказанием за то, что игра же и предлагает делать.
+
+    this._chain(at, player);
+  }
+
+  /**
+   * Цепь: взрыв поджигает взрывчатку, лежащую рядом.
+   *
+   * Не разом, а с задержкой: составленные кучей бочки рвутся волной, одна за
+   * другой, и это видно. Мгновенная цепь слилась бы в один хлопок.
+   *
+   * Каждая следующая взрывается через `explode`, то есть сама поджигает своих
+   * соседей — так цепочка и тянется через всю кучу. Дважды одно и то же не
+   * рванёт: `explode` первым делом смотрит, на месте ли вещь.
+   */
+  _chain(at, player) {
+    const CFG = CONFIG.explosion;
+
+    const соседи = this.debris.items.filter((item) => item.explosive && !item.held
+      && flatDistance(item.object.position, at) <= CFG.chainRadius + item.radius);
+
+    соседи.forEach((item, i) => {
+      setTimeout(() => this.explode(item, player), (i + 1) * CFG.chainDelay * 1000);
+    });
   }
 
   /**
@@ -1104,7 +1115,7 @@ export class Location {
     // Область перехода: центр и радиус читаем прямо с метки.
     const exitAt = this.exitMark
       ? [round(this.exitMark.position.x), round(this.exitMark.position.z),
-        round(this.exitMark.scale.x)]
+        round(this.exitMark.scale.x), round(this.exitMark.scale.z)]
       : this.data.exitAt;
 
     // Вехи правятся так же: в файл уходит то место, куда их подвинули.
@@ -1113,7 +1124,8 @@ export class Location {
         const spot = this.guideMarks[i] ?? mark.mark;
         // Радиус — третьим числом, как у выхода: гизмо растягивает саму метку.
         const saved = {
-          at: [round(spot.position.x), round(spot.position.z), round(spot.scale.x)],
+          at: [round(spot.position.x), round(spot.position.z),
+            round(spot.scale.x), round(spot.scale.y)],
         };
         if (!mark.halo) saved.halo = false;
         return saved;
@@ -1160,7 +1172,12 @@ export class Location {
     if (!spot) return;
 
     const at = new THREE.Vector3(spot[0], 0, spot[1]);
-    const radius = spot[2] ?? 3;
+
+    // Область перехода тянется по осям порознь: вытянутой поперёк прохода её и
+    // перекрывают. Третье число — полуось по X, четвёртое по Z; уровни, где
+    // число одно, читаются как круг.
+    const alongX = spot[2] ?? 3;
+    const alongZ = spot[3] ?? alongX;
     const CFG = CONFIG.exit;
 
     /**
@@ -1203,7 +1220,7 @@ export class Location {
      */
     mark.visible = true;
     mark.position.copy(at).setY(0.06);
-    mark.scale.set(radius, 1, radius);
+    mark.scale.set(alongX, 1, alongZ);
 
     // Поверх настила и дорожной плитки, но ниже гизмо.
     //
@@ -1247,7 +1264,8 @@ export class Location {
        * тут было одно число на всю игру, и растянутая гизмо веха срабатывала
        * по-прежнему — с чего бы её ни тянули.
        */
-      radius: spot.at[2] ?? CONFIG.pointer.reachWithin,
+      alongX: spot.at[2] ?? CONFIG.pointer.reachWithin,
+      alongZ: spot.at[3] ?? spot.at[2] ?? CONFIG.pointer.reachWithin,
       // Своя точка на сцене, а не ссылка на проп: веха может стоять и там, где
       // ничего не расставлено, — на перекрёстке, у поворота.
       at: new THREE.Vector3(spot.at[0], 0, spot.at[1]),
@@ -1289,14 +1307,15 @@ export class Location {
       })
     );
 
-    const radius = spot.at[2] ?? CONFIG.pointer.reachWithin;
+    const alongX = spot.at[2] ?? CONFIG.pointer.reachWithin;
+    const alongZ = spot.at[3] ?? alongX;
 
     mark.name = `guide:${index + 1}`;
     mark.rotation.x = -Math.PI / 2;
     mark.position.set(spot.at[0], 0.07, spot.at[1]);
-    // Размер метки — это и есть радиус срабатывания: растянули гизмо, значит
-    // растянули и саму веху.
-    mark.scale.set(radius, radius, 1);
+    // Размер метки — это и есть область срабатывания, по каждой оси свой. Меш
+    // лежит плашмя, поэтому его Y — это мировой Z.
+    mark.scale.set(alongX, alongZ, 1);
     mark.renderOrder = -1; // ниже гизмо, как и метка выхода
     mark.castShadow = false;
     mark.receiveShadow = false;
@@ -1329,11 +1348,12 @@ export class Location {
        * Раз размер задают гизмо, он и решает: растянутая поперёк прохода веха
        * работает как заслон, мимо которого не проскочить.
        */
-      // Плюс само тело героя: круг засчитывается, когда он коснулся края, а не
-      // когда влез в него целиком.
-      const reach = (mark.mark ? mark.mark.scale.x : mark.radius) + CONFIG.player.radius;
+      // Плюс само тело героя: засчитывается по касанию края, а не когда он
+      // влез внутрь целиком.
+      const alongX = mark.mark ? mark.mark.scale.x : mark.alongX;
+      const alongZ = mark.mark ? mark.mark.scale.y : mark.alongZ;
 
-      if (flatDistance(p, mark.at) <= reach) {
+      if (inside(p, mark.at, alongX, alongZ, CONFIG.player.radius)) {
         mark.done = true;
         changed = true;
       }
@@ -1369,12 +1389,10 @@ export class Location {
   reachedExit(p) {
     if (!this.exitMark || this.exitLocked) return false;
 
-    // По самому кругу и его размеру: во что метку растянули гизмо, то и есть
-    // область перехода. Плюс тело героя — переход срабатывает по касанию края,
-    // а не когда герой целиком внутри.
-    const reach = this.exitMark.scale.x + CONFIG.player.radius;
-
-    return flatDistance(p, this.exitMark.position) <= reach;
+    // Во что метку растянули гизмо, то и есть область перехода: по каждой оси
+    // свой размер. Плюс тело героя — срабатывает по касанию края.
+    return inside(p, this.exitMark.position, this.exitMark.scale.x, this.exitMark.scale.z,
+      CONFIG.player.radius);
   }
 
   /**

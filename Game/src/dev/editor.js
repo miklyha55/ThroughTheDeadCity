@@ -54,6 +54,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
   });
   gizmo.addEventListener('dragging-changed', (e) => { dragging = e.value; });
 
+
   let active = false;
   let dragging = false;
   let picked = null;

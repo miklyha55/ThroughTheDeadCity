@@ -21,9 +21,9 @@
   "exitAt": [
     -0.33,
     -69.05,
+    14.88,
     14.88
   ],
-  "clearToExit": true,
   "horde": {
     "trigger": [
       -10,
@@ -975,8 +975,8 @@
     {
       "prop": "Prop_Barrel",
       "at": [
-        0.16,
-        22.07
+        -2.23,
+        21.95
       ],
       "rotation": -179.8
     },
@@ -1548,8 +1548,8 @@
     {
       "prop": "Prop_Jerrycan",
       "at": [
-        -7.3,
-        23.04
+        -5.08,
+        22.81
       ],
       "rotation": 173.6
     },
@@ -1600,6 +1600,30 @@
         32.06
       ],
       "rotation": -179.8
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        -11.5,
+        31.07
+      ],
+      "rotation": -179.8
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -2.63,
+        30.86
+      ],
+      "rotation": 173.6
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -4.98,
+        -9.89
+      ],
+      "rotation": -103.2
     }
   ],
   "zombies": [
@@ -2199,9 +2223,10 @@
   "guide": [
     {
       "at": [
-        -11.13,
+        -11.24,
         26.07,
-        6.37
+        2.39,
+        16.04
       ],
       "halo": false
     }

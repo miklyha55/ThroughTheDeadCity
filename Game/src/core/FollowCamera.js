@@ -176,22 +176,32 @@ export class FollowCamera {
       this.camera.position.copy(this._focus).add(this._offset);
     }
 
-    // Тряска смещает саму камеру, а не точку интереса: кадр дёргается, но
-    // продолжает смотреть туда же, и после затухания встаёт ровно как был.
-    if (this._shake > 0) {
-      this._shake = Math.max(0, this._shake - dt);
-
-      const left = this._shake / this._shakeFor;
-      const amount = this._shakePower * left * left; // к концу затихает мягко
-
-      this.camera.position.x += (Math.random() - 0.5) * 2 * amount;
-      this.camera.position.y += (Math.random() - 0.5) * 2 * amount;
-      this.camera.position.z += (Math.random() - 0.5) * 2 * amount;
-
-      if (this._shake === 0) this._shakePower = 0;
-    }
-
+    this._shakeStep(dt);
     this.camera.lookAt(this._focus);
+  }
+
+  /**
+   * Тряска смещает саму камеру, а не точку интереса: кадр дёргается, но
+   * продолжает смотреть туда же, и после затухания встаёт ровно как был.
+   *
+   * Отдельным шагом, потому что трясти надо и во время пролёта. Раньше пролёт
+   * шёл своей веткой, мимо тряски, — и толчок от рухнувших ворот, заказанный
+   * ровно в миг прорыва, копился впустую и выплёскивался секундой позже, когда
+   * камера возвращалась к герою.
+   */
+  _shakeStep(dt) {
+    if (this._shake <= 0) return;
+
+    this._shake = Math.max(0, this._shake - dt);
+
+    const left = this._shake / this._shakeFor;
+    const amount = this._shakePower * left * left; // к концу затихает мягко
+
+    this.camera.position.x += (Math.random() - 0.5) * 2 * amount;
+    this.camera.position.y += (Math.random() - 0.5) * 2 * amount;
+    this.camera.position.z += (Math.random() - 0.5) * 2 * amount;
+
+    if (this._shake === 0) this._shakePower = 0;
   }
 
   /** Ход пролёта: туда, постоять, обратно. */
@@ -218,6 +228,7 @@ export class FollowCamera {
     }
 
     this.camera.position.copy(this._focus).add(this._offset);
+    this._shakeStep(dt);
     this.camera.lookAt(this._focus);
   }
 }
