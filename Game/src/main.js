@@ -540,7 +540,7 @@ engine.add({
     shards.update(dt);
     gunPickup.update(dt, player); // лежащее ружьё: крутится, а подошёл — летит в руки
     ammoPickup.update(dt, player); // и коробка патронов — точно так же
-    pointer.update(dt, player.yaw); // стрелка под ногами держит цель
+    pointer.update(dt, player.shownYaw); // стрелка под ногами держит цель: вычитает, как развёрнута модель
     puffs.update(dt);
     camera.update(dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям

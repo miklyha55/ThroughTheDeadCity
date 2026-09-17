@@ -9,6 +9,11 @@ const CFG = CONFIG.player;
 
 // пустой ввод: им подменяется стик, когда управление отобрано
 const ZERO_MOVE = { x: 0, y: 0 };
+const UP = new THREE.Vector3(0, 1, 0);
+const _facing = new THREE.Quaternion();
+
+/** Угол в пределах от −π до π: иначе разница углов может выйти лишним оборотом. */
+const wrap = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
 const DEG = Math.PI / 180;
 
 /**
@@ -139,6 +144,10 @@ export class Player extends Figure {
     this._jumpTo = new THREE.Vector3();
 
     this.reacting = 0;     // доигрывается реакция на попадание
+
+    // Поправка на ствол — одна, из позы выстрела. Снимается до того, как модель
+    // встанет в стойку: замер ставит её в эту позу.
+    this.aimOffset = this._measureAimOffset();
 
     this.play('Idle', 0);
 
@@ -568,8 +577,8 @@ export class Player extends Figure {
     this._holdGun(false);
     this.reloading = CFG.startDelay; // новый уровень начинается не с выстрела
     this.root.position.copy(position);
-    this.yaw = yaw;
-    this.root.rotation.y = yaw;
+    this.yaw = wrap(yaw);
+    this.root.quaternion.setFromAxisAngle(UP, this.yaw); // на новом месте — сразу, без доворота
     this.velocity.set(0, 0, 0);
     if (this.alive) this.play('Idle', 0);
   }
@@ -636,6 +645,7 @@ export class Player extends Figure {
    */
   update(dt, move, cameraYaw, location) {
     if (this.reacting > 0) this.reacting -= dt;
+    this._face(dt);
 
     // Перезарядка идёт сама по себе, что бы персонаж ни делал.
     //
@@ -751,6 +761,13 @@ export class Player extends Figure {
     // Стрелять можно только стоя. Проверяем сам ввод, а не скорость: на кадре
     // отпускания стика скорость ещё старая, и выстрел терялся бы до следующего.
     const standing = this._desired.lengthSq() === 0;
+
+    // Стоит вплотную к взрывчатке или клинку — сперва берёт их, стрельба потом.
+    if (standing && location && this._grabNearby(location)) {
+      this.mixer.update(dt);
+      return;
+    }
+
     // Безоружный не стреляет и не целится: ни ружья, ни отметки на цели.
     const canShoot = standing && location && !this.helpless && !this.frozen && this.armed;
     const shooting = canShoot ? this._aimAndFire(dt, location) : this._holdFire();
@@ -776,16 +793,70 @@ export class Player extends Figure {
   }
 
   /**
+   * Взять лежащую рядом взрывчатку или клинок, не сходя с места.
+   *
+   * Обычно предмет берётся только касанием на ходу: стоит герой — значит
+   * стреляет. Но бочка или тесак под ногами сильнее выстрела, и стоять рядом с
+   * ними, паля из ружья, было бы глупо. Поэтому такие вещи в пределах `grabNear`
+   * берутся первыми. Все прочие условия броска — цель, дальность, свободная
+   * линия — проверяет сам `grab`.
+   *
+   * @returns {boolean} взял ли
+   */
+  _grabNearby(location) {
+    const debris = location.debris;
+    const from = this.root.position;
+
+    let best = null;
+    let bestGap = CFG.grabNear;
+
+    for (const item of debris.items) {
+      if (item.held || item.flight || !(item.explosive || item.blade)) continue;
+      if (!item.asleep && item.velocity.lengthSq() > 1) continue; // ещё летит
+
+      const gap = flatDistance(item.object.position, from) - item.radius - CFG.radius;
+      if (gap <= bestGap) {
+        best = item;
+        bestGap = gap;
+      }
+    }
+
+    return best ? this.grab(best, debris) === true : false;
+  }
+
+  /**
    * Поворот корпуса с постоянной скоростью, по кратчайшей дуге.
    * Линейно: доворачивается ровно до цели и останавливается.
    */
   _turnTo(target, speed, dt) {
-    let delta = target - this.yaw;
-    delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+    const delta = wrap(target - this.yaw);
 
     const step = speed * dt;
-    this.yaw += Math.abs(delta) <= step ? delta : Math.sign(delta) * step;
-    this.root.rotation.y = this.yaw;
+    this.yaw = wrap(this.yaw + (Math.abs(delta) <= step ? delta : Math.sign(delta) * step));
+
+    // Доворот и так идёт с ограниченной скоростью по кратчайшей дуге — модель
+    // встаёт на него сразу.
+    this.root.quaternion.setFromAxisAngle(UP, this.yaw);
+  }
+
+  /**
+   * Модель догоняет заданный поворот — через кватернион, по кратчайшей дуге.
+   *
+   * Прицел ставит поворот разом (`_setYaw`), и раньше модель прыгала на него в
+   * тот же кадр. Угол при этом копился без приведения: разница между стволом и
+   * корпусом выходила то чуть больше π, то чуть меньше, и корпус иногда
+   * проворачивался почти на полный оборот не в ту сторону. Кватернион кратчайший
+   * путь знает сам, а `rotateTowards` ещё и ограничивает скорость.
+   */
+  _face(dt) {
+    _facing.setFromAxisAngle(UP, this.yaw);
+    this.root.quaternion.rotateTowards(_facing, CFG.aimTurnSpeed * dt);
+  }
+
+  /** Куда модель развёрнута на самом деле — она может ещё догонять `yaw`. */
+  get shownYaw() {
+    const q = this.root.quaternion;
+    return wrap(2 * Math.atan2(q.y, q.w));
   }
 
   /**
@@ -917,8 +988,13 @@ export class Player extends Figure {
    * Разворачивает персонажа так, чтобы на цель смотрел ствол, а не корпус.
    *
    * Оружие висит на кости правой руки и в каждой позе развёрнуто по-своему:
-   * в стойке ствол уходит вбок почти на 54°. Поэтому считаем, куда он смотрит
-   * сейчас, и поворачиваем корпус ровно на разницу с направлением на цель.
+   * в стойке ствол уходит вбок почти на 54°. Корпус поворачивается на разницу
+   * между стволом и корпусом — но взятую из позы выстрела, а не из текущей.
+   *
+   * Текущая поза тут и подводила: между выстрелами герой в стойке, ствол в ней
+   * смотрит вбок, и корпус отворачивался на полсотни градусов, а на выстреле
+   * возвращался обратно. Стоя на месте, он мотался туда-сюда с каждым залпом.
+   * Бьёт он всегда из позы выстрела — по ней и целиться.
    *
    * Доворот мгновенный, без плавного схождения. Плавный отставал: выстрел уходил
    * раньше, чем корпус успевал встать, и росчерк шёл к зомби, а дуло в это время
@@ -929,31 +1005,48 @@ export class Player extends Figure {
     const from = this.root.position;
     const wanted = Math.atan2(target.x - from.x, target.z - from.z);
 
-    this._setYaw(wanted - this._barrelOffset());
+    this._setYaw(wanted - this.aimOffset);
   }
 
-  /** Ставит поворот корпуса разом и в поле, и в саму модель. */
+  /** Задать поворот корпуса. Модель догонит его сама — см. `_face`. */
   _setYaw(yaw) {
-    this.yaw = yaw;
-    this.root.rotation.y = yaw;
+    this.yaw = wrap(yaw);
   }
 
   /** Куда смотрит ствол в мировых осях. */
   _barrelAngle() {
-    if (!this.gun) return this.yaw;
+    if (!this.gun) return this.shownYaw;
 
     this.gun.updateWorldMatrix(true, false);
     this._barrel.set(1, 0, 0).transformDirection(this.gun.matrixWorld).setY(0);
-    if (this._barrel.lengthSq() < 1e-6) return this.yaw;
+    if (this._barrel.lengthSq() < 1e-6) return this.shownYaw;
 
     this._barrel.normalize();
     return Math.atan2(this._barrel.x, this._barrel.z);
   }
 
-  /** На сколько ствол развёрнут относительно корпуса прямо сейчас. */
-  _barrelOffset() {
-    // ствол идёт вдоль локальной оси X оружия, дуло в сторону +X
-    return this.gun ? this._barrelAngle() - this.yaw : 0;
+  /**
+   * На сколько ствол развёрнут относительно корпуса в миг выстрела.
+   *
+   * Модель ставится в клип выстрела на тот кадр, где вылетает пуля, и меряется
+   * угол ружья. Клипа или ружья нет — поправки нет. Позу после замера никто не
+   * заметит: сразу за ним модель встаёт в стойку.
+   */
+  _measureAimOffset() {
+    const shoot = this.actions.get('Shoot');
+    if (!this.gun || !shoot) return 0;
+
+    shoot.reset().play();
+    shoot.setEffectiveWeight(1);
+    shoot.time = Math.min(shoot.getClip().duration, CFG.shotDelay * CFG.shootSpeed);
+    this.mixer.update(0);
+    this.root.updateMatrixWorld(true);
+
+    // Ствол идёт вдоль локальной оси X оружия, дуло в сторону +X.
+    const offset = wrap(this._barrelAngle() - this.shownYaw);
+
+    shoot.stop();
+    return offset;
   }
 
   /** Достаёт ружьё в руки или убирает за спину. */

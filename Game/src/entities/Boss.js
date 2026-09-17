@@ -205,7 +205,8 @@ export class Boss extends Zombie {
     this.heardAt = this._distanceTo(player);
 
     if (this.state === STATE.DEAD) {
-      // Тело остаётся лежать: в землю оно не уходит, это конец боя.
+      // Как и любой зомби: полежит, уйдёт под землю и снимется со сцены.
+      this._rot(dt);
       this.mixer.update(dt);
       return;
     }

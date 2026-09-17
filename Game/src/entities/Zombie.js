@@ -744,9 +744,12 @@ export class Zombie extends Figure {
     // начинает уходить в землю, ещё не упав
     if (this.deadTime < this.deathLength + CFG.corpseLinger) return;
 
-    this.root.position.y -= CFG.sinkSpeed * dt;
+    // Глубина и скорость — по росту: крупное тело уходит глубже, но за то же
+    // время, что и обычное.
+    const size = this.sizeScale;
+    this.root.position.y -= CFG.sinkSpeed * size * dt;
 
-    if (this.root.position.y <= -CFG.sinkDepth) {
+    if (this.root.position.y <= -CFG.sinkDepth * size) {
       this.root.removeFromParent();
       this.removed = true;
     }
