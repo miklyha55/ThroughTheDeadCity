@@ -22,14 +22,43 @@ const _dir = new THREE.Vector3();
  * десятки, и луч по ним стоит дешевле, чем кажется.
  */
 export class SeeThrough {
-  constructor(camera) {
+  /**
+   * @param {THREE.Camera} camera
+   * @param {THREE.WebGLRenderer} [renderer] — у него спрашивают плотность
+   *   экрана: от неё зависит, сколько точек занимает одно зерно дымки
+   */
+  constructor(camera, renderer = null) {
     this.camera = camera;
+    this.renderer = renderer;
+
+    /**
+     * Размер зерна дымки в точках экрана.
+     *
+     * Общий на все просвечивающие вещи: одно число, и все материалы смотрят на
+     * него. Считается от плотности экрана, чтобы зерно выглядело одинаково и на
+     * обычном мониторе, и на плотном телефоне. Без этого на плотном экране оно
+     * выходило вдвое мельче и дымка казалась другой.
+     */
+    this.grain = { value: 1 };
+    this._fitGrain();
     this.raycaster = new THREE.Raycaster();
 
     this.items = [];        // за кем следим: { object, fade }
     this.blocking = new Set();
     this._objects = [];     // те же вещи списком: по нему бьёт луч, и пересобирать
                             // его на каждый луч незачем — за кадр их теперь до семи
+  }
+
+  /**
+   * Пересчитать размер зерна под нынешнюю плотность экрана.
+   *
+   * Зовётся и при заведении, и каждый кадр: плотность меняется на ходу, когда
+   * окно переносят на другой монитор или включают в браузере режим телефона.
+   * Сравнение чисел дешевле, чем подписка на все способы это заметить.
+   */
+  _fitGrain() {
+    const density = this.renderer?.getPixelRatio?.() ?? devicePixelRatio ?? 1;
+    this.grain.value = Math.max(0.5, density * CFG.grain);
   }
 
   /**
@@ -69,7 +98,7 @@ export class SeeThrough {
 
       // Материал общий на всю локацию, а гаснуть должна одна вещь — значит ей
       // нужен свой. Геометрия при этом остаётся общей, копируется только оболочка.
-      mesh.material = fadeable(mesh.material);
+      mesh.material = fadeable(mesh.material, this.grain);
       mesh.userData.fadeItem = item;
     });
 
@@ -118,6 +147,8 @@ export class SeeThrough {
    */
   update(dt, player, others = null) {
     if (this.items.length === 0) return;
+
+    this._fitGrain();
 
     this.blocking.clear();
     if (player.alive !== false) this._findBlockers(player.position);
@@ -193,32 +224,47 @@ export class SeeThrough {
  * нельзя — погаснут все разом. Копия дешёвая: геометрия и текстуры остаются
  * общими, дублируется только описание.
  */
-function fadeable(material) {
+function fadeable(material, grain) {
   const copy = material.clone();
   const fade = { value: 1 };
 
   copy.userData.fade = fade;
   copy.onBeforeCompile = (shader) => {
     shader.uniforms.uFade = fade;
+    shader.uniforms.uGrain = grain;
 
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
         uniform float uFade;
+        uniform float uGrain; // сколько точек экрана занимает одно зерно
 
-        // Упорядоченный узор 4x4: по нему и решаем, оставить точку или выбросить.
+        /**
+         * Порог, с которым сравнивают прозрачность: свой у каждой точки экрана.
+         *
+         * Раньше здесь была таблица Байера 4x4 — самый обычный упорядоченный
+         * узор. Считалась она правильно, а выглядела плохо, и вот почему.
+         *
+         * При прозрачности около четверти под порог проходят четыре младших
+         * числа таблицы, а лежат они в ней ровно по чётным строкам и чётным
+         * столбцам. То есть узор вырождается в строгую решётку с шагом в две
+         * точки. Пока картинка идёт на экран один к одному, это ровная дымка;
+         * но стоит её перемасштабировать — а это и режим телефона в браузере, и
+         * дробная плотность экрана, и любое увеличение страницы, — как решётка
+         * бьётся с сеткой точек экрана и расплывается крупными светящимися
+         * пятнами. Муар.
+         *
+         * Здесь узор нерегулярный: у него нет одной частоты, с которой можно
+         * сбиться. Пересчёт размывает его в шум, а не в пятна.
+         *
+         * Число постоянно для каждой точки экрана и не меняется от кадра к
+         * кадру, так что дымка не мерцает и не ползёт.
+         */
         float fadePattern(vec2 at) {
-          const mat4 rows = mat4(
-             0.0,  8.0,  2.0, 10.0,
-            12.0,  4.0, 14.0,  6.0,
-             3.0, 11.0,  1.0,  9.0,
-            15.0,  7.0, 13.0,  5.0
-          );
-          int x = int(mod(at.x, 4.0));
-          int y = int(mod(at.y, 4.0));
-          return (rows[x][y] + 0.5) / 16.0;
+          vec2 cell = floor(at);
+          return fract(52.9829189 * fract(dot(cell, vec2(0.06711056, 0.00583715))));
         }`)
       .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
-        if (uFade < 0.999 && fadePattern(gl_FragCoord.xy) > uFade) discard;`);
+        if (uFade < 0.999 && fadePattern(gl_FragCoord.xy / uGrain) > uFade) discard;`);
   };
 
   // материалу с правленым шейдером нужен свой ключ, иначе three возьмёт чужую программу

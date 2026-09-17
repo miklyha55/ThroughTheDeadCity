@@ -320,7 +320,7 @@ const pointer = new Pointer(player.root, engine.scene);
 const locations = new LocationManager(engine.scene, prefabs, player, zombies);
 locations.splash = splash;
 locations.sfx = sfx;
-locations.seeThrough = new SeeThrough(engine.camera);
+locations.seeThrough = new SeeThrough(engine.camera, engine.renderer);
 
 const music = new Music();
 const transmission = new Transmission(); // текст вступления по букве внизу экрана
