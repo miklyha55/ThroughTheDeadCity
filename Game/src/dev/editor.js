@@ -37,6 +37,21 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
 
   const gizmo = new TransformControls(engine.camera, engine.renderer.domElement);
   gizmo.setSpace('world');
+
+  /**
+   * Гизмо рисуется поверх всего.
+   *
+   * Иначе его прячет то, что он же и двигает: метка выхода лежит на земле
+   * плашмя и накрывает стрелки целиком — на глаз кажется, что её нельзя взять,
+   * хотя выбрана она верно.
+   */
+  gizmo.getHelper().traverse((node) => {
+    node.renderOrder = 100;
+    if (node.material) {
+      node.material.depthTest = false;
+      node.material.depthWrite = false;
+    }
+  });
   gizmo.addEventListener('dragging-changed', (e) => { dragging = e.value; });
 
   let active = false;
@@ -186,6 +201,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     if (locations.current.exitMark) list.push(locations.current.exitMark);
     if (locations.current.gunMark) list.push(locations.current.gunMark);
     if (locations.current.ammoMark) list.push(locations.current.ammoMark);
+    for (const mark of locations.current.guideMarks ?? []) list.push(mark);
     return list;
   };
 
@@ -293,6 +309,7 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     else if (object === locations.current.exitMark) status('выбрана область перехода: размер — радиус');
     else if (object === locations.current.gunMark) status('выбрано ружьё: где оно лежит на уровне');
     else if (object === locations.current.ammoMark) status('выбраны патроны: где они лежат на уровне');
+    else if (locations.current.guideMarks?.includes(object)) status(`выбрана ${object.name}: точка, через которую ведёт стрелка`);
     else if (locations.current.zombies.some((z) => z.root === object)) status('выбран зомби');
     else status(`выбран ${object.name || 'проп'}`);
   }
@@ -316,8 +333,8 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     const location = locations.current;
     if (picked === location.ground || picked === location.exitMark
         || picked === location.gunMark || picked === location.ammoMark
-        || picked === locations.player?.root) {
-      status('это убрать нельзя: пол, старт, выход, ружьё и патроны — часть самой локации');
+        || location.guideMarks?.includes(picked) || picked === locations.player?.root) {
+      status('это убрать нельзя: пол, старт, выход, ружьё, патроны и вехи — часть самой локации');
       return;
     }
 
@@ -346,8 +363,8 @@ export function createEditor({ engine, locations, joystick, camera, onToggle, on
     const location = locations.current;
     if (picked === location.ground || picked === location.exitMark
         || picked === location.gunMark || picked === location.ammoMark
-        || picked === locations.player?.root) {
-      status('это не копируется: пол, старт, выход, ружьё и патроны на локации по одному');
+        || location.guideMarks?.includes(picked) || picked === locations.player?.root) {
+      status('это не копируется: пол, старт, выход, ружьё, патроны и вехи на локации по одному');
       return;
     }
 

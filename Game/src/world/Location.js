@@ -392,6 +392,7 @@ export class Location {
     this._clearBoss();
     this._hordeStep(dt, player);
     this._watchCleared();
+    this._pulseExit(dt);
 
     // предметы разлетаются и от зомби: толпа проходит — ящики расходятся
     this._movers.length = 0;
@@ -607,6 +608,31 @@ export class Location {
   /** Остались ли живые, если на уровне выход — только через всех. */
   get mustClear() {
     return Boolean(this.data.clearToExit) && !this.cleared;
+  }
+
+  /**
+   * Ближайший живой зомби: к нему ведёт указатель, пока уровень не зачищен.
+   *
+   * Без этого конец уровня превращался в обход площадки: выход заперт, идти
+   * некуда, а последние двое разбрелись по разным её углам — и игрок ищет их
+   * вслепую, не понимая, заперт выход по делу или сломался.
+   *
+   * @param {THREE.Vector3} from — откуда искать, обычно герой
+   */
+  nearestAlive(from) {
+    let best = null;
+    let bestAway = Infinity;
+
+    for (const zombie of this.zombies) {
+      if (!zombie.alive) continue;
+
+      const away = flatDistance(zombie.position, from);
+      if (away < bestAway) {
+        best = zombie;
+        bestAway = away;
+      }
+    }
+    return best;
   }
 
   /**
@@ -1082,6 +1108,19 @@ export class Location {
         round(this.exitMark.scale.x)]
       : this.data.exitAt;
 
+    // Вехи правятся так же: в файл уходит то место, куда их подвинули.
+    const guide = this.guideMarks.length
+      ? this.guide.map((mark, i) => {
+        const spot = this.guideMarks[i] ?? mark.mark;
+        // Радиус — третьим числом, как у выхода: гизмо растягивает саму метку.
+        const saved = {
+          at: [round(spot.position.x), round(spot.position.z), round(spot.scale.x)],
+        };
+        if (!mark.halo) saved.halo = false;
+        return saved;
+      })
+      : this.data.guide;
+
     // Место под ружьё правится тем же гизмо: в файл уходит точка, где оно лежит.
     const gun = this.gunMark
       ? { ...this.data.gun, at: [round(this.gunMark.position.x), round(this.gunMark.position.z)] }
@@ -1099,6 +1138,7 @@ export class Location {
     if (exitAt) data.exitAt = exitAt;
     if (gun) data.gun = gun;
     if (ammo) data.ammo = ammo;
+    if (guide?.length) data.guide = guide;
 
     return data;
   }
@@ -1122,18 +1162,65 @@ export class Location {
 
     const at = new THREE.Vector3(spot[0], 0, spot[1]);
     const radius = spot[2] ?? 3;
-    const mark = new THREE.Mesh(
-      new THREE.CylinderGeometry(1, 1, 0.1, 24),
-      new THREE.MeshBasicMaterial({ color: 0xffd27f, transparent: true, opacity: 0.35 })
-    );
+    const CFG = CONFIG.exit;
+
+    /**
+     * Метка выхода: заливка и кольцо по краю.
+     *
+     * Одной заливки мало — на светлом асфальте она теряется, а на тёмном полу
+     * её принимают за пятно света. Кольцо же читается как проведённая черта:
+     * видно, где именно кончается уровень.
+     *
+     * Обе части лежат в одной группе: снаружи метка остаётся одной вещью —
+     * её двигают гизмо, по ней же считают, дошёл ли герой.
+     */
+    const mark = new THREE.Group();
+
+    // `DoubleSide` обязателен: круг лежит на земле, и стоит камере качнуться —
+    // односторонний полигон пропадает целиком, будто метки и не было.
+    const flat = (color) => new THREE.MeshBasicMaterial({
+      color, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false,
+    });
+
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), flat(CFG.color));
+    disc.rotation.x = -Math.PI / 2;
+
+    const ring = new THREE.Mesh(new THREE.RingGeometry(1 - CFG.ringWidth, 1, 48), flat(CFG.ringColor));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.01; // на волос выше заливки, чтобы не спорили за глубину
+
+    mark.add(disc, ring);
+    mark.userData.parts = { disc, ring };
 
     mark.name = 'exit';
-    mark.material.opacity = CONFIG.exit.openOpacity;
-    mark.visible = !this.batched; // в игре круг не рисуется, только считается
-    mark.position.copy(at).setY(0.05);
+
+    /**
+     * Круг видно и в игре.
+     *
+     * Раньше он был только в правке расстановки: место перехода игрок узнавал
+     * по стрелке под ногами. Но стрелка показывает направление, а не черту, и у
+     * самого проёма гаснет — и было непонятно, где именно кончается уровень.
+     * Теперь под выходом лежит пятно, и промахнуться мимо него нельзя.
+     */
+    mark.visible = true;
+    mark.position.copy(at).setY(0.06);
     mark.scale.set(radius, 1, radius);
-    mark.castShadow = false;
-    mark.receiveShadow = false;
+
+    // Поверх настила и дорожной плитки, но ниже гизмо.
+    //
+    // Число тут важнее, чем кажется. Метка полупрозрачна и не пишет глубину,
+    // поэтому три.js рисует её в конце, вместе со всем прозрачным, — то есть
+    // ПОСЛЕ гизмо. А тот рисуется без проверки глубины, чтобы его было видно
+    // сквозь стены; значит всё, что ляжет поверх, его закрасит. Отрицательный
+    // порядок ставит метку впереди всей прозрачной очереди, и гизмо остаётся
+    // сверху.
+    mark.renderOrder = -1;
+
+    for (const part of mark.children) {
+      part.castShadow = false;
+      part.receiveShadow = false;
+      part.renderOrder = -1;
+    }
 
     this.group.add(mark);
     this.exitMark = mark;
@@ -1151,12 +1238,73 @@ export class Location {
    * точку в `guide`, и она встанет в очередь сама.
    */
   _buildGuide() {
-    this.guide = (this.data.guide ?? []).map((spot) => ({
+    this.guideMarks = [];
+
+    this.guide = (this.data.guide ?? []).map((spot, i) => ({
+      /**
+       * Насколько близко надо подойти, чтобы веха засчиталась.
+       *
+       * Своё у каждой и хранится в файле третьим числом, как у выхода. Раньше
+       * тут было одно число на всю игру, и растянутая гизмо веха срабатывала
+       * по-прежнему — с чего бы её ни тянули.
+       */
+      radius: spot.at[2] ?? CONFIG.pointer.reachWithin,
       // Своя точка на сцене, а не ссылка на проп: веха может стоять и там, где
       // ничего не расставлено, — на перекрёстке, у поворота.
       at: new THREE.Vector3(spot.at[0], 0, spot.at[1]),
+
+      /**
+       * Круг под вехой: есть не у всякой.
+       *
+       * У той, что показывает вещь, он нужен — это «вот она». А у поворотной
+       * его быть не должно: там на полу ничего нет, и светящийся круг посреди
+       * пустого коридора читается как «встань сюда», хотя вставать незачем.
+       */
+      halo: spot.halo !== false,
       done: false,
+
+      /**
+       * Метка на сцене: видна только в правке расстановки.
+       *
+       * Без неё вехи были невидимыми точками из файла: поставить их можно было
+       * только числами, а проверить — лишь запустив уровень и пройдя его. В
+       * правке же они выглядят как маленькие круги, которые двигают гизмо.
+       */
+      mark: this.batched ? null : this._guideMark(spot, i),
     }));
+  }
+
+  /** Кружок вехи для правки расстановки. */
+  _guideMark(spot, index) {
+    const CFG = CONFIG.exit;
+
+    const mark = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 32),
+      new THREE.MeshBasicMaterial({
+        color: CFG.guideColor,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        fog: false,
+      })
+    );
+
+    const radius = spot.at[2] ?? CONFIG.pointer.reachWithin;
+
+    mark.name = `guide:${index + 1}`;
+    mark.rotation.x = -Math.PI / 2;
+    mark.position.set(spot.at[0], 0.07, spot.at[1]);
+    // Размер метки — это и есть радиус срабатывания: растянули гизмо, значит
+    // растянули и саму веху.
+    mark.scale.set(radius, radius, 1);
+    mark.renderOrder = -1; // ниже гизмо, как и метка выхода
+    mark.castShadow = false;
+    mark.receiveShadow = false;
+
+    this.group.add(mark);
+    this.guideMarks.push(mark);
+    return mark;
   }
 
   /**
@@ -1168,14 +1316,57 @@ export class Location {
   reachGuide(p) {
     let changed = false;
 
-    for (const mark of this.guide) {
+    for (let i = 0; i < this.guide.length; i++) {
+      const mark = this.guide[i];
       if (mark.done) continue;
-      if (flatDistance(p, mark.at) > CONFIG.pointer.reachWithin) continue;
 
-      mark.done = true;
-      changed = true;
+      const reach = mark.mark ? mark.mark.scale.x : mark.radius;
+
+      if (flatDistance(p, mark.at) <= reach || this._passedBy(p, i)) {
+        mark.done = true;
+        changed = true;
+      }
     }
     return changed;
+  }
+
+  /**
+   * Миновал ли герой веху, не подойдя к ней вплотную.
+   *
+   * Одного касания мало. Веха на повороте стоит посреди коридора, а бежит герой
+   * как придётся — вдоль стены, по дуге, срезая угол, — и запросто проходит в
+   * стороне. Незасчитанная, она осталась бы первой в очереди, и стрелка тянула
+   * бы назад, в уже пройденный коридор.
+   *
+   * Поэтому веха засчитывается и тогда, когда герой оказался ближе к следующей
+   * цели, чем она сама: значит он её обошёл, и вести к ней больше незачем.
+   * Следующая цель — очередная веха, а за последней — выход.
+   *
+   * @param {THREE.Vector3} p — где герой @param {number} i — какая это веха
+   */
+  _passedBy(p, i) {
+    const next = this.guide[i + 1]?.at ?? this.exitMark?.position;
+    if (!next) return false;
+
+    return flatDistance(p, next) < flatDistance(this.guide[i].at, next);
+  }
+
+  /**
+   * Пульс круга под выходом: он дышит, чтобы читаться как живая метка, а не
+   * как пятно на земле. Зовётся каждый кадр из общего хода локации.
+   */
+  _pulseExit(dt) {
+    const parts = this.exitMark?.userData.parts;
+    if (!parts) return;
+
+    this._exitTime = (this._exitTime ?? 0) + dt;
+
+    const CFG = CONFIG.exit;
+    const beat = Math.sin(this._exitTime * CFG.pulseSpeed) * CFG.pulse;
+    const share = this.exitLocked ? CFG.lockedShare : 1;
+
+    parts.disc.material.opacity = (CFG.fillOpacity + beat) * share;
+    parts.ring.material.opacity = (CFG.ringOpacity + beat) * share;
   }
 
   /**
@@ -1205,11 +1396,7 @@ export class Location {
    */
   lockExit(locked) {
     this.exitLocked = locked;
-
-    if (!this.exitMark) return;
-    this.exitMark.material.opacity = locked
-      ? CONFIG.exit.lockedOpacity
-      : CONFIG.exit.openOpacity;
+    // Прозрачность ставит `_pulseExit` каждый кадр: здесь её трогать незачем.
   }
 
   /**
@@ -1246,13 +1433,19 @@ export class Location {
     for (const batch of this.merged) batch.traverse((o) => o.isMesh && o.geometry.dispose());
     this.merged.length = 0;
 
-    // Освобождаем только то, что создала сама локация: пол и метку выхода.
-    // Геометрия и материалы пропов общие с библиотекой — их трогать нельзя,
-    // иначе следующая локация соберётся из уже выброшенного.
-    for (const own of [this.ground, this.exitMark, this.fog]) {
-      if (!own) continue;
-      own.geometry.dispose();
-      own.material.dispose();
+    // Освобождаем только то, что создала сама локация: пол, метку выхода и
+    // мглу по краям. Геометрия и материалы пропов общие с библиотекой — их
+    // трогать нельзя, иначе следующая локация соберётся из уже выброшенного.
+    //
+    // Обходом, а не напрямую: метка выхода — не меш, а группа из заливки и
+    // кольца, и своих геометрии с материалом у неё нет вовсе.
+    for (const own of [this.ground, this.exitMark, this.fog, ...this.guideMarks]) {
+      own?.traverse((node) => {
+        if (!node.isMesh) return;
+
+        node.geometry.dispose();
+        node.material.dispose();
+      });
     }
   }
 }

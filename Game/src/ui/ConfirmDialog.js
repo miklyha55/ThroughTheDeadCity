@@ -95,6 +95,20 @@ export class ConfirmDialog {
     return new Promise((done) => { this._answer = done; });
   }
 
+  /**
+   * Убрать окно немедленно, без растворения.
+   *
+   * Нужно там, где следом начинается что-то своё — реклама, перезапуск игры: к
+   * этому мигу окно уже ответило, и тающая поверх нового экрана карточка
+   * читается как остаток прошлого кадра.
+   */
+  snap() {
+    clearTimeout(this._fade);
+    this.shown = false;
+    this.root.classList.remove('confirm--on');
+    this.root.hidden = true;
+  }
+
   _close(event, agreed) {
     if (event?.cancelable) event.preventDefault();
     if (!this.shown) return;

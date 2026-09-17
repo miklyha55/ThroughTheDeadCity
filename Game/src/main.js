@@ -342,7 +342,10 @@ const gunPickup = new GunPickup(engine.scene);
  * Взята — стрелка идёт к следующей цели, как и после ружья.
  */
 const ammoPickup = new AmmoPickup(engine.scene);
-ammoPickup.onTaken = () => aimPointer();
+ammoPickup.onTaken = () => {
+  rememberKit();
+  aimPointer();
+};
 
 /**
  * Ружьё подобрано.
@@ -352,6 +355,7 @@ ammoPickup.onTaken = () => aimPointer();
  */
 gunPickup.onTaken = () => {
   showAmmo();
+  rememberKit();
 
   // Очередь целей пересобирается целиком, а не сдвигается на одну вперёд.
   // Сдвиг снимал то, что сейчас первое, — а это не всегда подобранное ружьё:
@@ -406,6 +410,17 @@ if (import.meta.env.DEV) startMessage.muted = localStorage.getItem(NO_INTRO) ===
  */
 const WITH_GUN = 'dev:withGun';
 if (import.meta.env.DEV && localStorage.getItem(WITH_GUN) === '1') player.arm();
+
+/**
+ * Снаряжение возвращается вместе с местом.
+ *
+ * Ружьё и коробку патронов подбирают один раз за игру, и хранится это у
+ * площадки рядом с последним уровнем. Без этого игрок, закрывший вкладку на
+ * ферме, открывал её там же, но безоружным — а ружьё лежит на вводной, и взять
+ * его уже негде.
+ */
+if (progress.armed) player.arm();
+if (progress.magazine > player.magazine) player.extendMagazine(progress.magazine);
 const radio = new Radio(); // и рация в углу: видно, откуда голос и почему нельзя идти
 const ending = new Ending(); // экран, которым игра кончается
 
@@ -447,9 +462,13 @@ locations.onFinish = () => {
   finished = true;
   tally.pause();                    // путь кончился: часы больше не идут
   sfx.silence();                    // мир замер — его звуки замолкают вместе с ним
-  music.silence();                  // и музыка тоже: под передачей слышен один голос
 
-  // Музыка финала начинается вместе с картинкой, а не под речью.
+  // Под передачей играет дорожка вводной: с неё голос по рации начинался, ею же
+  // и кончается. Громкость у неё своя, приглушённая, — она заведена как раз под
+  // речь поверх музыки.
+  music.play(CONFIG.endMessage.track);
+
+  // А музыка финала начинается вместе с картинкой, когда голос отговорил.
   endMessage.onDone = () => {
     music.play(CONFIG.ending.track);
     ending.show();
@@ -611,6 +630,11 @@ async function updateDebugView() {
   debugView = showObstacles(engine.scene, locations.current.obstacles);
 }
 
+/** Отложить в сохранения снаряжение героя: ружьё и вместимость магазина. */
+function rememberKit() {
+  progress.setKit({ armed: player.armed, magazine: player.magazine });
+}
+
 /** Патроны показываем, только когда есть чем стрелять. */
 function showAmmo() {
   ammo.root.hidden = !player.armed;
@@ -671,18 +695,38 @@ function aimPointer() {
   const barrier = here?.hordeMark ?? null;
   if (barrier) targets.push({ at: barrier, halo: false });
 
+  /**
+   * Пока уровень не зачищен, стрелка ведёт к ближайшему живому.
+   *
+   * Выход в это время заперт, и без указателя игрок ходил бы по площадке,
+   * разыскивая последних: толпа после прорыва расходится широко, и двое
+   * оставшихся легко оказываются в разных её концах.
+   *
+   * Цель пересчитывается на каждой смерти — там же, где считаются убитые.
+   */
+  if (clearing && !barrier) {
+    const left = here.nearestAlive(player.position);
+    if (left) targets.push({ at: left.root, halo: false });
+  }
+
   // Вехи по дороге: то, что важно заметить по пути. Ведём к ним так же, как к
   // ружью — с кругом на полу и с любого расстояния, — и в том же порядке, в
   // каком они выписаны в файле уровня. Пройденные из очереди уходят сами.
   for (const mark of here?.guide ?? []) {
-    if (!mark.done) targets.push({ at: mark.at, halo: true });
+    if (!mark.done) targets.push({ at: mark.at, halo: mark.halo });
   }
 
-  // Выход: без подсветки и только вблизи. Круг под дверью читался бы как «встань
-  // сюда», а он и так на виду; напомнить стоит, лишь когда герой рядом.
+  /**
+   * Выход: с любого расстояния, но без круга на полу.
+   *
+   * Расстояния тут больше нет. Оно было: стрелка подхватывала выход за
+   * двадцать шесть метров, а дальше гасла — и на больших уровнях игрок
+   * оставался без всякой подсказки посреди площадки, разыскивая переход
+   * наугад. Круг под ним по-прежнему не рисуем: он читался бы как «встань
+   * сюда», а выход и так на виду, когда до него дошли.
+   */
   if (here?.exitMark && !clearing) {
-    const cleared = Boolean(here.data.clearToExit);
-    targets.push({ at: here.exitMark, halo: false, within: cleared ? undefined : CONFIG.pointer.exitWithin });
+    targets.push({ at: here.exitMark, halo: false });
   }
 
   pointer.follow(targets);
@@ -920,7 +964,7 @@ deathScreen.onAgain = async () => {
 deathScreen.onFromStart = () => {
   // Пройденное стирается: игрок согласился на это в отдельном окне, и с этой
   // минуты игра для него начинается с чистого листа.
-  progress.reset();
+  progress.reset(); // вместе с прогрессом уходит и снаряжение
   tally.reset();
 
   player.revive();
@@ -974,7 +1018,12 @@ locations.onChange = (location) => {
   progress.setLevel(location.data.id);
 
   wireBlasts(location);
-  location.onKill = () => { tally.kills += 1; };
+  location.onKill = () => {
+    tally.kills += 1;
+    // На зачищаемом уровне стрелка ведёт к ближайшему живому — значит после
+    // каждой смерти ей нужна новая цель.
+    if (location.mustClear) aimPointer();
+  };
   location.onBossDown = () => aimPointer(); // вожак упал — стрелка к выходу, выход открыт
   wireHorde(location);
   // Вожак заметил героя — его круг разом проступает из тумана, а камера плывёт
@@ -1168,6 +1217,7 @@ player.onMagazine = (size) => ammo.resize(size); // коробка патрон�
   window.__game = {
     engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash, fog,
     gunPickup, ammoPickup, pointer, controlsHint, skipHint, deathScreen, levelMap,
+    endMessage, // ответная передача: её удобно щупать из консоли
     yandex, progress, // площадка и сохранения: их удобно щупать из консоли
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),

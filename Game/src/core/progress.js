@@ -21,7 +21,10 @@ const CFG = CONFIG.yandex;
  */
 class Progress {
   constructor() {
-    this.state = { level: null, passed: [] };
+    // `armed` и `magazine` — снаряжение героя: подобранное ружьё и коробка
+    // патронов. Без них игрок, вернувшийся на ферму, оказывался там безоружным,
+    // хотя ружьё подобрал ещё на вводной.
+    this.state = { level: null, passed: [], armed: false, magazine: 0 };
     this._pending = null;
     this._loaded = false;
   }
@@ -41,6 +44,8 @@ class Progress {
     // смену версий игры. Чужому виду тут доверять нельзя: по нему потом ходят
     // как по списку.
     if (!Array.isArray(this.state.passed)) this.state.passed = [];
+    this.state.armed = Boolean(this.state.armed);
+    this.state.magazine = Number(this.state.magazine) || 0;
     this._loaded = true;
     return this.state;
   }
@@ -53,6 +58,26 @@ class Progress {
 
   /** Пройден ли уровень. */
   isPassed(id) { return this.state.passed.includes(id); }
+
+  /** Есть ли у героя ружьё и сколько вмещает его магазин. */
+  get armed() { return this.state.armed; }
+  get magazine() { return this.state.magazine; }
+
+  /**
+   * Запомнить снаряжение: подобранное ружьё и расширенный магазин.
+   *
+   * Пишется только на самом деле новое: подбирают это раз за игру, а каждая
+   * лишняя запись идёт в счёт предела, который площадка ведёт на сохранения.
+   *
+   * @param {{armed: boolean, magazine: number}} kit
+   */
+  setKit({ armed, magazine }) {
+    const same = this.state.armed === armed && this.state.magazine === magazine;
+    if (same) return;
+
+    this.state = { ...this.state, armed, magazine };
+    this._save();
+  }
 
   /**
    * Отметить уровень пройденным.
@@ -91,7 +116,7 @@ class Progress {
    * оно не должно потеряться, если он тут же закроет вкладку.
    */
   reset() {
-    this.state = { level: null, passed: [] };
+    this.state = { level: null, passed: [], armed: false, magazine: 0 };
     this._save(true);
   }
 

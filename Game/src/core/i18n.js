@@ -87,7 +87,7 @@ const EN = {
   'endMessage.times': [0.04, 3.66, 8.6, 14.64, 18.2, 23.12, 25.62],
 
   // Голос вступления и его субтитры: своя дорожка и свой текст.
-  'startMessage.file': asset('assets/audio/start_message_en.mp3'),
+  'startMessage.file': asset('assets/audio/start_message_eng.mp3'),
   // Слово в слово с озвучкой: субтитры идут за самой дорожкой, и расхождение
   // текста с голосом видно сразу.
   'startMessage.lines': [
