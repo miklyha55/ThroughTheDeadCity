@@ -38,7 +38,6 @@ import { BattleFog } from './fx/BattleFog.js';
 import { Sfx } from './core/Sfx.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
-import { Dust } from './fx/Dust.js';
 import { Puffs } from './fx/Puffs.js';
 import { HealthBars } from './fx/HealthBars.js';
 import { Explosions } from './fx/Explosions.js';
@@ -304,7 +303,6 @@ const playerBlood = new Blood(engine.scene, CONFIG.blood.playerColor, CONFIG.blo
 const healthBars = new HealthBars(engine.scene);
 const explosions = new Explosions(engine.scene);
 const shards = new Shards(engine.scene); // обломки взорванного: летят, падают, пропадают
-const dust = new Dust(engine.scene);
 const puffs = new Puffs(engine.scene);
 const ammo = new Ammo(CONFIG.player.magazine); // патроны вверху по центру
 
@@ -519,7 +517,6 @@ engine.add({
     shards.update(dt);
     gunPickup.update(dt, player); // лежащее ружьё: крутится, а подошёл — летит в руки
     pointer.update(dt, player.yaw); // стрелка под ногами держит цель
-    dust.update(dt, player.position);
     puffs.update(dt);
     camera.update(dt);
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям

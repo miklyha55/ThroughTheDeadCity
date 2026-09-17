@@ -15,7 +15,7 @@ import os
 
 OUT = os.path.join(os.path.dirname(bpy.data.filepath), 'Game/public/assets/models/props.glb')
 SKIP_PREFIXES = ('Food_',)   # хилки живут отдельно от декора локаций
-SKIP_NAMES = ('Floor',)
+SKIP_NAMES = ('Floor', 'Weapon_Knife')   # нож из игры убран, в .blend остаётся
 
 
 def exportable(obj):

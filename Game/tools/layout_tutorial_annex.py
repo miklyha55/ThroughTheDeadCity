@@ -43,9 +43,6 @@ PORCH = (36, 40, -24, -20)
 
 EXIT_AT = [38.0, -22.0, 2.0]
 
-# Вехи: указатель ведёт по ним, пока не покажется сам переход. Одна за проёмом,
-# вторая у пролома — ровно там, где дорога сворачивает и цель уходит из виду.
-GUIDE = [[14.2, -10.0], [22.0, -14.0]]
 
 # --- мастерская: тут когда-то что-то чинили ----------------------------------
 SHOP_PROPS = [
@@ -69,7 +66,6 @@ SHOP_PROPS = [
     ('Prop_Barricade',   18.4, -14.4,   96),
     ('Prop_Cone',        16.6, -17.2,  -54),
     ('Prop_Cone',        20.4, -12.0,   22),
-    ('Weapon_Knife',     12.8, -14.8,   35),
     # Канистра на пути к первым двоим: взрывается раньше, чем до неё доходят.
     ('Prop_Jerrycan',    16.1, -13.2,    6),
 ]
@@ -249,7 +245,7 @@ def main():
     level['props'] += walls() + props()
     level['zombies'] += zombies()
     level['exitAt'] = EXIT_AT
-    level['guide'] = level['guide'][:1] + [{'at': at} for at in GUIDE]
+    level['guide'] = level['guide'][:1]
 
     json.dump(level, open(LEVEL, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print(f"пропов {len(level['props'])}, зомби {len(level['zombies'])}")
