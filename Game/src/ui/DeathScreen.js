@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { ConfirmDialog } from './ConfirmDialog.js';
 
 const CFG = CONFIG.death;
 
@@ -62,15 +63,50 @@ export class DeathScreen {
     this.root.appendChild(this.card);
     container.appendChild(this.root);
 
+    // Окно «точно?» перед сбросом. Живёт отдельно и всплывает поверх этого
+    // экрана, а не подменяет его кнопки: подменённые читаются как продолжение
+    // прежнего экрана, и отвечают на них не глядя.
+    this.dialog = new ConfirmDialog(container);
+
     this.shown = false;
     this.onAgain = null;     // переиграть этот уровень
     this.onFromStart = null; // и начать игру заново, с первого
+
     this._fade = null;
 
     // Именно на нажатии, а не на отпускании: касание должно засчитаться в тот
     // же миг, когда палец лёг на кнопку.
     this._press(this.again, () => this.onAgain?.());
-    this._press(this.fromStart, () => this.onFromStart?.());
+
+    /**
+     * Сброс сам по себе ничего не запускает: сперва вопрос, и всегда.
+     *
+     * Без исключений, даже на первом уровне, где терять нечего. Кнопка, которая
+     * то спрашивает, то нет, читается как сломанная: игрок жмёт и не понимает,
+     * почему в этот раз обошлось без вопроса.
+     *
+     * Отказались — экран смерти остаётся на месте, как будто и не нажимали.
+     * Согласились — уходим и начинаем заново.
+     */
+    this.fromStart.addEventListener('pointerdown', async (event) => {
+      event.preventDefault();
+      if (!this.shown) return;
+
+      const agreed = await this.dialog.ask({
+        title: CFG.confirmTitle,
+        note: CFG.confirmNote,
+        yes: CFG.wipe,
+        no: CFG.keep,
+      });
+      if (!agreed) return;
+
+      // Пока спрашивали, игрок мог уйти с экрана: открылась правка расстановки
+      // или уровень начался заново сам.
+      if (!this.shown) return;
+
+      this.hide();
+      this.onFromStart?.();
+    });
   }
 
   _press(button, act) {
