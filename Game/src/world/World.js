@@ -4,6 +4,18 @@ import { CONFIG } from '../config.js';
 
 const CFG = CONFIG.world;
 
+/** Отрисовать карту окружения и отдать её сцене, отпустив прежнюю. */
+function buildEnvironment(scene, renderer) {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const room = new RoomEnvironment();
+  const texture = pmrem.fromScene(room, 0.04).texture;
+  pmrem.dispose();
+  room.dispose(); // комната нужна только на время отрисовки
+
+  scene.environment?.dispose();
+  scene.environment = texture;
+}
+
 /** Общее для всех локаций: свет, небо, туман и земля до горизонта. */
 export function buildWorld(scene, renderer) {
   const sky = new THREE.Color(CFG.skyColor);
@@ -11,10 +23,19 @@ export function buildWorld(scene, renderer) {
   scene.fog = new THREE.Fog(sky, CFG.fogNear, CFG.fogFar);
 
   // Отражённый свет со всех сторон — без него PBR-материалы уходят в чёрный.
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  buildEnvironment(scene, renderer);
   scene.environmentIntensity = CFG.envIntensity;
-  pmrem.dispose();
+
+  /**
+   * Браузер может отобрать у вкладки видеопамять — экран на миг чернеет, потом
+   * контекст возвращается. Модели и текстуры three.js заливает заново сам, а
+   * карту окружения — нет: это не файл, а картинка, отрисованная в видеопамяти
+   * при старте, и после потери от неё остаётся пустота. Вся сцена после этого
+   * становилась тёмно-рыжей, а герой и зомби — чёрными. Поэтому пересобираем её.
+   */
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    buildEnvironment(scene, renderer);
+  });
 
   const hemi = new THREE.HemisphereLight(CFG.skyColor, CFG.groundColor, CFG.hemiIntensity);
   scene.add(hemi);
