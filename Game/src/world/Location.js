@@ -256,6 +256,7 @@ export class Location {
     if (kind === CONFIG.boss.kind) {
       this.boss = zombie;
       zombie.onDown = () => this.onBossDown?.(); // сцене пора открыть выход
+      zombie.onStep = (away) => this.onBossStep?.(away);
       zombie.onSpotted = () => this.onBossSpotted?.(zombie);
     }
     return zombie;

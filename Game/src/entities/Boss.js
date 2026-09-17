@@ -97,7 +97,10 @@ export class Boss extends Zombie {
     this.skipped = new Map(); // предмет → до какого времени его не брать
     this.clock = 0;
     this.walking = false;
+    this.stepPhase = 1;     // где он был в прошлом кадре по циклу ходьбы
+    this.throws = 0;        // сколько уже швырнул: по этому счёту он и рычит
     this.onDown = null;     // убит: сцене пора открыть выход
+    this.onStep = null;     // шагнул: сцене пора качнуть камеру
     this.onSpotted = null;  // впервые заметил героя: сцена открывает его круг на карте
     this.spotted = false;
 
@@ -220,6 +223,7 @@ export class Boss extends Zombie {
     // его круг проступает из тумана, и видно, с чем имеешь дело.
     if (sees && !this.spotted) {
       this.spotted = true;
+      this._roar(); // заметил героя — рявкнул, и только один раз за бой
       this.onSpotted?.();
     }
 
@@ -249,12 +253,52 @@ export class Boss extends Zombie {
     }
 
     this.mixer.update(dt);
+    this._steps();
+  }
+
+  /**
+   * Рык: им он и встречает героя, и швыряет, и падает.
+   *
+   * Запись каждый раз берётся случайная — их две, и одна и та же подряд звучит
+   * как заевшая плёнка. Слышно его всегда, как бы далеко он ни стоял: это не
+   * бормотание из толпы, а то, из-за чего игрок оборачивается.
+   */
+  _roar() {
+    this.sfx?.play('bossRoar', CFG.voiceVolume, 1, CFG.voicePitch, { echo: false });
+  }
+
+  /**
+   * Топот: отметки берутся из самого клипа ходьбы, как у героя.
+   *
+   * Так шаг звучит ровно тогда, когда нога касается земли, при любой скорости
+   * клипа. По таймеру он бы разъезжался с картинкой.
+   */
+  _steps() {
+    if (!this.walking || this.current !== this.actions.get('Walk')) {
+      this.stepPhase = 1; // встал — следующий шаг с начала цикла
+      return;
+    }
+
+    const clip = this.current.getClip();
+    const phase = (this.current.time % clip.duration) / clip.duration;
+
+    for (const at of CFG.stepPhases) {
+      const crossed = this.stepPhase < phase
+        ? at > this.stepPhase && at <= phase
+        : at > this.stepPhase || at <= phase; // цикл пошёл заново
+
+      if (!crossed) continue;
+
+      this.sfx?.play('bossStep', CFG.stepVolume, 1, 1, { echo: false });
+      this.onStep?.(this.heardAt); // и земля под ним вздрагивает
+      break;
+    }
+    this.stepPhase = phase;
   }
 
   _set(state) {
     if (state === this.state && state !== STATE.HURT) return;
 
-    const was = this.state;
     this.state = state;
     this.walking = false;
 
@@ -266,9 +310,6 @@ export class Boss extends Zombie {
 
       case STATE.FETCH:
         this.stuck = 0;
-        // Заметил героя — рычит. Только при первом шаге из покоя, а не на каждый
-        // новый предмет.
-        if (was === STATE.WAIT) this._voice('zombieAlert', CFG.voiceVolume, 1, CFG.voicePitch);
         break;
 
       case STATE.THROW:
@@ -281,7 +322,7 @@ export class Boss extends Zombie {
         break;
 
       case STATE.DEAD:
-        this._voice('zombieDead', CFG.voiceVolume, 1, CFG.voicePitch);
+        this._roar();
         this.restart('Death', 0.15);
         break;
     }
@@ -556,6 +597,9 @@ export class Boss extends Zombie {
     const along = Math.max(0.01, length / reach);
 
     debris.launch(item, ux, uz, along, up / along, CFG.throwSpin, this, CFG.throwGrace);
+
+    // Рык через бросок: первый со звуком, дальше каждый третий.
+    if (this.throws++ % CFG.roarEvery === 0) this._roar();
 
     // Смертельно для героя — и только это, и только пока летит.
     item.lethalTo = player;

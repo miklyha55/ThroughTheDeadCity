@@ -1037,6 +1037,24 @@ locations.onChange = (location) => {
     if (location.mustClear) aimPointer();
   };
   location.onBossDown = () => aimPointer(); // вожак упал — стрелка к выходу, выход открыт
+
+  /**
+   * Шаг вожака: земля вздрагивает.
+   *
+   * Сила падает с расстоянием и за `stepShakeRange` гаснет совсем: вздрагивать
+   * от шагов, которых даже не слышно, кадр не должен.
+   */
+  location.onBossStep = (away) => {
+    const CFG = CONFIG.boss;
+
+    // Гаснет не сразу, а к самому краю: вблизи сила почти полная, и толчок
+    // читается, пока вожак в кадре. Линейное затухание съедало его уже на
+    // середине радиуса — а там он обычно и стоит, швыряя хлам.
+    const share = 1 - Math.min(1, away / CFG.stepShakeRange) ** 2;
+    if (share <= 0) return;
+
+    camera.shake(CFG.stepShake * share, CFG.stepShakeFor);
+  };
   wireHorde(location);
   // Вожак заметил героя — его круг разом проступает из тумана, а камера плывёт
   // к нему, показывает и возвращается. Смотрим на уровень груди великана.
