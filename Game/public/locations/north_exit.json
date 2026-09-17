@@ -901,22 +901,6 @@
       "rotation": 70
     },
     {
-      "prop": "Prop_Barrel",
-      "at": [
-        -3.18,
-        15.95
-      ],
-      "rotation": 111.5
-    },
-    {
-      "prop": "Prop_Jerrycan",
-      "at": [
-        -0.84,
-        15.71
-      ],
-      "rotation": 173.6
-    },
-    {
       "prop": "Weapon_Cleaver",
       "at": [
         5.79,
@@ -1450,14 +1434,6 @@
       "rotation": 90
     },
     {
-      "prop": "Prop_Jerrycan",
-      "at": [
-        -5.21,
-        22.04
-      ],
-      "rotation": -103.2
-    },
-    {
       "prop": "Weapon_Cleaver",
       "at": [
         -1.91,
@@ -1540,8 +1516,8 @@
     {
       "prop": "Prop_Barrel",
       "at": [
-        -14.32,
-        30.16
+        -12.69,
+        30.77
       ],
       "rotation": -179.8
     },
@@ -1552,22 +1528,6 @@
         26.26
       ],
       "rotation": -103.2
-    },
-    {
-      "prop": "Prop_Barrel",
-      "at": [
-        -13.58,
-        31.43
-      ],
-      "rotation": -179.8
-    },
-    {
-      "prop": "Prop_Barrel",
-      "at": [
-        -12.94,
-        30.58
-      ],
-      "rotation": 111.5
     },
     {
       "prop": "Weapon_Cleaver",
@@ -1588,8 +1548,8 @@
     {
       "prop": "Prop_Jerrycan",
       "at": [
-        -7.44,
-        24.49
+        -7.3,
+        23.04
       ],
       "rotation": 173.6
     },
@@ -1606,6 +1566,30 @@
       "at": [
         -28.58,
         30.11
+      ],
+      "rotation": 18.5
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -2.72,
+        13.21
+      ],
+      "rotation": 173.6
+    },
+    {
+      "prop": "Heavy_SemiTruck",
+      "at": [
+        -38.07,
+        22.39
+      ],
+      "rotation": 70
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -34.77,
+        20.21
       ],
       "rotation": 18.5
     }

@@ -987,11 +987,11 @@
     {
       "prop": "Car_VanRust",
       "at": [
-        -45.07,
-        8.42
+        -46.48,
+        7.45
       ],
       "rotation": 89.4,
-      "y": -0.14
+      "y": -0.02
     },
     {
       "prop": "Car_VanRust",
@@ -1804,6 +1804,54 @@
         4
       ],
       "rotation": 90
+    },
+    {
+      "prop": "Car_SedanWreck",
+      "at": [
+        -54.05,
+        -3.63
+      ],
+      "rotation": 56.5
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -27.57,
+        -3.03
+      ],
+      "rotation": -35.5
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -42.87,
+        3.44
+      ],
+      "rotation": -35.5
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -41.77,
+        5.06
+      ],
+      "rotation": -35.5
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -52.47,
+        -3.14
+      ],
+      "rotation": -35.5
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -51.41,
+        -3.51
+      ],
+      "rotation": -146.8
     }
   ],
   "zombies": [
