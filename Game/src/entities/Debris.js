@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { arcPoint } from '../core/arc.js';
 
 const CFG = CONFIG.debris;
 const BLADES = CONFIG.blades;
 const ZOMBIES = CONFIG.zombies;
 
-const _bite = new THREE.Vector3(); // точка, где клинок вошёл в тело
+const _bite = new THREE.Vector3();   // точка, где клинок вошёл в тело
+const _aim = new THREE.Vector3();  // куда ведут клинок: грудь цели
+const _step = new THREE.Vector3(); // где он был кадром раньше
 
 // рабочие векторы, чтобы не мусорить в куче каждый кадр
 const _r = new THREE.Vector3();
@@ -79,6 +82,7 @@ export class Debris {
       ignoreFor: 0,  // и сколько ещё секунд
       explosive, // бочка: пуля её прошивает — и она детонирует
       blade,     // нож или тесак: в полёте режет и остаётся торчать в теле
+      flight: null, // полёт клинка в цель: ведётся по дуге, а не физикой
     });
   }
 
@@ -89,6 +93,14 @@ export class Debris {
    */
   update(dt, movers) {
     for (const item of this.items) {
+      // Клинок, брошенный в цель, физике не подчиняется: он ведётся по дуге и
+      // приходит туда, куда метили. Ни столкновений, ни падения ему не нужно —
+      // весь его полёт умещается в полсекунды и кончается ударом.
+      if (item.flight) {
+        this._carry(item, dt);
+        continue;
+      }
+
       // Предмет в руке живёт не здесь: его возит анимация, и ни падать, ни
       // кого-то сбивать он пока не может.
       if (item.held) continue;
@@ -193,6 +205,91 @@ export class Debris {
   }
 
   /**
+   * Швырнуть клинок в цель: полёт по дуге и удар наверняка.
+   *
+   * Физикой это делать нельзя. Направление она берёт в миг вылета из руки, а
+   * дальше клинок идёт по инерции — и зомби, шагнувший вбок, из-под него
+   * выходит. Промах по тому, кого герой держал на прицеле, читается не как
+   * сложность, а как неисправность: игрок всё сделал верно.
+   *
+   * Поэтому путь клинка не считается, а ведётся: он идёт по той же дуге, по
+   * которой персонаж перепрыгивает машины, от руки до груди цели, и конец дуги
+   * едет вместе с целью. Куда бы та ни двинулась, клинок её найдёт.
+   *
+   * @param {object} item — тело из физики
+   * @param {object} target — в кого метят: ему и достанется
+   * @param {THREE.Vector3} from — откуда вылетел, обычно рука
+   */
+  hurl(item, target, from) {
+    item.held = false;
+    item.asleep = false;
+    item.velocity.set(0, 0, 0);
+    item.angular.set(0, 0, 0);
+
+    const away = Math.hypot(target.position.x - from.x, target.position.z - from.z);
+
+    item.flight = {
+      target,
+      from: from.clone(),
+      time: 0,
+      // Время полёта — от расстояния, чтобы скорость была одна и та же на любой
+      // дистанции: близкий бросок не должен тянуться, дальний — мелькать.
+      span: Math.max(BLADES.minFlight, away / BLADES.flySpeed),
+      arc: away * BLADES.arcShare,
+    };
+  }
+
+  /**
+   * Вести клинок по дуге. Зовётся каждый кадр, пока он летит.
+   */
+  _carry(item, dt) {
+    const flight = item.flight;
+    flight.time += dt;
+
+    const target = flight.target;
+
+    /**
+     * Цель убили раньше, чем клинок долетел, — дальше он падает сам.
+     *
+     * Отдаём его физике с той скоростью, с какой он шёл: вести его больше не к
+     * кому, а замирать в воздухе он не должен.
+     */
+    if (!target.alive) {
+      const share = Math.min(1, flight.time / flight.span);
+      _aim.copy(target.position).setY(target.position.y + CONFIG.player.hitHeight);
+      arcPoint(_step, flight.from, _aim, share, flight.arc);
+
+      item.flight = null;
+      item.velocity.copy(_step).sub(item.object.position).divideScalar(Math.max(dt, 1e-3));
+      item.idle = 0;
+      return;
+    }
+
+    // Конец дуги едет вместе с целью: она может шагнуть в сторону, и клинок
+    // пойдёт за ней.
+    _aim.copy(target.position).setY(target.position.y + CONFIG.player.hitHeight);
+
+    const share = Math.min(1, flight.time / flight.span);
+    const was = _step.copy(item.object.position);
+
+    arcPoint(item.object.position, flight.from, _aim, share, flight.arc);
+
+    // Кувырок через лезвие: тот же, что и был у брошенного предмета, просто
+    // теперь его крутит не физика, а мы сами.
+    item.object.rotateZ(BLADES.throwSpin * dt);
+
+    if (share < 1) return;
+
+    // Долетел. Направление удара — последний отрезок пути: по нему клинок и
+    // входит в тело.
+    _bite.copy(item.object.position).sub(was);
+    if (_bite.lengthSq() < 1e-6) _bite.copy(_aim).sub(flight.from);
+
+    item.flight = null;
+    if (target.impale(item.object, _aim, _bite, item.boxMax.x)) this.forget(item);
+  }
+
+  /**
    * Убрать предмет из физики, оставив его на сцене.
    *
    * Тем и отличается от `remove`, что модель остаётся жить: воткнувшийся клинок
@@ -250,6 +347,7 @@ export class Debris {
     item.held = false;
     item.ignore = by;
     item.ignoreFor = grace;
+    item.flight = null;  // обычный бросок физикой: ведут только клинок в цель
 
     item.velocity.set(dirX * speed, speed * lift, dirZ * speed);
     // закрутка поперёк полёта: предмет уходит кувырком, а не плашмя
