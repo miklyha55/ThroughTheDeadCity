@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa';
 import { spawn } from 'node:child_process';
 import { basename, resolve } from 'node:path';
 import { cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
@@ -189,38 +188,6 @@ export default defineConfig({
   plugins: [
     blenderExport(),
     locationSaver(),
-
-    /**
-     * Обновление игры у тех, кто её уже открыл.
-     *
-     * Держится на служебном потоке: он хранит файлы игры у себя и сам замечает,
-     * что на сервере лежит сборка новее. `prompt` значит, что менять версию
-     * молча под игроком он не станет — только скажет, а решать игроку.
-     *
-     * Своей проверки версий у нас больше нет, и это к лучшему. Она сверяла
-     * отпечатки по сети и спотыкалась о кэш раздачи: нажатие на кнопку
-     * перезагружало страницу, а та приходила из кэша всё той же старой, и кнопка
-     * возвращалась. Служебный поток этой беды лишён — он сам себе кэш, и
-     * перезагрузка после него отдаёт уже новые файлы, а не те же самые.
-     */
-    VitePWA({
-      registerType: 'prompt',
-      workbox: {
-        // Только код и разметка. Модели, звук и картинки весят три десятка
-        // мегабайт, и складывать их в хранилище браузера незачем: они меняются
-        // редко, а место занимают всё.
-        globPatterns: ['**/*.{js,css,html}'],
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-      },
-      manifest: {
-        name: 'Through The Dead City',
-        short_name: 'Dead City',
-        theme_color: '#07090a',
-        background_color: '#07090a',
-        display: 'standalone',
-        icons: [],
-      },
-    }),
   ],
 
   server: {
