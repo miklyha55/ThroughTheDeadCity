@@ -347,679 +347,6 @@
       ]
     },
     {
-      "prop": "Bld_Shop",
-      "at": [
-        -40,
-        17
-      ],
-      "rotation": 180
-    },
-    {
-      "prop": "Bld_Diner",
-      "at": [
-        -22,
-        17
-      ],
-      "rotation": 180
-    },
-    {
-      "prop": "Bld_AutoShop",
-      "at": [
-        20,
-        17
-      ],
-      "rotation": 180
-    },
-    {
-      "prop": "Bld_Warehouse",
-      "at": [
-        38,
-        17
-      ],
-      "rotation": 180
-    },
-    {
-      "prop": "Bld_Warehouse",
-      "at": [
-        -36,
-        -17
-      ]
-    },
-    {
-      "prop": "Bld_Motel",
-      "at": [
-        -18,
-        -17
-      ]
-    },
-    {
-      "prop": "Bld_Shop",
-      "at": [
-        22,
-        -17
-      ]
-    },
-    {
-      "prop": "Bld_Diner",
-      "at": [
-        40,
-        -17
-      ]
-    },
-    {
-      "prop": "Bld_SuburbHouse",
-      "at": [
-        -16,
-        26
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Bld_SuburbHouse",
-      "at": [
-        16,
-        26
-      ],
-      "rotation": -90
-    },
-    {
-      "prop": "Bld_Ranch",
-      "at": [
-        -16,
-        -26
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Bld_Ranch",
-      "at": [
-        16,
-        -26
-      ],
-      "rotation": -90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -56,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -52,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -48,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -44,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -40,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -36,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -32,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -28,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -24,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -20,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -16,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        16,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        20,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        24,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        28,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        32,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        36,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        40,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        44,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        48,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        52,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        56,
-        25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -56,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -52,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -48,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -44,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -40,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -36,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -32,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -28,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -24,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -20,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -16,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        16,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        20,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        24,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        28,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        32,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        36,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        40,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        44,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        48,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        52,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        56,
-        -25
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        14
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        18
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        22
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        26
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        30
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        34
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        38
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        14
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        18
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        22
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        26
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        30
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        34
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        38
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        -40
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        -36
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        -32
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        -28
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        -24
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        -20
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        -16
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        -40
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        -36
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        -32
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        -28
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        -24
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        -20
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        -16
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -8,
-        22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -4,
-        22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        0,
-        22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        4,
-        22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        8,
-        22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        22
-      ]
-    },
-    {
       "prop": "Car_SedanWreck",
       "at": [
         -6,
@@ -1114,55 +441,6 @@
         26.5
       ],
       "rotation": -23.9
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        -22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -8,
-        -22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -4,
-        -22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        0,
-        -22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        4,
-        -22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        8,
-        -22
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        -22
-      ]
     },
     {
       "prop": "Car_SedanWreck",
@@ -1287,8 +565,8 @@
     {
       "prop": "Prop_Jerrycan",
       "at": [
-        -17.24,
-        -3.09
+        -18.61,
+        -3.27
       ],
       "rotation": 60.6
     },
@@ -1335,8 +613,8 @@
     {
       "prop": "Prop_Barrel",
       "at": [
-        11.38,
-        -4.12
+        4.65,
+        -7.23
       ],
       "rotation": 143.8
     },
@@ -1359,8 +637,8 @@
     {
       "prop": "Car_MuscleRaider",
       "at": [
-        0,
-        0
+        -1.74,
+        -10.87
       ],
       "rotation": 24
     },
@@ -1487,8 +765,8 @@
     {
       "prop": "Prop_Barricade",
       "at": [
-        -5.73,
-        -4.9
+        -5.86,
+        -4.81
       ],
       "rotation": -108.2
     },
@@ -1583,16 +861,16 @@
     {
       "prop": "Prop_Barrel",
       "at": [
-        -6.33,
-        7.08
+        -6.67,
+        6.76
       ],
       "rotation": 92.1
     },
     {
       "prop": "Prop_Jerrycan",
       "at": [
-        -6.9,
-        -6.53
+        -7.54,
+        -7.12
       ],
       "rotation": 115.1
     },
@@ -1693,22 +971,6 @@
       "rotation": 56.7
     },
     {
-      "prop": "Bush_Hedge",
-      "at": [
-        27.4,
-        21.64
-      ],
-      "rotation": 95.2
-    },
-    {
-      "prop": "Bush_Hedge",
-      "at": [
-        -32.96,
-        21.69
-      ],
-      "rotation": 84.2
-    },
-    {
       "prop": "Grass_Clump",
       "at": [
         31.22,
@@ -1725,26 +987,19 @@
       "rotation": -149.4
     },
     {
-      "prop": "Bush_Hedge",
-      "at": [
-        -25.54,
-        -16.06
-      ],
-      "rotation": 107.2
-    },
-    {
       "prop": "Car_VanRust",
       "at": [
-        -44,
-        11
+        -45.07,
+        8.42
       ],
-      "rotation": 89.4
+      "rotation": 89.4,
+      "y": -0.14
     },
     {
       "prop": "Car_VanRust",
       "at": [
         -30,
-        -11
+        -9.31
       ],
       "rotation": 1.1
     },
@@ -1759,8 +1014,8 @@
     {
       "prop": "Car_VanRust",
       "at": [
-        34,
-        -10.69
+        33.68,
+        -8.41
       ],
       "rotation": 57.3
     },
@@ -1768,9 +1023,653 @@
       "prop": "Car_VanRust",
       "at": [
         44,
-        8.87
+        8.42
       ],
       "rotation": -156.2
+    },
+    {
+      "prop": "Car_SedanWreck",
+      "at": [
+        -28.64,
+        1.71
+      ],
+      "rotation": 133.1
+    },
+    {
+      "prop": "Car_VanRust",
+      "at": [
+        -0.71,
+        11.14
+      ],
+      "rotation": 24.6
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        3.27,
+        8.23
+      ],
+      "rotation": 92.1
+    },
+    {
+      "prop": "Bld_Shop",
+      "at": [
+        -44,
+        19.74
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_Diner",
+      "at": [
+        -27.25,
+        19.1
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_AutoShop",
+      "at": [
+        29,
+        20.55
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_Warehouse",
+      "at": [
+        46.86,
+        18.6
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_Warehouse",
+      "at": [
+        -44.86,
+        -18.6
+      ]
+    },
+    {
+      "prop": "Bld_Barn",
+      "at": [
+        -29.42,
+        -19.03
+      ]
+    },
+    {
+      "prop": "Bld_Shop",
+      "at": [
+        27,
+        -19.73
+      ]
+    },
+    {
+      "prop": "Bld_Diner",
+      "at": [
+        46.25,
+        -19.1
+      ]
+    },
+    {
+      "prop": "Bld_Farmhouse",
+      "at": [
+        20.35,
+        33
+      ],
+      "rotation": -90
+    },
+    {
+      "prop": "Bld_Trailer",
+      "at": [
+        -17.11,
+        33
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Bld_Ranch",
+      "at": [
+        -20.5,
+        -33
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Bld_Ranch",
+      "at": [
+        20.5,
+        -33
+      ],
+      "rotation": -90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -54,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -50,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -46,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -42,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -38,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -34,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -30,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -26,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -22,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -18,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -14,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -13.67
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -17
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -20.33
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -20.33
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -17
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -13.67
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        14,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        18,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        22,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        26,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        30,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        34,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        38,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        42,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        46,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        50,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        54,
+        -12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        56,
+        2
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        56,
+        6
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        56,
+        10
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        54,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        50,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        46,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        42,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        38,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        34,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        30,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        26,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        22,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        18,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        14,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        13.67
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        17
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        20.33
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        20.33
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        17
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        13.67
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -14,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -18,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -22,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -26,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -30,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -34,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -38,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -42,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -46,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -50,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -54,
+        12
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -56,
+        10
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -56,
+        -10
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -10,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -6,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -2,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        2,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        6,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        10,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -10,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -6,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -2,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        2,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        6,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        10,
+        -22
+      ]
     }
   ],
   "zombies": [
@@ -2113,8 +2012,8 @@
     {
       "kind": "zombie1",
       "at": [
-        -0.19,
-        1.14
+        0.2,
+        4.3
       ],
       "rotation": 108.6
     },
@@ -2161,24 +2060,24 @@
     {
       "kind": "zombie2",
       "at": [
-        -3.01,
-        0
+        -4.23,
+        0.54
       ],
       "rotation": 109.3
     },
     {
       "kind": "zombie1",
       "at": [
-        1.81,
-        -0.04
+        3.01,
+        0.99
       ],
       "rotation": 83.9
     },
     {
       "kind": "zombie2",
       "at": [
-        -2.95,
-        -0.69
+        -3.06,
+        -3.14
       ],
       "rotation": -91.6
     }

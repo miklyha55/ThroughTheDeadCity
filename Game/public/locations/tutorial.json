@@ -1,811 +1,1634 @@
 {
-  "id": "tutorial",
-  "name": "Дом на окраине",
-  "number": 0,
-  "next": "farm",
-  "size": [
-    44,
-    22
+ "id": "tutorial",
+ "name": "Дом на окраине",
+ "number": 0,
+ "next": "farm",
+ "size": [
+  96,
+  48
+ ],
+ "ground": {
+  "color": "#5a4a3a",
+  "y": -0.02
+ },
+ "spawn": {
+  "position": [
+   -15.23,
+   -5.22
   ],
-  "ground": {
-    "color": "#5a4a3a",
-    "y": -0.02
-  },
-  "spawn": {
-    "position": [
-      -15.23,
-      -5.22
-    ],
-    "rotation": 90
-  },
-  "exitAt": [
-    14.26,
-    -7.76,
-    2.2
-  ],
-  "gun": {
-    "at": [
-      -14.82,
-      1.6
-    ]
-  },
-  "guide": [
-    {
-      "at": [
-        -3.8,
-        5.35
-      ]
-    }
-  ],
-  "props": [
-    {
-      "prop": "Wall_Window",
-      "at": [
-        -18,
-        -8
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -14,
-        -8
-      ],
-      "scale": [
-        1.08,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Window",
-      "at": [
-        -6,
-        -8
-      ]
-    },
-    {
-      "prop": "Wall_Window",
-      "at": [
-        -20,
-        -6
-      ],
-      "rotation": 90,
-      "scale": [
-        1.04,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -20,
-        -2
-      ],
-      "rotation": 90,
-      "scale": [
-        1.04,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Window",
-      "at": [
-        -20,
-        6
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -4,
-        -6
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -4,
-        2
-      ],
-      "rotation": 90,
-      "scale": [
-        1.05,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -2,
-        4
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        4,
-        -6
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        4,
-        2
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Wall_Window",
-      "at": [
-        6,
-        -8
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        10,
-        -8
-      ],
-      "scale": [
-        1.06,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Window",
-      "at": [
-        18,
-        -8
-      ]
-    },
-    {
-      "prop": "Wall_Window",
-      "at": [
-        20,
-        -6
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        20,
-        -2
-      ],
-      "rotation": 90,
-      "scale": [
-        1.07,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Window",
-      "at": [
-        20,
-        6
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -18,
-        8
-      ]
-    },
-    {
-      "prop": "Wall_Window",
-      "at": [
-        -10,
-        8
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -6,
-        8
-      ],
-      "scale": [
-        1.07,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -2,
-        8
-      ]
-    },
-    {
-      "prop": "Wall_Window",
-      "at": [
-        6,
-        8
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        10,
-        8
-      ],
-      "scale": [
-        1.09,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        14,
-        8
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -10.02,
-        -8
-      ],
-      "scale": [
-        1.09,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -4,
-        -1.98
-      ],
-      "rotation": 90,
-      "scale": [
-        1.06,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        2,
-        4
-      ],
-      "scale": [
-        1.05,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        4,
-        -1.98
-      ],
-      "rotation": 90,
-      "scale": [
-        1.07,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        20,
-        2.04
-      ],
-      "rotation": 90,
-      "scale": [
-        1.1,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        17.91,
-        8
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        1.99,
-        8
-      ],
-      "scale": [
-        1.07,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -14.01,
-        8
-      ],
-      "scale": [
-        1.07,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Plain",
-      "at": [
-        -20,
-        1.99
-      ],
-      "rotation": 90,
-      "scale": [
-        1.07,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Wall_Door",
-      "at": [
-        14.02,
-        -8
-      ],
-      "scale": [
-        1.08,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Furn_Sofa",
-      "at": [
-        -13.86,
-        -3.14
-      ],
-      "rotation": -164.9,
-      "scale": [
-        1.08,
-        1.1,
-        1.1
-      ]
-    },
-    {
-      "prop": "Furn_Armchair",
-      "at": [
-        -18.96,
-        -0.82
-      ],
-      "rotation": 75
-    },
-    {
-      "prop": "Furn_CoffeeTable",
-      "at": [
-        -13.55,
-        -5.46
-      ]
-    },
-    {
-      "prop": "Furn_TVStand",
-      "at": [
-        -14.01,
-        -7.02
-      ],
-      "rotation": 2.3
-    },
-    {
-      "prop": "Furn_Bookshelf",
-      "at": [
-        -8.94,
-        -7.4
-      ],
-      "rotation": 1.6
-    },
-    {
-      "prop": "Furn_FloorLamp",
-      "at": [
-        -19,
-        -7
-      ]
-    },
-    {
-      "prop": "Furn_Chair",
-      "at": [
-        -13.2,
-        -1.18
-      ],
-      "rotation": 30
-    },
-    {
-      "prop": "Furn_DiningTable",
-      "at": [
-        -18.98,
-        -5.37
-      ],
-      "rotation": 89.9
-    },
-    {
-      "prop": "Furn_Chair",
-      "at": [
-        -6.6,
-        1.2
-      ],
-      "rotation": -70
-    },
-    {
-      "prop": "Furn_Dresser",
-      "at": [
-        -19.26,
-        0.98
-      ],
-      "rotation": 90.5
-    },
-    {
-      "prop": "Furn_KitchenCounter",
-      "at": [
-        8.71,
-        -7.38
-      ],
-      "rotation": 180
-    },
-    {
-      "prop": "Furn_Stove",
-      "at": [
-        10.2,
-        -7.3
-      ]
-    },
-    {
-      "prop": "Furn_Fridge",
-      "at": [
-        11.41,
-        -7.3
-      ],
-      "rotation": 180
-    },
-    {
-      "prop": "Furn_Bed",
-      "at": [
-        -6.78,
-        -6.96
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Furn_Dresser",
-      "at": [
-        4.71,
-        -3.89
-      ],
-      "rotation": 86.2
-    },
-    {
-      "prop": "Furn_Bookshelf",
-      "at": [
-        4.48,
-        -2.71
-      ],
-      "rotation": 88
-    },
-    {
-      "prop": "Furn_FloorLamp",
-      "at": [
-        7.16,
-        -7.42
-      ]
-    },
-    {
-      "prop": "Prop_Pallet",
-      "at": [
-        -17.08,
-        -1.02
-      ],
-      "rotation": 26.1
-    },
-    {
-      "prop": "Prop_Pallet",
-      "at": [
-        -7.92,
-        -4.85
-      ],
-      "rotation": 80.4
-    },
-    {
-      "prop": "Prop_Pallet",
-      "at": [
-        10.55,
-        6.67
-      ],
-      "rotation": 16.8
-    },
-    {
-      "prop": "Prop_Pallet",
-      "at": [
-        -12.14,
-        2.4
-      ],
-      "rotation": 45.9
-    },
-    {
-      "prop": "Prop_Pallet",
-      "at": [
-        5.88,
-        -6.17
-      ],
-      "rotation": 74.1
-    },
-    {
-      "prop": "Prop_Pallet",
-      "at": [
-        10.39,
-        -3.12
-      ],
-      "rotation": -30.8
-    },
-    {
-      "prop": "Prop_Pallet",
-      "at": [
-        -14.8,
-        4.12
-      ],
-      "rotation": -71.6
-    },
-    {
-      "prop": "Prop_Pallet",
-      "at": [
-        -10.71,
-        -2.1
-      ],
-      "rotation": -45
-    },
-    {
-      "prop": "Prop_Pallet",
-      "at": [
-        8.68,
-        6.49
-      ],
-      "rotation": 42.5
-    },
-    {
-      "prop": "Prop_Cone",
-      "at": [
-        -7.36,
-        2.95
-      ],
-      "rotation": 4
-    },
-    {
-      "prop": "Prop_Cone",
-      "at": [
-        -10.98,
-        5.26
-      ],
-      "rotation": 67.1
-    },
-    {
-      "prop": "Prop_Cone",
-      "at": [
-        9.81,
-        3.68
-      ],
-      "rotation": -19.9
-    },
-    {
-      "prop": "Prop_Cone",
-      "at": [
-        11.29,
-        0.69
-      ],
-      "rotation": -42
-    },
-    {
-      "prop": "Prop_Cone",
-      "at": [
-        16.15,
-        -3.86
-      ],
-      "rotation": 30.5
-    },
-    {
-      "prop": "Prop_Cone",
-      "at": [
-        -2.6,
-        6.66
-      ],
-      "rotation": 54.3,
-      "y": -0.08
-    },
-    {
-      "prop": "Prop_Cone",
-      "at": [
-        -15.02,
-        -0.92
-      ],
-      "rotation": 85.4
-    },
-    {
-      "prop": "Prop_Cone",
-      "at": [
-        15.19,
-        4.36
-      ],
-      "rotation": -72.8
-    },
-    {
-      "prop": "Prop_Tires",
-      "at": [
-        8.32,
-        -2.03
-      ],
-      "rotation": 54.9
-    },
-    {
-      "prop": "Prop_Tires",
-      "at": [
-        -17.28,
-        4.89
-      ],
-      "rotation": -2.5
-    },
-    {
-      "prop": "Prop_Tires",
-      "at": [
-        15.42,
-        -2.11
-      ],
-      "rotation": 80.3
-    },
-    {
-      "prop": "Prop_Tires",
-      "at": [
-        1.62,
-        5.83
-      ],
-      "rotation": 19
-    },
-    {
-      "prop": "Prop_Jerrycan",
-      "at": [
-        7.13,
-        3.51
-      ],
-      "rotation": 7.4
-    },
-    {
-      "prop": "Prop_Crate",
-      "at": [
-        15.35,
-        2.28
-      ],
-      "rotation": -46.2
-    },
-    {
-      "prop": "Prop_Barricade",
-      "at": [
-        6.61,
-        -0.43
-      ],
-      "rotation": -14.2
-    },
-    {
-      "prop": "Furn_Sofa",
-      "at": [
-        -3.8,
-        5.35
-      ],
-      "rotation": -101.1,
-      "scale": 1.1
-    },
-    {
-      "prop": "Furn_Sofa",
-      "at": [
-        -11.62,
-        -4.12
-      ],
-      "rotation": -142.2,
-      "y": 0.07,
-      "scale": [
-        1.08,
-        1.1,
-        1.1
-      ]
-    },
-    {
-      "prop": "Furn_Sofa",
-      "at": [
-        -16.29,
-        -2.87
-      ],
-      "rotation": -179.4,
-      "scale": [
-        1.08,
-        1.1,
-        1.1
-      ]
-    },
-    {
-      "prop": "Furn_Bookshelf",
-      "at": [
-        4.95,
-        -7.47
-      ],
-      "rotation": 1.6
-    }
-  ],
-  "zombies": [
-    {
-      "kind": "zombie1",
-      "at": [
-        14.01,
-        -4.51
-      ],
-      "rotation": 45
-    },
-    {
-      "kind": "zombie1",
-      "at": [
-        16.57,
-        -4.88
-      ],
-      "rotation": -90
-    },
-    {
-      "kind": "zombie2",
-      "at": [
-        12.95,
-        2.97
-      ],
-      "rotation": 180
-    },
-    {
-      "kind": "zombie2",
-      "at": [
-        -15.74,
-        2.93
-      ],
-      "rotation": 90
-    },
-    {
-      "kind": "zombie1",
-      "at": [
-        10.74,
-        -4.9
-      ],
-      "rotation": 75.5
-    },
-    {
-      "kind": "zombie2",
-      "at": [
-        14.81,
-        -0.41
-      ],
-      "rotation": -102
-    },
-    {
-      "kind": "zombie2",
-      "at": [
-        17.11,
-        0.95
-      ],
-      "rotation": -102
-    }
+  "rotation": 90
+ },
+ "exitAt": [
+  38.0,
+  -22.0,
+  2.0
+ ],
+ "gun": {
+  "at": [
+   -14.82,
+   1.6
   ]
+ },
+ "guide": [
+  {
+   "at": [
+    -3.8,
+    5.35
+   ]
+  },
+  {
+   "at": [
+    14.2,
+    -10.0
+   ]
+  },
+  {
+   "at": [
+    22.0,
+    -14.0
+   ]
+  }
+ ],
+ "props": [
+  {
+   "prop": "Wall_Window",
+   "at": [
+    -18,
+    -8
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -14,
+    -8
+   ],
+   "scale": [
+    1.08,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    -6,
+    -8
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    -20,
+    -6
+   ],
+   "rotation": 90,
+   "scale": [
+    1.04,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -20,
+    -2
+   ],
+   "rotation": 90,
+   "scale": [
+    1.04,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    -20,
+    6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -4,
+    -6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -4,
+    2
+   ],
+   "rotation": 90,
+   "scale": [
+    1.05,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -2,
+    4
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    4,
+    -6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    4,
+    2
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    6,
+    -8
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    10,
+    -8
+   ],
+   "scale": [
+    1.06,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    18,
+    -8
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    20,
+    -6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    20,
+    -2
+   ],
+   "rotation": 90,
+   "scale": [
+    1.07,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    20,
+    6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -18,
+    8
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    -10,
+    8
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -6,
+    8
+   ],
+   "scale": [
+    1.07,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -2,
+    8
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    6,
+    8
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    10,
+    8
+   ],
+   "scale": [
+    1.09,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    14,
+    8
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -10.02,
+    -8
+   ],
+   "scale": [
+    1.09,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -4,
+    -1.98
+   ],
+   "rotation": 90,
+   "scale": [
+    1.06,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    2,
+    4
+   ],
+   "scale": [
+    1.05,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    4,
+    -1.98
+   ],
+   "rotation": 90,
+   "scale": [
+    1.07,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    20,
+    2.04
+   ],
+   "rotation": 90,
+   "scale": [
+    1.1,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    17.91,
+    8
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    1.99,
+    8
+   ],
+   "scale": [
+    1.07,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -14.01,
+    8
+   ],
+   "scale": [
+    1.07,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    -20,
+    1.99
+   ],
+   "rotation": 90,
+   "scale": [
+    1.07,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Furn_Sofa",
+   "at": [
+    -13.86,
+    -3.14
+   ],
+   "rotation": -164.9,
+   "scale": [
+    1.08,
+    1.1,
+    1.1
+   ]
+  },
+  {
+   "prop": "Furn_Armchair",
+   "at": [
+    -18.96,
+    -0.82
+   ],
+   "rotation": 75
+  },
+  {
+   "prop": "Furn_CoffeeTable",
+   "at": [
+    -13.55,
+    -5.46
+   ]
+  },
+  {
+   "prop": "Furn_TVStand",
+   "at": [
+    -14.01,
+    -7.02
+   ],
+   "rotation": 2.3
+  },
+  {
+   "prop": "Furn_Bookshelf",
+   "at": [
+    -8.94,
+    -7.4
+   ],
+   "rotation": 1.6
+  },
+  {
+   "prop": "Furn_FloorLamp",
+   "at": [
+    -19,
+    -7
+   ]
+  },
+  {
+   "prop": "Furn_Chair",
+   "at": [
+    -13.2,
+    -1.18
+   ],
+   "rotation": 30
+  },
+  {
+   "prop": "Furn_DiningTable",
+   "at": [
+    -18.98,
+    -5.37
+   ],
+   "rotation": 89.9
+  },
+  {
+   "prop": "Furn_Chair",
+   "at": [
+    -6.6,
+    1.2
+   ],
+   "rotation": -70
+  },
+  {
+   "prop": "Furn_Dresser",
+   "at": [
+    -19.26,
+    0.98
+   ],
+   "rotation": 90.5
+  },
+  {
+   "prop": "Furn_KitchenCounter",
+   "at": [
+    8.71,
+    -7.38
+   ],
+   "rotation": 180
+  },
+  {
+   "prop": "Furn_Stove",
+   "at": [
+    10.2,
+    -7.3
+   ]
+  },
+  {
+   "prop": "Furn_Fridge",
+   "at": [
+    11.41,
+    -7.3
+   ],
+   "rotation": 180
+  },
+  {
+   "prop": "Furn_Bed",
+   "at": [
+    -6.78,
+    -6.96
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Furn_Dresser",
+   "at": [
+    4.71,
+    -3.89
+   ],
+   "rotation": 86.2
+  },
+  {
+   "prop": "Furn_Bookshelf",
+   "at": [
+    4.48,
+    -2.71
+   ],
+   "rotation": 88
+  },
+  {
+   "prop": "Furn_FloorLamp",
+   "at": [
+    7.16,
+    -7.42
+   ]
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    -17.08,
+    -1.02
+   ],
+   "rotation": 26.1
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    -7.92,
+    -4.85
+   ],
+   "rotation": 80.4
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    10.55,
+    6.67
+   ],
+   "rotation": 16.8
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    -12.14,
+    2.4
+   ],
+   "rotation": 45.9
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    5.88,
+    -6.17
+   ],
+   "rotation": 74.1
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    10.39,
+    -3.12
+   ],
+   "rotation": -30.8
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    -14.8,
+    4.12
+   ],
+   "rotation": -71.6
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    -10.71,
+    -2.1
+   ],
+   "rotation": -45
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    8.68,
+    6.49
+   ],
+   "rotation": 42.5
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    -7.36,
+    2.95
+   ],
+   "rotation": 4
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    -10.98,
+    5.26
+   ],
+   "rotation": 67.1
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    9.81,
+    3.68
+   ],
+   "rotation": -19.9
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    11.29,
+    0.69
+   ],
+   "rotation": -42
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    16.15,
+    -3.86
+   ],
+   "rotation": 30.5
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    -2.6,
+    6.66
+   ],
+   "rotation": 54.3,
+   "y": -0.08
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    -15.02,
+    -0.92
+   ],
+   "rotation": 85.4
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    15.19,
+    4.36
+   ],
+   "rotation": -72.8
+  },
+  {
+   "prop": "Prop_Tires",
+   "at": [
+    8.32,
+    -2.03
+   ],
+   "rotation": 54.9
+  },
+  {
+   "prop": "Prop_Tires",
+   "at": [
+    -17.28,
+    4.89
+   ],
+   "rotation": -2.5
+  },
+  {
+   "prop": "Prop_Tires",
+   "at": [
+    15.42,
+    -2.11
+   ],
+   "rotation": 80.3
+  },
+  {
+   "prop": "Prop_Tires",
+   "at": [
+    1.62,
+    5.83
+   ],
+   "rotation": 19
+  },
+  {
+   "prop": "Prop_Jerrycan",
+   "at": [
+    7.13,
+    3.51
+   ],
+   "rotation": 7.4
+  },
+  {
+   "prop": "Prop_Crate",
+   "at": [
+    15.35,
+    2.28
+   ],
+   "rotation": -46.2
+  },
+  {
+   "prop": "Prop_Barricade",
+   "at": [
+    6.61,
+    -0.43
+   ],
+   "rotation": -14.2
+  },
+  {
+   "prop": "Furn_Sofa",
+   "at": [
+    -3.8,
+    5.35
+   ],
+   "rotation": -101.1,
+   "scale": 1.1
+  },
+  {
+   "prop": "Furn_Sofa",
+   "at": [
+    -11.62,
+    -4.12
+   ],
+   "rotation": -142.2,
+   "y": 0.07,
+   "scale": [
+    1.08,
+    1.1,
+    1.1
+   ]
+  },
+  {
+   "prop": "Furn_Sofa",
+   "at": [
+    -16.29,
+    -2.87
+   ],
+   "rotation": -179.4,
+   "scale": [
+    1.08,
+    1.1,
+    1.1
+   ]
+  },
+  {
+   "prop": "Furn_Bookshelf",
+   "at": [
+    4.95,
+    -7.47
+   ],
+   "rotation": 1.6
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    9.87,
+    -20
+   ],
+   "rotation": 0,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    13.96,
+    -20
+   ],
+   "rotation": 0,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    18.04,
+    -20
+   ],
+   "rotation": 0,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    22.13,
+    -20
+   ],
+   "rotation": 0,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    8,
+    -18.11
+   ],
+   "rotation": 90,
+   "scale": [
+    1.068,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    8,
+    -14.0
+   ],
+   "rotation": 90,
+   "scale": [
+    1.068,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    8,
+    -9.89
+   ],
+   "rotation": 90,
+   "scale": [
+    1.068,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    22.0,
+    -8
+   ],
+   "rotation": 0,
+   "scale": [
+    1.125,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    25.86,
+    -20
+   ],
+   "rotation": 0,
+   "scale": [
+    1.057,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    29.93,
+    -20
+   ],
+   "rotation": 0,
+   "scale": [
+    1.057,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    34.0,
+    -20
+   ],
+   "rotation": 0,
+   "scale": [
+    1.057,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    42.14,
+    -20
+   ],
+   "rotation": 0,
+   "scale": [
+    1.057,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    44,
+    -18.13
+   ],
+   "rotation": 90,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    44,
+    -14.04
+   ],
+   "rotation": 90,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    44,
+    -9.96
+   ],
+   "rotation": 90,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    44,
+    -5.87
+   ],
+   "rotation": 90,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    25.86,
+    -4
+   ],
+   "rotation": 0,
+   "scale": [
+    1.057,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    29.93,
+    -4
+   ],
+   "rotation": 0,
+   "scale": [
+    1.057,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    34.0,
+    -4
+   ],
+   "rotation": 0,
+   "scale": [
+    1.057,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    38.07,
+    -4
+   ],
+   "rotation": 0,
+   "scale": [
+    1.057,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Window",
+   "at": [
+    42.14,
+    -4
+   ],
+   "rotation": 0,
+   "scale": [
+    1.057,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Door",
+   "at": [
+    38.0,
+    -24
+   ],
+   "rotation": 0,
+   "scale": [
+    1.04,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    36,
+    -22.0
+   ],
+   "rotation": 90,
+   "scale": [
+    1.125,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    40,
+    -22.0
+   ],
+   "rotation": 90,
+   "scale": [
+    1.125,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    24,
+    -18.13
+   ],
+   "rotation": 90,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    24,
+    -9.96
+   ],
+   "rotation": 90,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Wall_Plain",
+   "at": [
+    24,
+    -5.87
+   ],
+   "rotation": 90,
+   "scale": [
+    1.061,
+    1,
+    1
+   ]
+  },
+  {
+   "prop": "Furn_Bookshelf",
+   "at": [
+    9.3,
+    -9.6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Furn_Bookshelf",
+   "at": [
+    9.3,
+    -12.6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Furn_TVStand",
+   "at": [
+    9.3,
+    -17.6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Furn_Dresser",
+   "at": [
+    11.0,
+    -19.3
+   ],
+   "rotation": 0
+  },
+  {
+   "prop": "Furn_DiningTable",
+   "at": [
+    14.6,
+    -11.4
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Furn_Chair",
+   "at": [
+    13.4,
+    -11.6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Furn_Chair",
+   "at": [
+    15.8,
+    -11.3
+   ],
+   "rotation": -90
+  },
+  {
+   "prop": "Furn_Armchair",
+   "at": [
+    22.8,
+    -9.6
+   ],
+   "rotation": -90
+  },
+  {
+   "prop": "Furn_FloorLamp",
+   "at": [
+    22.9,
+    -11.4
+   ],
+   "rotation": 0
+  },
+  {
+   "prop": "Furn_CoffeeTable",
+   "at": [
+    21.6,
+    -17.8
+   ],
+   "rotation": 0
+  },
+  {
+   "prop": "Prop_Barrel",
+   "at": [
+    12.4,
+    -19.2
+   ],
+   "rotation": 20
+  },
+  {
+   "prop": "Prop_Barrel",
+   "at": [
+    13.6,
+    -19.3
+   ],
+   "rotation": -35
+  },
+  {
+   "prop": "Prop_Crate",
+   "at": [
+    17.6,
+    -19.2
+   ],
+   "rotation": 14
+  },
+  {
+   "prop": "Prop_Crate",
+   "at": [
+    18.9,
+    -19.3
+   ],
+   "rotation": -28
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    10.4,
+    -15.4
+   ],
+   "rotation": 72
+  },
+  {
+   "prop": "Prop_Tires",
+   "at": [
+    22.6,
+    -18.8
+   ],
+   "rotation": 16
+  },
+  {
+   "prop": "Prop_Tires",
+   "at": [
+    21.0,
+    -19.3
+   ],
+   "rotation": -42
+  },
+  {
+   "prop": "Prop_Barricade",
+   "at": [
+    18.4,
+    -14.4
+   ],
+   "rotation": 96
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    16.6,
+    -17.2
+   ],
+   "rotation": -54
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    20.4,
+    -12.0
+   ],
+   "rotation": 22
+  },
+  {
+   "prop": "Weapon_Knife",
+   "at": [
+    12.8,
+    -14.8
+   ],
+   "rotation": 35
+  },
+  {
+   "prop": "Prop_Jerrycan",
+   "at": [
+    16.1,
+    -13.2
+   ],
+   "rotation": 6
+  },
+  {
+   "prop": "Furn_Bed",
+   "at": [
+    26.4,
+    -6.2
+   ],
+   "rotation": 0
+  },
+  {
+   "prop": "Furn_Dresser",
+   "at": [
+    29.0,
+    -5.3
+   ],
+   "rotation": 180
+  },
+  {
+   "prop": "Furn_Bookshelf",
+   "at": [
+    31.6,
+    -5.4
+   ],
+   "rotation": 180
+  },
+  {
+   "prop": "Furn_Sofa",
+   "at": [
+    35.6,
+    -5.6
+   ],
+   "rotation": 180
+  },
+  {
+   "prop": "Furn_CoffeeTable",
+   "at": [
+    35.4,
+    -7.4
+   ],
+   "rotation": 0
+  },
+  {
+   "prop": "Furn_Armchair",
+   "at": [
+    38.6,
+    -6.4
+   ],
+   "rotation": 170
+  },
+  {
+   "prop": "Furn_FloorLamp",
+   "at": [
+    41.0,
+    -5.6
+   ],
+   "rotation": 0
+  },
+  {
+   "prop": "Furn_Fridge",
+   "at": [
+    43.0,
+    -7.8
+   ],
+   "rotation": -90
+  },
+  {
+   "prop": "Furn_Stove",
+   "at": [
+    43.0,
+    -9.6
+   ],
+   "rotation": -90
+  },
+  {
+   "prop": "Furn_KitchenCounter",
+   "at": [
+    43.0,
+    -11.6
+   ],
+   "rotation": -90
+  },
+  {
+   "prop": "Furn_DiningTable",
+   "at": [
+    40.0,
+    -12.0
+   ],
+   "rotation": 0
+  },
+  {
+   "prop": "Furn_Chair",
+   "at": [
+    40.6,
+    -9.8
+   ],
+   "rotation": -60
+  },
+  {
+   "prop": "Furn_Chair",
+   "at": [
+    38.8,
+    -12.2
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Furn_TVStand",
+   "at": [
+    25.2,
+    -9.4
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Furn_Bookshelf",
+   "at": [
+    25.2,
+    -18.6
+   ],
+   "rotation": 90
+  },
+  {
+   "prop": "Prop_Crate",
+   "at": [
+    28.6,
+    -18.8
+   ],
+   "rotation": 26
+  },
+  {
+   "prop": "Prop_Crate",
+   "at": [
+    30.0,
+    -19.2
+   ],
+   "rotation": -16
+  },
+  {
+   "prop": "Prop_Crate",
+   "at": [
+    29.4,
+    -17.6
+   ],
+   "rotation": 9
+  },
+  {
+   "prop": "Prop_Barrel",
+   "at": [
+    33.4,
+    -19.0
+   ],
+   "rotation": 12
+  },
+  {
+   "prop": "Prop_Barrel",
+   "at": [
+    34.6,
+    -18.6
+   ],
+   "rotation": -40
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    27.0,
+    -14.6
+   ],
+   "rotation": -38
+  },
+  {
+   "prop": "Prop_Pallet",
+   "at": [
+    31.6,
+    -16.8
+   ],
+   "rotation": 62
+  },
+  {
+   "prop": "Prop_Tires",
+   "at": [
+    42.0,
+    -18.5
+   ],
+   "rotation": 32
+  },
+  {
+   "prop": "Prop_Tires",
+   "at": [
+    43.0,
+    -16.4
+   ],
+   "rotation": -68
+  },
+  {
+   "prop": "Prop_Barricade",
+   "at": [
+    33.2,
+    -11.4
+   ],
+   "rotation": 12
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    29.8,
+    -9.0
+   ],
+   "rotation": 42
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    36.8,
+    -14.8
+   ],
+   "rotation": -22
+  },
+  {
+   "prop": "Prop_Cone",
+   "at": [
+    27.6,
+    -11.8
+   ],
+   "rotation": -8
+  },
+  {
+   "prop": "Weapon_Cleaver",
+   "at": [
+    31.0,
+    -12.6
+   ],
+   "rotation": -25
+  },
+  {
+   "prop": "Prop_Jerrycan",
+   "at": [
+    30.4,
+    -14.6
+   ],
+   "rotation": 4
+  }
+ ],
+ "zombies": [
+  {
+   "kind": "zombie1",
+   "at": [
+    14.01,
+    -4.51
+   ],
+   "rotation": 45
+  },
+  {
+   "kind": "zombie1",
+   "at": [
+    16.57,
+    -4.88
+   ],
+   "rotation": -90
+  },
+  {
+   "kind": "zombie2",
+   "at": [
+    12.95,
+    2.97
+   ],
+   "rotation": 180
+  },
+  {
+   "kind": "zombie2",
+   "at": [
+    -15.74,
+    2.93
+   ],
+   "rotation": 90
+  },
+  {
+   "kind": "zombie1",
+   "at": [
+    10.74,
+    -4.9
+   ],
+   "rotation": 75.5
+  },
+  {
+   "kind": "zombie2",
+   "at": [
+    14.81,
+    -0.41
+   ],
+   "rotation": -102
+  },
+  {
+   "kind": "zombie2",
+   "at": [
+    17.11,
+    0.95
+   ],
+   "rotation": -102
+  },
+  {
+   "kind": "zombie1",
+   "at": [
+    17.6,
+    -16.4
+   ],
+   "rotation": 70
+  },
+  {
+   "kind": "zombie1",
+   "at": [
+    20.1,
+    -15.0
+   ],
+   "rotation": 120
+  },
+  {
+   "kind": "zombie2",
+   "at": [
+    13.8,
+    -17.6
+   ],
+   "rotation": 25
+  },
+  {
+   "kind": "zombie2",
+   "at": [
+    33.6,
+    -15.6
+   ],
+   "rotation": 168
+  },
+  {
+   "kind": "zombie1",
+   "at": [
+    35.8,
+    -13.2
+   ],
+   "rotation": 152
+  },
+  {
+   "kind": "zombie1",
+   "at": [
+    31.2,
+    -10.4
+   ],
+   "rotation": -128
+  },
+  {
+   "kind": "zombie2",
+   "at": [
+    38.4,
+    -8.2
+   ],
+   "rotation": -148
+  }
+ ]
 }
