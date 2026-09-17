@@ -2,7 +2,7 @@
   "id": "gas_station",
   "name": "Заправка на 40-м шоссе",
   "number": 2,
-  "next": null,
+  "next": "crossroads",
   "size": [
     124,
     84

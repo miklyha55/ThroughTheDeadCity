@@ -1,0 +1,2186 @@
+{
+  "id": "crossroads",
+  "name": "Северный перекрёсток",
+  "number": 3,
+  "next": null,
+  "size": [
+    112,
+    80
+  ],
+  "ground": {
+    "color": "#3f3a34",
+    "y": -0.06
+  },
+  "spawn": {
+    "position": [
+      -46,
+      0
+    ],
+    "rotation": 90
+  },
+  "exitAt": [
+    46,
+    -6,
+    4
+  ],
+  "guide": [
+    {
+      "at": [
+        0,
+        0
+      ]
+    }
+  ],
+  "props": [
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -48,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -48,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -40,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -40,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -32,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -32,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Damaged",
+      "at": [
+        -24,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Damaged",
+      "at": [
+        -24,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -16,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -16,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Cross",
+      "at": [
+        -8,
+        -4
+      ]
+    },
+    {
+      "prop": "Road_Cross",
+      "at": [
+        -8,
+        4
+      ]
+    },
+    {
+      "prop": "Road_Cross",
+      "at": [
+        0,
+        -4
+      ]
+    },
+    {
+      "prop": "Road_Cross",
+      "at": [
+        0,
+        4
+      ]
+    },
+    {
+      "prop": "Road_Cross",
+      "at": [
+        8,
+        -4
+      ]
+    },
+    {
+      "prop": "Road_Cross",
+      "at": [
+        8,
+        4
+      ]
+    },
+    {
+      "prop": "Road_Damaged",
+      "at": [
+        16,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Damaged",
+      "at": [
+        16,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        24,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        24,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        32,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        32,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        40,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        40,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        48,
+        -4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        48,
+        4
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        -36
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        4,
+        -36
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        -28
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        4,
+        -28
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        -20
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        4,
+        -20
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        -12
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        4,
+        -12
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        12
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        4,
+        12
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        20
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        4,
+        20
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        28
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        4,
+        28
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        -4,
+        36
+      ]
+    },
+    {
+      "prop": "Road_Straight",
+      "at": [
+        4,
+        36
+      ]
+    },
+    {
+      "prop": "Bld_Shop",
+      "at": [
+        -40,
+        17
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_Diner",
+      "at": [
+        -22,
+        17
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_AutoShop",
+      "at": [
+        20,
+        17
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_Warehouse",
+      "at": [
+        38,
+        17
+      ],
+      "rotation": 180
+    },
+    {
+      "prop": "Bld_Warehouse",
+      "at": [
+        -36,
+        -17
+      ]
+    },
+    {
+      "prop": "Bld_Motel",
+      "at": [
+        -18,
+        -17
+      ]
+    },
+    {
+      "prop": "Bld_Shop",
+      "at": [
+        22,
+        -17
+      ]
+    },
+    {
+      "prop": "Bld_Diner",
+      "at": [
+        40,
+        -17
+      ]
+    },
+    {
+      "prop": "Bld_SuburbHouse",
+      "at": [
+        -16,
+        26
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Bld_SuburbHouse",
+      "at": [
+        16,
+        26
+      ],
+      "rotation": -90
+    },
+    {
+      "prop": "Bld_Ranch",
+      "at": [
+        -16,
+        -26
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Bld_Ranch",
+      "at": [
+        16,
+        -26
+      ],
+      "rotation": -90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -56,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -52,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -48,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -44,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -40,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -36,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -32,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -28,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -24,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -20,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -16,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        16,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        20,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        24,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        28,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        32,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        36,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        40,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        44,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        48,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        52,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        56,
+        25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -56,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -52,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -48,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -44,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -40,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -36,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -32,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -28,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -24,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -20,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -16,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        16,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        20,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        24,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        28,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        32,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        36,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        40,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        44,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        48,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        52,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        56,
+        -25
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        14
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        18
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        22
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        26
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        30
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        34
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        38
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        14
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        18
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        22
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        26
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        30
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        34
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        38
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -40
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -36
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -32
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -28
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -24
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -20
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -16
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -40
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -36
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -32
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -28
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -24
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -20
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -16
+      ],
+      "rotation": 90
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -8,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -4,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        0,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        4,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        8,
+        22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        22
+      ]
+    },
+    {
+      "prop": "Car_SedanWreck",
+      "at": [
+        -6,
+        26.09
+      ],
+      "rotation": 78
+    },
+    {
+      "prop": "Heavy_SemiTruck",
+      "at": [
+        3.7,
+        28.05
+      ],
+      "rotation": 96
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        -9,
+        23.2
+      ],
+      "rotation": 87.2
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        -5.4,
+        23.2
+      ],
+      "rotation": 84.4
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        -1.8,
+        23.2
+      ],
+      "rotation": 92.4
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        1.8,
+        23.2
+      ],
+      "rotation": 83.2
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        5.4,
+        23.2
+      ],
+      "rotation": 90.6
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        9,
+        23.2
+      ],
+      "rotation": 87.9
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        -8.7,
+        26.5
+      ],
+      "rotation": -159.1
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        -2.5,
+        26.5
+      ],
+      "rotation": 2.7
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        0.05,
+        26.5
+      ],
+      "rotation": -166.5
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        6.5,
+        26.5
+      ],
+      "rotation": -23.9
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -12,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -8,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        -4,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        0,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        4,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        8,
+        -22
+      ]
+    },
+    {
+      "prop": "Fence_ChainLink",
+      "at": [
+        12,
+        -22
+      ]
+    },
+    {
+      "prop": "Car_SedanWreck",
+      "at": [
+        -4.76,
+        -26.54
+      ],
+      "rotation": 78
+    },
+    {
+      "prop": "Heavy_SemiTruck",
+      "at": [
+        5,
+        -27.79
+      ],
+      "rotation": 96
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        -9,
+        -23.2
+      ],
+      "rotation": 83.1
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        -5.4,
+        -23.2
+      ],
+      "rotation": 83.5
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        -1.8,
+        -23.2
+      ],
+      "rotation": 88.8
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        1.8,
+        -23.2
+      ],
+      "rotation": 95.2
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        5.4,
+        -23.2
+      ],
+      "rotation": 84
+    },
+    {
+      "prop": "Prop_JerseyBarrier",
+      "at": [
+        9,
+        -23.2
+      ],
+      "rotation": 85.6
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        -8.01,
+        -26.5
+      ],
+      "rotation": 45.9
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        -1.92,
+        -26.5
+      ],
+      "rotation": 161.2
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        0.99,
+        -26.5
+      ],
+      "rotation": 27.8
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        6.5,
+        -26.5
+      ],
+      "rotation": -37.2
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        -34.2,
+        -5.06
+      ],
+      "rotation": 129
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -41.03,
+        -1.3
+      ],
+      "rotation": -137.6
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        -36.77,
+        3.71
+      ],
+      "rotation": -114.9
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -17.24,
+        -3.09
+      ],
+      "rotation": 60.6
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        -24.33,
+        0.29
+      ],
+      "rotation": 135.2
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        -19.79,
+        3.18
+      ],
+      "rotation": 34
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        -19.68,
+        0.69
+      ],
+      "rotation": 122.4
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        13.35,
+        1.53
+      ],
+      "rotation": 163.1
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        14.95,
+        1.12
+      ],
+      "rotation": 42.3
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        11.38,
+        -4.12
+      ],
+      "rotation": 143.8
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        19.12,
+        1.62
+      ],
+      "rotation": 107.2
+    },
+    {
+      "prop": "Weapon_Cleaver",
+      "at": [
+        17.57,
+        -1.71
+      ],
+      "rotation": -142.7
+    },
+    {
+      "prop": "Car_MuscleRaider",
+      "at": [
+        0,
+        0
+      ],
+      "rotation": 24
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        8.54,
+        -3.01
+      ],
+      "rotation": -35.5
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        2.36,
+        4.28
+      ],
+      "rotation": 32.7
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        -8.39,
+        1.86
+      ],
+      "rotation": 117.5
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        8.53,
+        -1.06
+      ],
+      "rotation": -123.9
+    },
+    {
+      "prop": "Prop_Crate",
+      "at": [
+        -3.96,
+        -1.24
+      ],
+      "rotation": 9.6
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        6.43,
+        -2.85
+      ],
+      "rotation": 117.4
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        1.4,
+        5.59
+      ],
+      "rotation": 0.4
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        0.54,
+        -6.26
+      ],
+      "rotation": -29.2
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        7.05,
+        7.61
+      ],
+      "rotation": 143.2
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        -5.07,
+        -8.27
+      ],
+      "rotation": -28.6
+    },
+    {
+      "prop": "Prop_Crate",
+      "at": [
+        -7.51,
+        -1.52
+      ],
+      "rotation": 134.2
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        1.37,
+        -8.15
+      ],
+      "rotation": -118
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        -5.89,
+        -2.18
+      ],
+      "rotation": 11.1
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        3.27,
+        -2.95
+      ],
+      "rotation": -80.3
+    },
+    {
+      "prop": "Prop_Crate",
+      "at": [
+        -8.63,
+        -3.52
+      ],
+      "rotation": -20.4
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        -5.73,
+        -4.9
+      ],
+      "rotation": -108.2
+    },
+    {
+      "prop": "Prop_Cone",
+      "at": [
+        -1.28,
+        7.45
+      ],
+      "rotation": 2.8
+    },
+    {
+      "prop": "Prop_Barricade",
+      "at": [
+        7.47,
+        -7.38
+      ],
+      "rotation": 141.4
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -5.84,
+        3.37
+      ],
+      "rotation": -153.9
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        -1.82,
+        -8.43
+      ],
+      "rotation": -88.9
+    },
+    {
+      "prop": "Prop_Crate",
+      "at": [
+        4.73,
+        5.52
+      ],
+      "rotation": -36.6
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        -10.89,
+        0.87
+      ],
+      "rotation": -121.9
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -2.85,
+        4.55
+      ],
+      "rotation": -146.8
+    },
+    {
+      "prop": "Prop_Tires",
+      "at": [
+        -5.7,
+        5.06
+      ],
+      "rotation": 4.4
+    },
+    {
+      "prop": "Prop_Pallet",
+      "at": [
+        10.02,
+        4.28
+      ],
+      "rotation": 169.8
+    },
+    {
+      "prop": "Prop_Crate",
+      "at": [
+        4.63,
+        3.58
+      ],
+      "rotation": 146.1
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        7.84,
+        5.36
+      ],
+      "rotation": -114.6
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        -6.33,
+        7.08
+      ],
+      "rotation": 92.1
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -6.9,
+        -6.53
+      ],
+      "rotation": 115.1
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        6.73,
+        -6.7
+      ],
+      "rotation": 125.9
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        47.03,
+        -13.07
+      ],
+      "rotation": 173.7
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -15.73,
+        22.6
+      ],
+      "rotation": -34.3
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -15.24,
+        -30.3
+      ],
+      "rotation": -174.9
+    },
+    {
+      "prop": "Bush_Hedge",
+      "at": [
+        12.54,
+        25.83
+      ],
+      "rotation": -121.2
+    },
+    {
+      "prop": "Tree_Dead",
+      "at": [
+        -41.55,
+        23.21
+      ],
+      "rotation": 35.6
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        19.27,
+        -30.92
+      ],
+      "rotation": -123.3
+    },
+    {
+      "prop": "Tree_Dead",
+      "at": [
+        46.18,
+        32.14
+      ],
+      "rotation": -92
+    },
+    {
+      "prop": "Tree_Dead",
+      "at": [
+        46.57,
+        -12.1
+      ],
+      "rotation": -114.1
+    },
+    {
+      "prop": "Tree_Dead",
+      "at": [
+        -16.47,
+        -28.3
+      ],
+      "rotation": 1
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        -49.5,
+        -16.04
+      ],
+      "rotation": -128.2
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        -41.55,
+        31.12
+      ],
+      "rotation": 56.7
+    },
+    {
+      "prop": "Bush_Hedge",
+      "at": [
+        27.4,
+        21.64
+      ],
+      "rotation": 95.2
+    },
+    {
+      "prop": "Bush_Hedge",
+      "at": [
+        -32.96,
+        21.69
+      ],
+      "rotation": 84.2
+    },
+    {
+      "prop": "Grass_Clump",
+      "at": [
+        31.22,
+        -24.53
+      ],
+      "rotation": 117.5
+    },
+    {
+      "prop": "Bush_Tumbleweed",
+      "at": [
+        18.29,
+        13.15
+      ],
+      "rotation": -149.4
+    },
+    {
+      "prop": "Bush_Hedge",
+      "at": [
+        -25.54,
+        -16.06
+      ],
+      "rotation": 107.2
+    },
+    {
+      "prop": "Car_VanRust",
+      "at": [
+        -44,
+        11
+      ],
+      "rotation": 89.4
+    },
+    {
+      "prop": "Car_VanRust",
+      "at": [
+        -30,
+        -11
+      ],
+      "rotation": 1.1
+    },
+    {
+      "prop": "Car_VanRust",
+      "at": [
+        24,
+        6.27
+      ],
+      "rotation": 12.7
+    },
+    {
+      "prop": "Car_VanRust",
+      "at": [
+        34,
+        -10.69
+      ],
+      "rotation": 57.3
+    },
+    {
+      "prop": "Car_VanRust",
+      "at": [
+        44,
+        8.87
+      ],
+      "rotation": -156.2
+    }
+  ],
+  "zombies": [
+    {
+      "kind": "zombie2",
+      "at": [
+        -33.81,
+        -1.5
+      ],
+      "rotation": -144.9
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -30.95,
+        -2.75
+      ],
+      "rotation": -1.3
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -34.9,
+        -0.69
+      ],
+      "rotation": 30.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -32.73,
+        0.58
+      ],
+      "rotation": 71.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -29.85,
+        2.86
+      ],
+      "rotation": 135
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -30.36,
+        -1.94
+      ],
+      "rotation": -137.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -10.14,
+        -0.98
+      ],
+      "rotation": -158.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -15.52,
+        -3.38
+      ],
+      "rotation": -77.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -17.9,
+        2.38
+      ],
+      "rotation": 158.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -16.99,
+        2.68
+      ],
+      "rotation": -158.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -13.75,
+        -1.54
+      ],
+      "rotation": -36.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -10.33,
+        -1.48
+      ],
+      "rotation": -18.3
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -20.05,
+        -1.36
+      ],
+      "rotation": 131
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -14.67,
+        2.61
+      ],
+      "rotation": 65.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -16.02,
+        1.32
+      ],
+      "rotation": -116.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -13.69,
+        1.94
+      ],
+      "rotation": 119.2
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -12.74,
+        1.95
+      ],
+      "rotation": -29.2
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        24.78,
+        -2.96
+      ],
+      "rotation": 174.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        24.04,
+        -1.46
+      ],
+      "rotation": -143.1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        21.93,
+        -3.27
+      ],
+      "rotation": 40.9
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        28.39,
+        -1.21
+      ],
+      "rotation": -126.5
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        25.95,
+        0.39
+      ],
+      "rotation": -9.3
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        29.13,
+        -0.06
+      ],
+      "rotation": -7.1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        25.13,
+        -0.51
+      ],
+      "rotation": 86.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        20.74,
+        -1.5
+      ],
+      "rotation": -106.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        29.33,
+        -2.73
+      ],
+      "rotation": 92.9
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        24.5,
+        1.37
+      ],
+      "rotation": 70.6
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -0.19,
+        17.94
+      ],
+      "rotation": -51.9
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        0.58,
+        18.34
+      ],
+      "rotation": 49.1
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -3.23,
+        14.05
+      ],
+      "rotation": 110.2
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        1.7,
+        13.4
+      ],
+      "rotation": -108
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -4.05,
+        16.13
+      ],
+      "rotation": 104.4
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -2.14,
+        16.26
+      ],
+      "rotation": -19
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        4.57,
+        -17.34
+      ],
+      "rotation": -151
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        2.52,
+        -14.68
+      ],
+      "rotation": -106.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -3.31,
+        -18.29
+      ],
+      "rotation": -7.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -2.46,
+        -18.47
+      ],
+      "rotation": 120.5
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        2.09,
+        -14.63
+      ],
+      "rotation": -7.9
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        1.85,
+        -13.31
+      ],
+      "rotation": -148.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -4.28,
+        -5.97
+      ],
+      "rotation": -126.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        5.55,
+        -2.16
+      ],
+      "rotation": -147.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        6.87,
+        1.82
+      ],
+      "rotation": 142.3
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -0.19,
+        1.14
+      ],
+      "rotation": 108.6
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        7.59,
+        3.09
+      ],
+      "rotation": -84.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        1.15,
+        0.77
+      ],
+      "rotation": 153.6
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -0.29,
+        1.81
+      ],
+      "rotation": 157.7
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        3.66,
+        -0.5
+      ],
+      "rotation": -107.4
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -1.55,
+        2.65
+      ],
+      "rotation": -75.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -3.01,
+        0
+      ],
+      "rotation": 109.3
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        1.81,
+        -0.04
+      ],
+      "rotation": 83.9
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -2.95,
+        -0.69
+      ],
+      "rotation": -91.6
+    }
+  ]
+}

@@ -91,6 +91,7 @@ const LEVEL_NAMES = {
     tutorial: 'House on the Outskirts',
     farm: 'Wilson Farm',
     gas_station: 'Gas Station on Route 40',
+    crossroads: 'The North Crossroads',
   },
 };
 
