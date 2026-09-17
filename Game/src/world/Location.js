@@ -552,16 +552,6 @@ export class Location {
    *
    * Сцене кусок отдаётся до того, как его снимут: осколки берут цвет с модели.
    */
-  /**
-   * Куда вести героя, пока толпа не поднялась: к заграждению.
-   *
-   * Пусто, когда вести уже некуда — черта пройдена или заграждения нет вовсе.
-   */
-  get hordeMark() {
-    if (!this.horde || this.horde.clock >= 0 || this.breachable.length === 0) return null;
-    return this._breachCenter();
-  }
-
   /** Середина заграждения: туда и смотрит камера. */
   _breachCenter() {
     const at = new THREE.Vector3();
@@ -850,7 +840,11 @@ export class Location {
      */
     for (const zombie of this.zombies) {
       if (!zombie.alive) continue;
-      if (flatDistance(zombie.position, at) <= CFG.radius) zombie.crush(at, CFG.gore, 'blast');
+      // По касанию: в круг попадает и тот, кого задело краем, а не только тот,
+      // кто стоял в нём целиком.
+      if (flatDistance(zombie.position, at) <= CFG.radius + zombie.bodyRadius) {
+        zombie.crush(at, CFG.gore, 'blast');
+      }
     }
 
     // Героя взрыв не трогает вовсе. Бочка теперь не ловушка, а оружие: он сам
@@ -1320,35 +1314,26 @@ export class Location {
       const mark = this.guide[i];
       if (mark.done) continue;
 
-      const reach = mark.mark ? mark.mark.scale.x : mark.radius;
+      /**
+       * Только по кругу вехи — и ничему больше.
+       *
+       * Здесь была поблажка: веху засчитывало, если герой оказался ближе к
+       * следующей цели, то есть обошёл её стороной. Она и обесценивала весь
+       * смысл растяжения — как круг ни тяни, веха могла сработать на подходе.
+       *
+       * Раз размер задают гизмо, он и решает: растянутая поперёк прохода веха
+       * работает как заслон, мимо которого не проскочить.
+       */
+      // Плюс само тело героя: круг засчитывается, когда он коснулся края, а не
+      // когда влез в него целиком.
+      const reach = (mark.mark ? mark.mark.scale.x : mark.radius) + CONFIG.player.radius;
 
-      if (flatDistance(p, mark.at) <= reach || this._passedBy(p, i)) {
+      if (flatDistance(p, mark.at) <= reach) {
         mark.done = true;
         changed = true;
       }
     }
     return changed;
-  }
-
-  /**
-   * Миновал ли герой веху, не подойдя к ней вплотную.
-   *
-   * Одного касания мало. Веха на повороте стоит посреди коридора, а бежит герой
-   * как придётся — вдоль стены, по дуге, срезая угол, — и запросто проходит в
-   * стороне. Незасчитанная, она осталась бы первой в очереди, и стрелка тянула
-   * бы назад, в уже пройденный коридор.
-   *
-   * Поэтому веха засчитывается и тогда, когда герой оказался ближе к следующей
-   * цели, чем она сама: значит он её обошёл, и вести к ней больше незачем.
-   * Следующая цель — очередная веха, а за последней — выход.
-   *
-   * @param {THREE.Vector3} p — где герой @param {number} i — какая это веха
-   */
-  _passedBy(p, i) {
-    const next = this.guide[i + 1]?.at ?? this.exitMark?.position;
-    if (!next) return false;
-
-    return flatDistance(p, next) < flatDistance(this.guide[i].at, next);
   }
 
   /**
@@ -1379,7 +1364,12 @@ export class Location {
   reachedExit(p) {
     if (!this.exitMark || this.exitLocked) return false;
 
-    return flatDistance(p, this.exitMark.position) <= this.exitMark.scale.x;
+    // По самому кругу и его размеру: во что метку растянули гизмо, то и есть
+    // область перехода. Плюс тело героя — переход срабатывает по касанию края,
+    // а не когда герой целиком внутри.
+    const reach = this.exitMark.scale.x + CONFIG.player.radius;
+
+    return flatDistance(p, this.exitMark.position) <= reach;
   }
 
   /**

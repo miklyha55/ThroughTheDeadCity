@@ -173,7 +173,11 @@ export class GunPickup {
 
 
     if (!player.alive || player.frozen) return;
-    if (flatDistance(player.position, this.object.position) > CFG.takeRadius) return;
+    // Плюс само тело героя: вещь берётся, когда он её коснулся, а не когда
+    // встал на неё серединой. Правило одно на все круги в игре — веха, выход,
+    // подбираемое.
+    const reach = CFG.takeRadius + CONFIG.player.radius;
+    if (flatDistance(player.position, this.object.position) > reach) return;
 
     // Подошёл: gun отрывается от земли и летит к нему.
     this.flight = Number.EPSILON;
