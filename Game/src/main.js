@@ -22,6 +22,9 @@ import { Music } from './core/Music.js';
 import { attachListener, unlockAudio, wakeAudio } from './core/audio.js';
 import { StartMessage } from './core/StartMessage.js';
 import { ControlsHint } from './ui/ControlsHint.js';
+import { yandex } from './core/yandex.js';
+import { applyLanguage, levelName } from './core/i18n.js';
+import { progress, saveOnLeave } from './core/progress.js';
 import { LevelMap, LevelMapButton } from './ui/LevelMap.js';
 import { lockViewport } from './core/viewport.js';
 import { SkipHint } from './ui/SkipHint.js';
@@ -142,7 +145,41 @@ addEventListener('unhandledrejection', (event) => reportBreak(event.reason));
  */
 const LAST_LEVEL = 'dev:location';
 const remembered = import.meta.env.DEV ? localStorage.getItem(LAST_LEVEL) : null;
-const firstLevel = params.get('location') ?? remembered ?? CONFIG.locations.first;
+
+/**
+ * Площадка поднимается самой первой, до единой надписи на экране.
+ *
+ * Причин две. Язык: он берётся у площадки и обязан примениться до того, как
+ * собран первый экран — часть надписей читается ровно в тот миг, когда экран
+ * создаётся, и переписанные позже они уже никуда не попадут. И прогресс: по
+ * нему решается, какой уровень открывать, а решать это надо раньше, чем
+ * заставка начнёт готовить картинку.
+ *
+ * Вне площадки оба вызова отвечают пустотой, и игра идёт своим чередом.
+ */
+await yandex.start();
+
+/**
+ * Язык берётся у площадки, а `?lang=` его перебивает.
+ *
+ * Перебивает только для проверки: сама площадка тоже открывает игру на нужном
+ * языке отдельной вкладкой из своей панели отладки, и переключателя внутри игры
+ * быть не должно — это её прямое требование.
+ */
+applyLanguage(params.get('lang') ?? yandex.language());
+
+const saved = await progress.load();
+saveOnLeave();
+
+/**
+ * Куда игра открывается.
+ *
+ * Адрес сильнее всего: `?location=` открывает то, что в нём написано. Дальше
+ * выбор в панели разработчика. Потом сохранённое у площадки — ради него всё и
+ * затевалось: игрок возвращается туда, где остановился. И только если ничего
+ * этого нет, игра начинается сначала.
+ */
+const firstLevel = params.get('location') ?? remembered ?? saved.level ?? CONFIG.locations.first;
 
 // Первое, что видит игрок, — чёрный экран с кнопкой. Нужен он ради звука:
 // браузер выпускает звук только после действия игрока, и чем раньше это
@@ -455,7 +492,7 @@ engine.add({
     // либо старый уровень уже снят со сцены, либо игра кончилась, либо игрок
     // выбирает, куда идти, — а бежать всё это время персонаж иначе продолжал бы
     // как ни в чём не бывало.
-    if (locations.loading || finished || mapOpen) return;
+    if (locations.loading || finished || mapOpen || pausedByHost) return;
 
     input.update();
     watchDeath(); // упал и долежал — поднимаем экран с кнопкой
@@ -559,11 +596,17 @@ function aimPointer() {
   here?.lockExit(Boolean(gun));
 }
 
+/** Название нынешнего уровня на языке игры. */
+function levelTitle() {
+  const level = locations.current?.data;
+  return level ? levelName(level.id, level.name) : '';
+}
+
 function showHud() {
   hud.hidden = false;
   hud.textContent = editor?.active
-    ? `${locations.current.data.name} · правка`
-    : locations.current.data.name;
+    ? `${levelTitle()} · правка`
+    : levelTitle();
 }
 
 // ?debug=input — видно, что приходит со стика и куда едет персонаж
@@ -639,14 +682,39 @@ levelMap.onPick = (id) => {
  */
 levelMap.onToggle = (on) => {
   mapOpen = on;
+  if (on) yandex.pause(); else yandex.play(); // открытая карта — это пауза
   joystick.setEnabled(!on); // и стик под картой не ловит палец
   input.enabled = !on;
 };
 
 const deathScreen = new DeathScreen();
 
-/** Ещё раз: тот же уровень с начала. */
-deathScreen.onAgain = () => {
+/**
+ * Площадка просит остановиться и продолжить.
+ *
+ * Приходит при показе рекламы, переключении вкладки и сворачивании окна. Своё
+ * состояние паузы ведём отдельным флагом, а не выводим из этих событий: игра
+ * могла встать и сама — под картой уровней или в правке расстановки, — и тогда
+ * возвращать её в ход по чужой команде нельзя.
+ */
+let pausedByHost = false;
+yandex.onPause = () => { pausedByHost = true; };
+yandex.onResume = () => { pausedByHost = false; };
+
+/**
+ * Ещё раз: тот же уровень с начала, через рекламный ролик.
+ *
+ * Уровень начинается в любом случае: посмотрел игрок ролик, отказался от него,
+ * или его вовсе не нашлось. Запирать перезапуск за рекламой нельзя — при первом
+ * же сбое сети игра встала бы намертво, а это уже не монетизация, а поломка.
+ *
+ * Момент выбран нарочно: игрок в эту секунду ничего не делает, он только что
+ * умер и сам нажал кнопку. Показывать ролик там, где по экрану возят пальцем,
+ * площадка прямо запрещает — случайные нажатия она считает обманом.
+ */
+deathScreen.onAgain = async () => {
+  await yandex.showRewarded();
+
   player.revive();
   locations.load(locations.current.data.id).catch(reportBreak);
 };
@@ -660,6 +728,10 @@ deathScreen.onAgain = () => {
  * секунд, и весь её смысл пропал бы.
  */
 deathScreen.onFromStart = () => {
+  // Пройденное стирается: игрок согласился на это в отдельном окне, и с этой
+  // минуты игра для него начинается с чистого листа.
+  progress.reset();
+
   player.revive();
   player.disarm();
   locations.load(CONFIG.locations.first).catch(reportBreak);
@@ -684,11 +756,25 @@ function watchDeath() {
   if (player.alive) return;
   if (performance.now() < player.restartAt) return;
 
+  if (!deathScreen.shown) yandex.pause(); // попытка кончилась — геймплей встал
   deathScreen.show();
 }
 
+/**
+ * Уровень уходит — геймплей встал.
+ *
+ * Площадка меряет по этим отметкам своё, и правило у неё простое: остановиться
+ * надо в тот же миг, когда игра и правда встала. Под заставкой мир не живёт,
+ * значит и отметка ставится здесь, а не после сборки нового уровня.
+ */
+locations.onLoading = () => yandex.pause();
+
 locations.onChange = (location) => {
   deathScreen.hide(); // уровень начинается заново — экрану смерти тут не место
+
+  // Где игрок остановился: по этому месту игра и откроется в следующий раз.
+  progress.setLevel(location.data.id);
+
   wireBlasts(location);
   gunPickup.place(location, player, locations.editing); // в правке лежит всегда
   aimPointer();
@@ -710,6 +796,18 @@ locations.onChange = (location) => {
  */
 locations.onOpened = (location) => {
   startMessage.arm(location.data.number ?? 1);
+
+  /**
+   * Площадке говорим, что игра готова, ровно здесь.
+   *
+   * Не тогда, когда догрузились файлы, а тогда, когда ушёл последний экран и
+   * игрок может действовать: площадка меряет именно этот миг. Второй раз
+   * говорить нечего, дальше это просто смена уровней.
+   */
+  yandex.loaded();
+
+  // Уровень открылся — геймплей пошёл.
+  yandex.play();
 };
 /**
  * Первый уровень собрался раньше, чем эти двое были привязаны, — догоняем.
@@ -856,7 +954,8 @@ if (import.meta.env.DEV) {
 
   window.__game = {
     engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash, fog,
-    gunPickup, pointer, controlsHint, skipHint, deathScreen,
+    gunPickup, pointer, controlsHint, skipHint, deathScreen, levelMap,
+    yandex, progress, // площадка и сохранения: их удобно щупать из консоли
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),
   };

@@ -1,4 +1,5 @@
 import { Location } from './Location.js';
+import { levelName } from '../core/i18n.js';
 import { asset } from '../core/paths.js';
 
 /**
@@ -50,6 +51,7 @@ export class LocationManager {
 
   async load(id) {
     this.loading = true;
+    this.onLoading?.(); // уровень уходит: мир встаёт до самой сборки нового
     this.sfx?.silence(); // старый уровень уходит — его шаги и хрипы уходят с ним
 
     // Сначала чем встречать, и только потом показ: иначе первым делом виден
@@ -98,7 +100,9 @@ export class LocationManager {
     const data = await res.json();
     // Для знакомого уровня это уже сделано до показа; здесь — на случай, если он
     // открыт в обход цепочки и о нём узнали только сейчас, из файла.
-    this.splash?.setLevel(data.name, data.number ?? 1);
+    // Название на языке игры: в файле оно записано по-русски, и править файл
+    // нельзя — его перезаписывает правка расстановки.
+    this.splash?.setLevel(levelName(id, data.name), data.number ?? 1);
 
     this.current?.dispose();
     this.seeThrough?.clear(); // прежние здания ушли вместе с локацией

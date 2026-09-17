@@ -1,4 +1,5 @@
 import { asset } from '../core/paths.js';
+import { levelName } from '../core/i18n.js';
 
 /**
  * Цепочка уровней: каждый знает, какой идёт за ним.
@@ -28,7 +29,13 @@ export async function readChain(firstId) {
       break; // файла нет или он битый: дальше цепочку не построить
     }
 
-    list.push({ id, number: data.number ?? list.length + 1, name: data.name ?? id });
+    // Название берётся на нынешнем языке: в файле оно записано по-русски, и
+    // править файл нельзя — его перезаписывает правка расстановки.
+    list.push({
+      id,
+      number: data.number ?? list.length + 1,
+      name: levelName(id, data.name ?? id),
+    });
     id = data.next;
   }
   return list;

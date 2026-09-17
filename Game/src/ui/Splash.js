@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { levelName } from '../core/i18n.js';
 import { asset } from '../core/paths.js';
 
 const CFG = CONFIG.splash;
@@ -135,7 +136,7 @@ export class Splash {
       if (!res.ok) return;
 
       const data = await res.json();
-      this.setLevel(data.name, data.number ?? CFG.bootLevel);
+      this.setLevel(levelName(id, data.name), data.number ?? CFG.bootLevel);
     } catch {
       // не прочиталось — заставка просто останется с запасной картинкой
     }
