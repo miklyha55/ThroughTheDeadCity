@@ -635,7 +635,13 @@ export class Debris {
   _collideWalls(item) {
     const position = item.object.position;
     this._before.copy(position);
-    this.location.obstacles.resolve(position, item.radius);
+
+    // Низ предмета: всё, что ниже него, он пролетает поверху. Без этого вещь,
+    // брошенная через забор, билась о его контур в воздухе — на глаз это
+    // выглядело как невидимая стена.
+    const bottom = position.y + item.boxMin.y;
+
+    this.location.obstacles.resolve(position, item.radius, bottom);
     this.location.clampPosition(position);
 
     this._normal.set(position.x - this._before.x, 0, position.z - this._before.z);

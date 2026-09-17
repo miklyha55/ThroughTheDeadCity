@@ -16,7 +16,14 @@ export class Obstacles {
    * @param {THREE.Object3D} object — уже размещённый проп
    * @param {Array<Array<[number, number]>>} shapes — контуры в локальных осях пропа
    */
-  add(object, shapes) {
+  /**
+   * @param {THREE.Object3D} object @param {Array} shapes — контуры модели
+   * @param {number} [height] — во что она упирается вверх, м от своего основания.
+   *   Без него преграда считается бесконечно высокой: так и надо всему, что
+   *   ходит по земле. А вот летящему предмету высота нужна — иначе он бьётся о
+   *   забор, проходя метрах в четырёх над ним.
+   */
+  add(object, shapes, height = Infinity) {
     if (!shapes?.length) return;
 
     const yaw = object.rotation.y;
@@ -50,7 +57,9 @@ export class Obstacles {
         reach = Math.max(reach, Math.hypot(points[i] - cx, points[i + 1] - cz));
       }
 
-      this.items.push({ points, cx, cz, reach, owner: object });
+      const top = Number.isFinite(height) ? object.position.y + height : Infinity;
+
+      this.items.push({ points, cx, cz, reach, top, owner: object });
     }
   }
 
@@ -119,7 +128,13 @@ export class Obstacles {
    * @param {THREE.Vector3} position — правится на месте
    * @param {number} radius — радиус персонажа
    */
-  resolve(position, radius) {
+  /**
+   * @param {THREE.Vector3} position — правится на месте
+   * @param {number} radius — толщина тела
+   * @param {number} [bottom] — низ тела по высоте, м. Преграды ниже него не в
+   *   счёт: над забором можно пролететь.
+   */
+  resolve(position, radius, bottom = null) {
     // Суммарное выталкивание за кадр ограничено: рядом со сложной моделью
     // контуров много, и каждый толкает по-своему. Без предела персонажа
     // «возит» между ними — со стороны это выглядит так, будто он сам бежит.
@@ -129,6 +144,7 @@ export class Obstacles {
     for (const item of this.items) {
       const span = item.reach + radius;
       if (Math.abs(position.x - item.cx) > span || Math.abs(position.z - item.cz) > span) continue;
+      if (bottom !== null && bottom >= item.top) continue; // летит выше — не заденет
 
       const { points } = item;
       const count = points.length / 2;

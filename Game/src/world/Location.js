@@ -712,7 +712,11 @@ export class Location {
     if (!prefab) return;
 
     if (prefab.solid) {
-      this.obstacles.add(object, prefab.shapes);
+      // Высоту берём у самой модели: по ней летящее поверху решает, задело оно
+      // преграду или прошло над ней.
+      const height = prefab.size ? prefab.size.y * object.scale.y : Infinity;
+
+      this.obstacles.add(object, prefab.shapes, height);
       this.sight.add(object, prefab.sightShapes);
     }
 
