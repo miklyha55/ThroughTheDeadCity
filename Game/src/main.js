@@ -546,8 +546,8 @@ engine.add({
     healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
     visibility.update(here); // ушедшее за край экрана не рисуем вовсе
     watchAmmo();
-    // заслонившее героя или ближних зомби — просвечивает
-    locations.seeThrough.update(dt, player, here?.zombies);
+    // просвечивает только заслонившее героя или зомби у него на прицеле
+    locations.seeThrough.update(dt, player, player.spotted);
     dayNight.update(dt); // сутки идут своим ходом: свет, небо и тени
     sun.follow(player.position); // тени ездят вместе с персонажем, иначе он выйдет за карту теней
     fog.update(engine.camera, player, dt); // за героем остаётся прорезанная дорожка

@@ -139,23 +139,26 @@ export class SeeThrough {
   }
 
   /**
+   * Что растворять. Поводов ровно два, и больше никаких:
+   *   — вещь заслоняет героя;
+   *   — вещь заслоняет зомби, взятого им на прицел.
+   *
+   * Раньше растворялось и то, что прятало ближайших зомби вообще, до шести
+   * штук. Со стороны это читалось как случайность: дома гасли и загорались
+   * вокруг, хотя ни герой, ни его цель за ними не стояли.
+   *
    * @param {number} dt
-   * @param {object} player — герой: его заслонившее просвечивает всегда
-   * @param {Array} [others] — кого ещё не стоит терять из виду: живые зомби
-   *   рядом. Прячущий их дом растворяется так же, как прячущий героя, — иначе
-   *   толпа исчезала за углом целиком, и стрелять приходилось в никуда.
+   * @param {object} player — герой
+   * @param {object} [target] — зомби у него на прицеле
    */
-  update(dt, player, others = null) {
+  update(dt, player, target = null) {
     if (this.items.length === 0) return;
 
     this._fitGrain();
 
     this.blocking.clear();
     if (player.alive !== false) this._findBlockers(player.position);
-
-    if (others) {
-      for (const one of this._nearest(others, player)) this._findBlockers(one.position);
-    }
+    if (target && target.alive !== false) this._findBlockers(target.position);
 
     for (const item of this.items) {
       const wanted = this.blocking.has(item) ? CFG.fadeTo : 1;
@@ -173,32 +176,6 @@ export class SeeThrough {
         if (mesh.isMesh) mesh.material.userData.fade.value = item.fade;
       });
     }
-  }
-
-  /**
-   * Кого из толпы стоит проверять лучом.
-   *
-   * Всех подряд нельзя: на заправке их под шесть десятков, и луч на каждого
-   * съел бы ровно то, ради чего просвечивание и затевалось. Берём ближайших к
-   * герою и не дальше круга, в котором до них вообще есть дело, — дальний зомби
-   * за домом игрока не занимает.
-   */
-  _nearest(zombies, player) {
-    const near = [];
-
-    for (const one of zombies) {
-      if (one.alive === false) continue;
-
-      const dx = one.position.x - player.position.x;
-      const dz = one.position.z - player.position.z;
-      const away = Math.hypot(dx, dz);
-      if (away > CFG.watchRadius) continue;
-
-      near.push({ one, away });
-    }
-
-    near.sort((a, b) => a.away - b.away);
-    return near.slice(0, CFG.watchLimit).map((item) => item.one);
   }
 
   /** Кто стоит между камерой и точкой, за которой следим. */
