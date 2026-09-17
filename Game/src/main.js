@@ -508,7 +508,7 @@ engine.add({
      * кадру и туман, который проецируется от камеры. Музыка идёт своим ходом,
      * ей цикл не нужен. Персонаж, зомби, физика и указатель ждут.
      */
-    if (camera.showing) {
+    if (camera.pausing) {
       camera.update(dt);
       visibility.update(locations.current);
       fog.update(engine.camera, player, dt);
@@ -609,6 +609,10 @@ function aimPointer() {
   const boss = here?.boss?.alive ? here.boss : null;
   if (boss) targets.push({ at: boss, halo: false });
 
+  // Уровень, где выход — только через всех: пока живы, выход заперт, а когда
+  // перебиты, стрелка ведёт к нему с любого расстояния.
+  const clearing = Boolean(here?.mustClear);
+
   // Вехи по дороге: то, что важно заметить по пути. Ведём к ним так же, как к
   // ружью — с кругом на полу и с любого расстояния, — и в том же порядке, в
   // каком они выписаны в файле уровня. Пройденные из очереди уходят сами.
@@ -618,8 +622,9 @@ function aimPointer() {
 
   // Выход: без подсветки и только вблизи. Круг под дверью читался бы как «встань
   // сюда», а он и так на виду; напомнить стоит, лишь когда герой рядом.
-  if (here?.exitMark) {
-    targets.push({ at: here.exitMark, halo: false, within: CONFIG.pointer.exitWithin });
+  if (here?.exitMark && !clearing) {
+    const cleared = Boolean(here.data.clearToExit);
+    targets.push({ at: here.exitMark, halo: false, within: cleared ? undefined : CONFIG.pointer.exitWithin });
   }
 
   pointer.follow(targets);
@@ -627,7 +632,7 @@ function aimPointer() {
   // Выход заперт, пока не взято ружьё: уйти без него значит прийти на следующий
   // уровень безоружным.
   // И пока жив вожак: уйти, не победив его, нельзя.
-  here?.lockExit(Boolean(gun) || Boolean(boss));
+  here?.lockExit(Boolean(gun) || Boolean(boss) || clearing);
 }
 
 /**
@@ -685,6 +690,54 @@ if (params.get('debug') === 'input') {
     },
   });
 }
+/**
+ * Толпа за заграждением: что сцена показывает и как звучит.
+ *
+ * Камера летит к толпе, не останавливая игру, — герой в это время может и
+ * бежать, и стрелять. Толпа ревёт одним разом, а не каждым зомби поодиночке:
+ * голоса зомби гаснут с расстоянием от героя, и далёкая толпа молчала бы.
+ * Каждый кусок заграждения разлетается осколками своего цвета, в пыли.
+ */
+function wireHorde(location) {
+  const CFG = CONFIG.horde;
+
+  // Один пролёт на весь прорыв: камера уходит к заграждению, показывает, как
+  // оно разлетается, и возвращается к герою. Игра при этом не останавливается.
+  location.onHorde = (at) => {
+    fog.revealAll(); // толпа бежит по всей дороге — прятать в тумане больше нечего
+    camera.show(at.clone(), 1.4, { pause: false, timing: CFG.camera });
+  };
+
+  location.onHordeWake = () => {
+    sfx.play('zombieAlert', CFG.roarVolume, 3, CFG.roarPitch);
+  };
+
+  let crashed = false;
+  location.onBreak = (object) => {
+    const at = object.position.clone().setY(0.6);
+
+    // Не один залп, а несколько подряд: секция сетки крупная, и одной горсти
+    // осколков на неё мало — разлёт читается как щелчок, а не как обвал.
+    for (let i = 0; i < CFG.bursts; i++) {
+      const wave = () => {
+        shards.burst(at, object);
+        puffs.burst(at);
+        puffs.burst(at.clone().setY(CFG.dustAbove)); // пыль столбом, а не только под ногами
+      };
+      if (i === 0) wave();
+      else setTimeout(wave, i * CFG.burstEvery * 1000);
+    }
+
+    // Грохот и тряска — один раз на всё заграждение, а не на каждый кусок.
+    if (crashed) return;
+    crashed = true;
+    camera.shake(CFG.shake, CFG.shakeFor);
+    sfx.play('explosion', CONFIG.explosion.volume * CFG.crashVolume, 1, 0.7, { echo: false, spread: false });
+  };
+
+  location.onCleared = () => aimPointer(); // перебиты все — выход открыт, стрелка к нему
+}
+
 /** Что сцена делает со взрывом: вспышка на месте и толчок камере. */
 function wireBlasts(location) {
   location.onBlast = (at, object = null) => {
@@ -835,6 +888,7 @@ locations.onChange = (location) => {
 
   wireBlasts(location);
   location.onBossDown = () => aimPointer(); // вожак упал — стрелка к выходу, выход открыт
+  wireHorde(location);
   // Вожак заметил героя — его круг разом проступает из тумана, а камера плывёт
   // к нему, показывает и возвращается. Смотрим на уровень груди великана.
   location.onBossSpotted = (boss) => {

@@ -134,6 +134,21 @@ export class BattleFog extends ScreenShader {
   }
 
   /**
+   * Открыть всю карту разом: туман больше ничего не прячет.
+   *
+   * Нужно, когда прятать уже нечего и незачем — толпа поднялась и бежит по всей
+   * дороге, и видеть её надо целиком.
+   */
+  revealAll() {
+    if (!this.field.width) return;
+
+    this.paint.fillStyle = '#fff';
+    this.paint.fillRect(0, 0, this.canvas2d.width, this.canvas2d.height);
+    this.dirty = true;
+    this._sinceUpload = CFG.uploadEvery; // залить в видеопамять сразу, а не через кадр
+  }
+
+  /**
    * Прорезать круг вокруг точки. Мягкий край, чтобы дорожка не была штампом.
    *
    * @param {number} x @param {number} z

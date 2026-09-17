@@ -69,6 +69,9 @@ export class Location {
     this.vaults = [];
     this.zombies = [];
     this.boss = null;        // вожак, если он на этом уровне есть: пока жив, выход заперт
+    this.breachable = [];    // заграждение, которое толпа снесёт: живёт поштучно, не сливается
+    this.horde = null;       // толпа за ним: когда поднимется и что уже случилось
+    this.cleared = false;    // все зомби перебиты — на уровнях, где это условие выхода
     this.exitLocked = false; // заперт ли выход: на вводной — пока не взято ружьё
     this.guide = [];         // вехи на пути к выходу: что заметить по дороге
     this._movers = [];  // кто может задеть разбросанные предметы
@@ -110,6 +113,7 @@ export class Location {
     this.nav.build(this.obstacles, CONFIG.zombies.radius);
 
     this._buildZombies();
+    this._buildHorde();
     this._buildExitMark();
     this._buildGuide();
 
@@ -186,6 +190,17 @@ export class Location {
     this.group.add(obj);
 
     const { carrier, com } = this._place(entry.prop, obj);
+
+    /**
+     * Заграждение, которое снесёт толпа, сливать со статикой нельзя: из общего
+     * меша кусок уже не вынуть. Держим его отдельно — это пара десятков вещей
+     * на весь уровень, и вызовов отрисовки они почти не добавляют.
+     */
+    if (entry.breach) {
+      this.statics = this.statics.filter((one) => one !== obj);
+      this.watched = this.watched.filter((one) => one !== obj);
+      this.breachable.push(obj);
+    }
 
     /**
      * Крупное, поставленное уже после сборки, отдаём на просвечивание сразу.
@@ -374,6 +389,8 @@ export class Location {
 
     this._blockPlayer(player);
     this._clearBoss();
+    this._hordeStep(dt, player);
+    this._watchCleared();
 
     // предметы разлетаются и от зомби: толпа проходит — ящики расходятся
     this._movers.length = 0;
@@ -432,6 +449,153 @@ export class Location {
       zombie.position.x -= dx * push;
       zombie.position.z -= dz * push;
     }
+  }
+
+  /**
+   * Толпа из файла уровня: где черта, которую переходит герой, и кто в толпе.
+   *
+   * В толпе все, кто стоит в её прямоугольнике на момент сборки уровня. Поимённо
+   * их не перечисляем: расставляют их в редакторе, и держать отдельный список,
+   * который разойдётся с расстановкой, незачем.
+   */
+  _buildHorde() {
+    const spec = this.data.horde;
+    if (!spec) return;
+
+    const [x0, z0, x1, z1] = spec.area;
+    const inside = (p) => p.x >= Math.min(x0, x1) && p.x <= Math.max(x0, x1)
+      && p.z >= Math.min(z0, z1) && p.z <= Math.max(z0, z1);
+
+    this.horde = {
+      trigger: spec.trigger,
+      members: this.zombies.filter((zombie) => inside(zombie.position)),
+      clock: -1,     // меньше нуля — ещё не началось
+      woke: false,
+      broke: false,
+      calmAt: null,  // кто когда остынет: расписывается в миг прорыва
+      calmed: false, // остыли все — толпы больше нет, есть просто зомби
+    };
+  }
+
+  /**
+   * Ход толпы: герой пересёк черту — дальше всё идёт по часам.
+   *
+   * Сцене сообщается дважды: когда началось (ей лететь камерой) и когда рухнул
+   * каждый кусок заграждения (ей рисовать осколки и греметь).
+   */
+  _hordeStep(dt, player) {
+    const horde = this.horde;
+    if (!horde || horde.calmed) return;
+
+    if (horde.clock < 0) {
+      if (!player.alive) return;
+
+      const [x0, z0, x1, z1] = horde.trigger;
+      const p = player.position;
+      const crossed = p.x >= Math.min(x0, x1) && p.x <= Math.max(x0, x1)
+        && p.z >= Math.min(z0, z1) && p.z <= Math.max(z0, z1);
+      if (!crossed) return;
+
+      horde.clock = 0;
+
+      // Камера летит к заграждению: смотреть надо на то, что сейчас рухнет.
+      // Толпу за ним герой и так увидит, когда она побежит.
+      this.onHorde?.(this._breachCenter());
+      return;
+    }
+
+    horde.clock += dt;
+    const CFG = CONFIG.horde;
+
+    if (!horde.woke && horde.clock >= CFG.wakeAfter) {
+      horde.woke = true;
+      for (const zombie of horde.members) zombie.enrage();
+      this.onHordeWake?.();
+    }
+
+    if (!horde.broke && horde.clock >= CFG.breachAfter) {
+      horde.broke = true;
+      this.breach();
+
+      // Кто когда остынет и куда уйдёт.
+      //
+      // Время — поровну по отрезку и вразбивку: по порядку остывали бы соседи
+      // подряд, и толпа редела бы с одного края. Направления — веером по кругу,
+      // каждому своё: так остывшие расходятся во все стороны и занимают
+      // площадку, а не тянутся одной колонной.
+      const order = horde.members.slice().sort(() => Math.random() - 0.5);
+      const last = Math.max(1, order.length - 1);
+
+      horde.calmAt = new Map(order.map((zombie, i) => [zombie, {
+        at: horde.clock + CFG.calmFrom + (CFG.calmTo - CFG.calmFrom) * (i / last),
+        turn: (i / order.length) * Math.PI * 2 + Math.random() * 0.6,
+        away: CFG.scatterNear + Math.random() * (CFG.scatterFar - CFG.scatterNear),
+      }]));
+    }
+
+    if (!horde.broke) return;
+
+    for (const [zombie, plan] of horde.calmAt) {
+      if (horde.clock < plan.at) continue;
+
+      zombie.calm(this, plan.turn, plan.away);
+      horde.calmAt.delete(zombie);
+    }
+    if (horde.calmAt.size === 0) horde.calmed = true;
+  }
+
+  /**
+   * Снести заграждение: каждый кусок уходит из столкновений, из обзора и со
+   * сцены, а проходимость пересчитывается.
+   *
+   * Сцене кусок отдаётся до того, как его снимут: осколки берут цвет с модели.
+   */
+  /** Середина заграждения: туда и смотрит камера. */
+  _breachCenter() {
+    const at = new THREE.Vector3();
+    if (this.breachable.length === 0) return at;
+
+    for (const object of this.breachable) at.add(object.position);
+    return at.divideScalar(this.breachable.length);
+  }
+
+  breach() {
+    for (const object of this.breachable) {
+      this.onBreak?.(object);
+
+      this.obstacles.forget(object);
+      this.sight.forget(object);
+      this.vaults = this.vaults.filter((box) => box.owner !== object);
+      this.placed = this.placed.filter((one) => one.shaped !== object);
+      object.removeFromParent();
+
+      // Хлам рядом разлетается от удара.
+      const CFG = CONFIG.horde;
+      this.debris.blast(object.position, CFG.blastRadius, CFG.blastPower, CFG.blastLift);
+    }
+    this.breachable.length = 0;
+
+    // В игре сетка обычно не пересчитывается — уровень не меняется. Здесь он
+    // изменился: где стояло заграждение, теперь проход.
+    this.nav.build(this.obstacles, CONFIG.zombies.radius);
+    this._navAge = Infinity;
+  }
+
+  /**
+   * Перебиты ли все: на уровне, где это условие выхода, сцене пора открыть его.
+   * Сообщается один раз.
+   */
+  _watchCleared() {
+    if (this.cleared || !this.data.clearToExit) return;
+    if (this.zombies.some((zombie) => zombie.alive)) return;
+
+    this.cleared = true;
+    this.onCleared?.();
+  }
+
+  /** Остались ли живые, если на уровне выход — только через всех. */
+  get mustClear() {
+    return Boolean(this.data.clearToExit) && !this.cleared;
   }
 
   /**
@@ -854,6 +1018,11 @@ export class Location {
       const y = object.position.y - (com?.y ?? 0) + sinkOf(this.prefabs.get(entry.prop));
 
       const saved = { prop: entry.prop, at: [round(x), round(z)] };
+
+      // Метка «это снесёт толпа» — не геометрия, а роль вещи на уровне. Гизмо её
+      // не касается, но и потерять её нельзя: без неё сохранённое из редактора
+      // заграждение превращается в обычный неразрушимый забор.
+      if (entry.breach) saved.breach = true;
 
       const yaw = yawOf(object);
       if (yaw) saved.rotation = yaw;

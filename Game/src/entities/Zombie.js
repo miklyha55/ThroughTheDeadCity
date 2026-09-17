@@ -88,6 +88,7 @@ export class Zombie extends Figure {
     this.waitTime = 0;
     this.stuckTime = 0;    // сколько он топчется на месте, никуда не продвигаясь
     this.alerted = false;  // поднят по тревоге выстрелом — пойдёт на цель без обзора
+    this.enraged = false;  // поднят всей толпой: знает, где герой, где бы тот ни был
     this.sfx = null;       // голос; ставится снаружи
     this.heardAt = Infinity; // как далеко от персонажа он сейчас — для громкости
     this.chaseMoving = true;
@@ -342,6 +343,64 @@ export class Zombie extends Figure {
     this.mixer.update(dt);
   }
 
+  /**
+   * Поднять в атаку: с этой минуты зомби знает, где герой, и идёт на него.
+   *
+   * Без радиуса, без угла обзора и сквозь укрытия — так бежит толпа, которой
+   * указали цель. Отменить это нельзя: разъярённый не успокаивается, пока жив
+   * он сам или герой.
+   */
+  enrage() {
+    if (this.state === STATE.DEAD) return;
+
+    this.enraged = true;
+    this.alerted = true;
+    this.blindTime = 0;
+    if (this.state !== STATE.ATTACK && this.state !== STATE.HURT) this._enter(STATE.CHASE);
+  }
+
+  /**
+   * Остыть: бросить цель и разойтись.
+   *
+   * Герой перестаёт быть целью совсем — погоня обрывается, даже если он на
+   * виду. Зомби уходит в свою сторону и там поселяется; наткнётся на героя по
+   * дороге — погонится заново, но уже по обычным правилам зрения, и уйти от
+   * него будет можно.
+   *
+   * Уходит именно в сторону, а не остаётся на месте: иначе вся толпа так и
+   * стоит там, где её застало остывание, одной кучей, а площадка вокруг пустая.
+   *
+   * @param {import('../world/Location.js').Location} location
+   * @param {number} turn — в какую сторону уходить, рад
+   * @param {number} away — и как далеко, м
+   */
+  calm(location, turn = Math.random() * Math.PI * 2, away = CFG.patrolRadius) {
+    if (this.state === STATE.DEAD || !this.enraged) return;
+
+    this.enraged = false;
+    this.alerted = false;
+    this.blindTime = 0;
+
+    const from = this.root.position;
+    const x = from.x + Math.cos(turn) * away;
+    const z = from.z + Math.sin(turn) * away;
+
+    // В стену идти незачем: туда, куда не пройти, зомби просто упрётся носом.
+    if (location.nav.isFree(x, z)) {
+      this.home.set(x, from.y, z);
+      this.waypoint.copy(this.home);
+      this.stuckTime = 0;
+    } else {
+      this.home.copy(from);
+      this._pickWaypoint(location);
+    }
+
+    // В прогулку — из любого состояния, даже из замаха. Оборванный замах видно,
+    // но иначе зомби доигрывает удар и по его концу возвращается в погоню: цель
+    // он бы так и не потерял.
+    this._enter(STATE.PATROL, true);
+  }
+
   /** Скрыт ли персонаж за чем-то высоким — домом, машиной, контейнером. */
   _hidden(player, location) {
     return location.sight.blocksLine(
@@ -356,6 +415,7 @@ export class Zombie extends Figure {
    * `_toPlayer` здесь только читается: в погоне из него строится сам шаг.
    */
   _inSight(player, distance, location) {
+    if (this.enraged) return true; // поднятая толпа цель не теряет
     if (distance > CFG.loseRadius) return false;
 
     /**
@@ -542,6 +602,7 @@ export class Zombie extends Figure {
    */
   _sees(player, distance, location) {
     if (!player.alive) return false;
+    if (this.enraged) return true;
 
     if (distance > (this.alerted ? CFG.loseRadius : CFG.senseRadius)) return false;
 
@@ -729,7 +790,7 @@ export class Zombie extends Figure {
     this.hurtTime += dt;
     if (this.hurtTime < this.hurtLength) return;
 
-    if (player.alive && (this.alerted || distance <= CFG.loseRadius)) this._enter(STATE.CHASE);
+    if (player.alive && (this.enraged || this.alerted || distance <= CFG.loseRadius)) this._enter(STATE.CHASE);
     else this._enter(STATE.PATROL);
   }
 

@@ -123,8 +123,11 @@ export class FollowCamera {
   /** Направление «вперёд по камере» для управления персонажем. */
   get moveYaw() { return this.yaw + Math.PI; }
 
-  /** Идёт ли сейчас пролёт: пока да, игра стоит. */
+  /** Идёт ли сейчас пролёт. */
   get showing() { return this._show !== null; }
+
+  /** Идёт ли пролёт, на время которого игра стоит. */
+  get pausing() { return this._show?.pause === true; }
 
   /**
    * Плавно показать что-то другое и вернуться к герою.
@@ -134,9 +137,13 @@ export class FollowCamera {
    *
    * @param {THREE.Vector3} at — что показать; точка читается каждый кадр
    * @param {number} [height] — на какую высоту над ней смотреть, м
+   * @param {object} [options]
+   * @param {boolean} [options.pause] — стоит ли на это время игра
+   * @param {{toFor: number, holdFor: number, backFor: number}} [options.timing] —
+   *   свои длительности, если настройки камеры не подходят
    */
-  show(at, height = CFG.lookAtHeight) {
-    this._show = { at, height, time: 0 };
+  show(at, height = CFG.lookAtHeight, { pause = true, timing = CFG.show } = {}) {
+    this._show = { at, height, time: 0, pause, timing };
     this._from.copy(this._focus);
   }
 
@@ -190,7 +197,7 @@ export class FollowCamera {
   /** Ход пролёта: туда, постоять, обратно. */
   _showStep(dt) {
     const show = this._show;
-    const { toFor, holdFor, backFor } = CFG.show;
+    const { toFor, holdFor, backFor } = show.timing;
     show.time += dt;
 
     this._there.copy(show.at).setY(show.at.y + show.height);
