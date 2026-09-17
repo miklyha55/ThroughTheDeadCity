@@ -633,9 +633,24 @@ levelMap.onToggle = (on) => {
 
 const deathScreen = new DeathScreen();
 
-deathScreen.onRestart = () => {
+/** Ещё раз: тот же уровень с начала. */
+deathScreen.onAgain = () => {
   player.revive();
   locations.load(locations.current.data.id).catch(reportBreak);
+};
+
+/**
+ * С начала: вся игра заново, с первого уровня.
+ *
+ * Сбрасывается не только место, но и оружие: вводная локация начинается
+ * безоружным, ружьё лежит там на полу, а выход заперт, пока его не подняли.
+ * Придя туда с дробовиком за спиной, игрок прошёл бы её насквозь за десять
+ * секунд, и весь её смысл пропал бы.
+ */
+deathScreen.onFromStart = () => {
+  player.revive();
+  player.disarm();
+  locations.load(CONFIG.locations.first).catch(reportBreak);
 };
 
 /**
