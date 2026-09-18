@@ -502,7 +502,10 @@ export class Player extends Figure {
     else this.restart('Shoot', 0.08, CFG.shootSpeed);
 
     this._spend();
-    this.sfx?.play('fire', CFG.fireVolume);
+    // Начисто: без отзвука и без разброса высоты с громкостью. Выстрел у
+    // ружья один и тот же, и «живость» от гуляющего тона слышалась не как
+    // второй выстрел, а как плывущая запись.
+    this.sfx?.play('fire', CFG.fireVolume, 1, 1, { echo: false, spread: false });
 
     this.effects?.fire(this._muzzlePoint(), shot.item.object.position);
 
@@ -1279,7 +1282,10 @@ export class Player extends Figure {
     // персонажа ударили или он снова побежал. Отменённый выстрел не стоит
     // ничего — ни хлопка, ни патрона.
     this._spend();
-    this.sfx?.play('fire', CFG.fireVolume);
+    // Начисто: без отзвука и без разброса высоты с громкостью. Выстрел у
+    // ружья один и тот же, и «живость» от гуляющего тона слышалась не как
+    // второй выстрел, а как плывущая запись.
+    this.sfx?.play('fire', CFG.fireVolume, 1, 1, { echo: false, spread: false });
     this.onShot?.(); // толчок камере: без него ружьё бьёт как пневматика
 
     // Откуда вылетает пуля.

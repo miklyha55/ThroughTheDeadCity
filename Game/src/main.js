@@ -837,6 +837,7 @@ function wireHorde(location) {
   };
 
   let crashed = false;
+  let broken = 0; // какая по счёту секция заграждения рушится
   location.onBreak = (object) => {
     const at = object.position.clone().setY(0.6);
 
@@ -852,11 +853,34 @@ function wireHorde(location) {
       else setTimeout(wave, i * CFG.burstEvery * 1000);
     }
 
+    /**
+     * И огонь — тот же шар, что у взорванной бочки.
+     *
+     * Не на каждой секции: их два десятка, и огонь на всех сразу — сплошная
+     * пелена, в которой не разобрать ни одного взрыва. Через две на третью
+     * выходит цепь, идущая волной вдоль заграждения: видно и ширину пролома, и
+     * что рвануло по всей стене, а не в одной точке.
+     */
+    const piece = broken++;
+    if (piece % CFG.flashEach === 0) {
+      const spot = at.clone().setY(CFG.flashHeight);
+      spot.x += (Math.random() - 0.5) * 2 * CFG.flashSpread;
+      spot.z += (Math.random() - 0.5) * 2 * CFG.flashSpread;
+
+      const wave = (piece / CFG.flashEach) * CFG.flashWave * 1000;
+      if (wave <= 0) explosions.burst(spot);
+      else setTimeout(() => explosions.burst(spot), wave);
+    }
+
     // Грохот и тряска — один раз на всё заграждение, а не на каждый кусок.
     if (crashed) return;
     crashed = true;
     camera.shake(CFG.shake, CFG.shakeFor);
-    sfx.play('explosion', CONFIG.explosion.volume * CFG.crashVolume, 1, 0.7, { echo: false, spread: false });
+
+    // Одной дорожкой и без отзвука: раскат от домов и наложенные копии делали
+    // из удара кашу — грохот расползался и терял тот самый миг обвала.
+    sfx.play('explosion', CONFIG.explosion.volume * CFG.crashVolume,
+      1, 0.62, { echo: false, spread: false });
   };
 
   location.onCleared = () => aimPointer(); // перебиты все — выход открыт, стрелка к нему
