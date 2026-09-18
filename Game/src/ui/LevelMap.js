@@ -6,8 +6,13 @@ const CFG = CONFIG.levelMap;
  * Карта уровней: список, с которого можно уйти на любой из них.
  *
  * Простой столбец карточек сверху вниз, по одной на уровень, в том порядке, в
- * каком уровни идут по цепочке. Открыты все: игра короткая, и запирать в ней
- * нечего — игрок сам решает, куда пойти.
+ * каком уровни идут по цепочке. Открыт тот, что пройден, тот, на котором игрок
+ * стоит, и следующий за пройденным; дальше по цепочке — замок. Уйти вперёд по
+ * карте значило бы пропустить город, ради которого игра и затевалась.
+ *
+ * Что пройдено, карта не решает и не помнит: ей приносят готовый ответ снаружи,
+ * а он идёт из сохранений у площадки. Поэтому замки переживают и перезагрузку
+ * страницы, и смену устройства.
  *
  * Пока карта открыта, мир под ней стоит. Иначе зомби доберутся до героя, пока
  * тот разглядывает список, и вернуться будет уже некуда.
@@ -76,17 +81,31 @@ export class LevelMap {
   fill(levels, current = null, passed = () => false) {
     this.list.textContent = '';
 
+    // Открыт уровень, если он пройден, если игрок на нём стоит или если пройден
+    // предыдущий по цепочке. Считаем подряд, сверху вниз: первый непройденный
+    // открывается — он и есть «куда идти дальше», — а всё, что за ним, заперто.
+    let reached = true;
+
     for (const level of levels) {
-      this.list.appendChild(this._card(level, level.id === current, passed(level.id)));
+      const done = passed(level.id);
+      const here = level.id === current;
+      const open = reached || done || here;
+      reached = open && done; // дальше пускаем, только если этот и правда пройден
+
+      this.list.appendChild(this._card(level, here, done, !open));
     }
   }
 
-  _card(level, here, done = false) {
+  _card(level, here, done = false, locked = false) {
     const card = document.createElement('button');
     card.className = 'levelmap__card';
     card.type = 'button';
     if (here) card.dataset.here = '1';
     if (done) card.dataset.passed = '1';
+    if (locked) {
+      card.dataset.locked = '1';
+      card.disabled = true; // заперт — не нажимается ни мышью, ни с клавиатуры
+    }
 
     // Заставка уровня: та же картинка, что показывается перед входом в него.
     // По ней уровень и узнают — название читают уже вторым.
@@ -110,13 +129,21 @@ export class LevelMap {
     text.append(number, name);
     card.append(shot, text);
 
-    // Метка одна: «здесь» важнее «пройден», иначе на карточке их две подряд.
-    if (here || done) {
+    // Метка одна: «здесь» важнее «пройден», а замок важнее обоих — он один
+    // объясняет, почему карточка не нажимается.
+    if (locked) {
+      const mark = document.createElement('span');
+      mark.className = 'levelmap__locked';
+      mark.textContent = CFG.lockedLabel;
+      card.appendChild(mark);
+    } else if (here || done) {
       const mark = document.createElement('span');
       mark.className = here ? 'levelmap__here' : 'levelmap__passed';
       mark.textContent = here ? CFG.hereLabel : CFG.passedLabel;
       card.appendChild(mark);
     }
+
+    if (locked) return card; // нажимать нечего: уровень ещё не открыт
 
     card.addEventListener('click', () => {
       this.hide();

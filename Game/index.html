@@ -380,6 +380,31 @@
         letter-spacing: 0.1em; text-transform: uppercase;
       }
 
+      /* Запертый уровень: туда ещё не дошли. Карточка глухая и не нажимается —
+         заставка почти погашена, чтобы вперёд не подглядывали, а замок объясняет,
+         почему на неё не реагируют. */
+      .levelmap__card[data-locked] {
+        opacity: 0.55;
+        cursor: default;
+      }
+      .levelmap__card[data-locked]:hover {
+        background: rgba(18, 20, 22, 0.9);
+        border-color: rgba(232, 208, 143, 0.18);
+      }
+      .levelmap__card[data-locked]:active { transform: none; }
+      .levelmap__card[data-locked] .levelmap__shot {
+        filter: grayscale(1) brightness(0.32);
+      }
+      .levelmap__locked {
+        margin-left: auto; flex: none;
+        padding: 4px 9px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(232, 238, 244, 0.6);
+        font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.1em; text-transform: uppercase;
+      }
+
       /* Тот, на котором игрок сейчас: подсвечен рамкой, чтобы не терять место. */
       .levelmap__card[data-here] {
         border-color: rgba(232, 208, 143, 0.65);
