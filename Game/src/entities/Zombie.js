@@ -93,6 +93,7 @@ export class Zombie extends Figure {
     this.sfx = null;       // голос; ставится снаружи
     this.heardAt = Infinity; // как далеко от персонажа он сейчас — для громкости
     this.stepPhase = 1;    // где был клип бега в прошлом кадре: по нему ловится шаг
+    this.growlIn = Math.random() * CFG.growlEveryMax; // через сколько он заурчит
     this.chaseMoving = true;
     this.blindTime = 0;    // сколько уже не видит цель, с: погоня бросается не сразу
     this.state = STATE.PATROL;
@@ -343,6 +344,11 @@ export class Zombie extends Figure {
         break;
     }
 
+    // Урчит он и сам по себе, не дожидаясь поворота: иначе его слышно только
+    // от тех, кто бродит вдали, а не от того, кто идёт по пятам.
+    this.growlIn -= dt;
+    if (this.growlIn <= 0) this._growl();
+
     // Шаги считаются после состояний, но ДО `mixer.update`: клип в этот миг
     // стоит там же, где его видит игрок в нынешнем кадре.
     this._steps();
@@ -463,16 +469,33 @@ export class Zombie extends Figure {
    * @param {number} pitch — сдвиг высоты тона: им предсмертный хрип отличается
    *   от окрика, хотя записи у них одни и те же
    * @param {number} range — с какого расстояния его уже не слышно. У шагов он
-   *   свой, вдвое короче: окрик через двор слышен, а шарканье — нет
+   *   свой, короче: окрик через двор слышен, а шарканье — нет
+   * @param {number} falloff — насколько полого громкость падает с расстоянием.
+   *   Единица — прямая линия; меньше — звук держится почти до края круга. Прямая
+   *   годится окрику, который и вблизи громкий, а тихое бормотание при ней
+   *   пропадает уже на середине пути
    */
-  _voice(sound, loudness, chance = CFG.voiceChance, pitch = 1, range = CFG.voiceRange) {
+  _voice(sound, loudness, chance = CFG.voiceChance, pitch = 1, range = CFG.voiceRange, falloff = 1) {
     if (!this.sfx || Math.random() > chance) return;
 
     const away = this.heardAt ?? range;
     if (away >= range) return;
 
-    const near = 1 - away / range;
+    const near = (1 - away / range) ** falloff;
     this.sfx.play(sound, loudness * near, 1, pitch);
+  }
+
+  /**
+   * Урчание: и на повороте, и просто по ходу дела.
+   *
+   * Одних поворотов мало. Свернуть зомби успевает раз в несколько секунд, а тот,
+   * кто рядом с героем, обычно уже гонится — и не сворачивает вовсе. Урчали
+   * поэтому ровно те, кого и не слышно: дальние бродяги.
+   */
+  _growl() {
+    this.growlIn = CFG.growlEveryMin + Math.random() * (CFG.growlEveryMax - CFG.growlEveryMin);
+    this._voice('zombieGrowl', CFG.growlVolume, CFG.growlChance, CFG.growlPitch,
+      CFG.growlRange, CFG.growlFalloff);
   }
 
   /**
@@ -676,9 +699,15 @@ export class Zombie extends Figure {
   /**
    * Новая точка для прогулки: рядом с домом, на свободном месте и с проходимой
    * дорогой туда. Проверять одну только точку мало — до неё ещё надо дойти.
+   *
+   * Поворот заодно и слышно: зомби урчит себе под нос, но не на каждом — раз в
+   * два-три поворота, случайно. Сплошное бормотание толпы съело бы окрик того,
+   * кто и правда заметил героя, а редкое — наоборот, выдаёт, что рядом кто-то
+   * бродит, ещё до того, как его видно.
    */
   _pickWaypoint(location) {
     this.stuckTime = 0;
+    this._growl(); // свернул — буркнул; заодно отодвигается и очередное урчание
     const from = this.root.position;
 
     for (let attempt = 0; attempt < 12; attempt++) {

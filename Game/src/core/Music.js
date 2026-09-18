@@ -25,6 +25,10 @@ const CFG = CONFIG.music;
  *
  * Пока вкладка скрыта, музыка замолкает: играть в пустоту незачем, а вернувшись,
  * игрок продолжит с того же места.
+ *
+ * Поверх дорожки идёт ветер — одна зацикленная запись своим потоком. Он не про
+ * уровень, а про мир, поэтому со сменой локации не перезапускается и `silence`
+ * его не снимает: под ответной передачей молчит музыка, а город — нет.
  */
 export class Music {
   constructor() {
@@ -37,6 +41,18 @@ export class Music {
     this.sound = new THREE.Audio(listener);
     this.sound.setMediaElementSource(this.audio);
     this.sound.setVolume(CFG.volume);
+
+    // Ветер: второй поток, идущий параллельно любой дорожке. Своим элементом, а
+    // не разобранным куском, по той же причине, что и музыка, — это минуты
+    // звука, и держать их в памяти незачем.
+    this.wind = new Audio();
+    this.wind.loop = true;
+    this.wind.preload = 'auto';
+    this.wind.src = CFG.wind;
+
+    this.windSound = new THREE.Audio(listener);
+    this.windSound.setMediaElementSource(this.wind);
+    this.windSound.setVolume(CFG.windVolume);
 
     this.track = null; // номер уровня, чья дорожка сейчас заряжена
     // Разрешение мог дать уже экран с кнопкой «Играть» — тогда ждать нечего и
@@ -51,9 +67,18 @@ export class Music {
 
     document.addEventListener('visibilitychange', () => {
       if (!this.allowed) return;
-      if (document.hidden) this.audio.pause();
-      else this._resume();
+      if (document.hidden) {
+        this.audio.pause();
+        this.wind.pause();
+      } else {
+        this._resume();
+        this._blow();
+      }
     });
+
+    // Разрешение мог дать ещё экран с кнопкой «Играть» — тогда ветру нечего
+    // ждать: дорожки у него нет, и повода начаться он иначе не дождётся вовсе.
+    this._blow();
   }
 
   /**
@@ -85,11 +110,24 @@ export class Music {
     this.audio.currentTime = 0;
   }
 
+  /**
+   * Пустить ветер. Зовётся отовсюду, где мог появиться звук: он идёт всегда,
+   * и своего повода начинаться у него нет — в отличие от дорожки, которая ждёт
+   * номера уровня.
+   */
+  _blow() {
+    if (!this.allowed) return;
+
+    resumeAudio();
+    this.wind.play().catch(() => {}); // не пустили — пойдёт со следующей попытки
+  }
+
   /** Пустить музыку, когда игрок впервые тронул экран. */
   start() {
     if (this.allowed) return;
     this.allowed = true;
     this._resume();
+    this._blow();
   }
 
   _resume() {
@@ -106,6 +144,7 @@ export class Music {
     // на смене уровня и на возврате во вкладку, — и объявлять после этого, что
     // игрок нажал, было бы неправдой.
     resumeAudio();
+    this._blow(); // ветер идёт вместе с любой дорожкой, с первой же и до конца
 
     this.audio.play().catch(() => {
       // Браузер не пустил — ждём следующего касания и пробуем снова.
