@@ -39,5 +39,5 @@ export class AmmoPickup extends GunPickup {
   /** Модель из общей библиотеки уровня — та, что выделена в Blender. */
   _model(location) { return location.prefabs.create(CFG.model); }
 
-  _give(player) { player.extendMagazine(CFG.magazine); }
+  _give(player) { player.extendMagazine(CFG.magazine, CFG.roundsPerReload); }
 }

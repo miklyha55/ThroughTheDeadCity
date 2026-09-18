@@ -46,6 +46,7 @@ export class Splash {
     // уже во время показа. Ровно так заставка и выходила пустой.
     this.stamp = 0;
     this.levels = new Map(); // id уровня → чем его встречать; заполняется на старте
+
   }
 
   /**
@@ -155,6 +156,7 @@ export class Splash {
 
     this.shownAt = performance.now();
   }
+
 
   /** Довести полосу до конца и убрать заставку — не раньше, чем истечёт `minTime`. */
   async hide() {

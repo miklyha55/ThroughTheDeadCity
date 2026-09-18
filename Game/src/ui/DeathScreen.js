@@ -99,9 +99,11 @@ export class DeathScreen {
 
       this.busy = true;
       this.again.disabled = true;
+      this.veil(true); // и до конца ролика на экране ничего, кроме черноты
       try {
         await this.onAgain?.();
       } finally {
+        this.veil(false);
         this.busy = false;
         this.again.disabled = false;
       }
@@ -137,7 +139,15 @@ export class DeathScreen {
       // и тающие поверх него остатки прошлой попытки ни к чему.
       this.dialog.snap();
       this._snap();
-      this.onFromStart?.();
+      this.veil(true);
+
+      // Заслонка снимается, когда первый уровень уже собран: `onFromStart`
+      // ведёт загрузку, и ждать её — значит ждать готового кадра.
+      try {
+        await this.onFromStart?.();
+      } finally {
+        this.veil(false);
+      }
     });
   }
 
@@ -157,6 +167,27 @@ export class DeathScreen {
     this.shown = false;
     this.root.classList.remove('death--on');
     this.root.hidden = true;
+  }
+
+  /**
+   * Чёрная заслонка на время ролика и перезапуска.
+   *
+   * Между нажатием и рекламой проходит секунда-другая: площадка ещё только
+   * поднимает баннер. Без заслонки в эту щель видно и уходящую карточку, и
+   * живой уровень с телом героя, а потом поверх всего этого всплывает реклама.
+   * Здесь же всё гаснет разом, и до самого нового уровня экран чёрный.
+   *
+   * Стили прямо на элементе: заслонка нужна ровно одному месту, и заводить ради
+   * неё правило в общей таблице незачем.
+   */
+  veil(on) {
+    if (!this._veil) {
+      this._veil = document.createElement('div');
+      this._veil.style.cssText = 'position:fixed;inset:0;z-index:86;background:#000;'
+        + 'pointer-events:auto;display:none';
+      this.root.parentNode.appendChild(this._veil);
+    }
+    this._veil.style.display = on ? 'block' : 'none';
   }
 
   show() {

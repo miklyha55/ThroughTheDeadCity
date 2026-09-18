@@ -116,17 +116,45 @@ class Yandex {
 
     return new Promise((done) => {
       let rewarded = false;
+      let opened = false;
+      let settled = false;
 
-      // Страховка: если площадка не ответит ни закрытием, ни ошибкой, игра не
-      // должна остаться висеть на пустом экране.
-      const timer = setTimeout(() => done(rewarded), CFG.advTimeout * 1000);
-      const finish = () => { clearTimeout(timer); done(rewarded); };
+      /**
+       * Отвечаем ровно один раз и сразу.
+       *
+       * Площадка зовёт колбэки в таком порядке: `onOpen` — ролик на экране,
+       * `onRewarded` — просмотр засчитан, `onClose` — закрыт. Но `onClose`
+       * приходит и без `onOpen`: ролика не нашлось, сработал предел частоты,
+       * что-то отказало. Тогда ждать нечего — игру надо продолжать тут же.
+       */
+      const finish = (why) => {
+        if (settled) return;
+        settled = true;
+
+        clearTimeout(opening);
+        clearTimeout(timer);
+        done(rewarded || why === 'rewarded');
+      };
+
+      /**
+       * Если ролик не открылся за пару секунд, продолжаем игру.
+       *
+       * Без этого выходило то, что видно глазами: первый раз уровень
+       * перезапускался секунд через пять, а второй сразу. Площадка на первый
+       * запрос иногда отвечает медленно и молча, и мы всё это время ждали её
+       * ответа, держа игрока перед чёрным экраном.
+       */
+      const opening = setTimeout(() => { if (!opened) finish('нет ролика'); }, CFG.advOpenWait * 1000);
+
+      // И общая страховка: ролик открылся, но закрытие так и не пришло.
+      const timer = setTimeout(() => finish('нет ответа'), CFG.advTimeout * 1000);
 
       this.pause();
       this.sdk.adv.showRewardedVideo({
+        onOpen: () => { opened = true; },
         onRewarded: () => { rewarded = true; },
-        onClose: finish,
-        onError: finish,
+        onClose: () => finish('закрыт'),
+        onError: () => finish('ошибка'),
       });
     }).finally(() => this.play());
   }

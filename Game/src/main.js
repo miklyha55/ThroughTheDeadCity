@@ -420,7 +420,9 @@ if (import.meta.env.DEV && localStorage.getItem(WITH_GUN) === '1') player.arm();
  * его уже негде.
  */
 if (progress.armed) player.arm();
-if (progress.magazine > player.magazine) player.extendMagazine(progress.magazine);
+if (progress.magazine > player.magazine) {
+  player.extendMagazine(progress.magazine, progress.perReload || CONFIG.ammoPickup.roundsPerReload);
+}
 const radio = new Radio(); // и рация в углу: видно, откуда голос и почему нельзя идти
 const ending = new Ending(); // экран, которым игра кончается
 
@@ -632,7 +634,11 @@ async function updateDebugView() {
 
 /** Отложить в сохранения снаряжение героя: ружьё и вместимость магазина. */
 function rememberKit() {
-  progress.setKit({ armed: player.armed, magazine: player.magazine });
+  progress.setKit({
+    armed: player.armed,
+    magazine: player.magazine,
+    perReload: player.roundsPerReload,
+  });
 }
 
 /** Патроны показываем, только когда есть чем стрелять. */
@@ -961,7 +967,7 @@ deathScreen.onAgain = async () => {
  * Придя туда с дробовиком за спиной, игрок прошёл бы её насквозь за десять
  * секунд, и весь её смысл пропал бы.
  */
-deathScreen.onFromStart = () => {
+deathScreen.onFromStart = async () => {
   // Пройденное стирается: игрок согласился на это в отдельном окне, и с этой
   // минуты игра для него начинается с чистого листа.
   progress.reset(); // вместе с прогрессом уходит и снаряжение
@@ -969,7 +975,7 @@ deathScreen.onFromStart = () => {
 
   player.revive();
   player.disarm();
-  locations.load(CONFIG.locations.first).catch(reportBreak);
+  await locations.load(CONFIG.locations.first).catch(reportBreak);
 };
 
 /**

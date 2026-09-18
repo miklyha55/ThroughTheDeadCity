@@ -21,10 +21,10 @@ const CFG = CONFIG.yandex;
  */
 class Progress {
   constructor() {
-    // `armed` и `magazine` — снаряжение героя: подобранное ружьё и коробка
-    // патронов. Без них игрок, вернувшийся на ферму, оказывался там безоружным,
-    // хотя ружьё подобрал ещё на вводной.
-    this.state = { level: null, passed: [], armed: false, magazine: 0 };
+    // `armed`, `magazine` и `perReload` — снаряжение героя: подобранное ружьё и
+    // коробка патронов. Без них игрок, вернувшийся на ферму, оказывался там
+    // безоружным, хотя ружьё подобрал ещё на вводной.
+    this.state = { level: null, passed: [], armed: false, magazine: 0, perReload: 0 };
     this._pending = null;
     this._loaded = false;
   }
@@ -46,6 +46,7 @@ class Progress {
     if (!Array.isArray(this.state.passed)) this.state.passed = [];
     this.state.armed = Boolean(this.state.armed);
     this.state.magazine = Number(this.state.magazine) || 0;
+    this.state.perReload = Number(this.state.perReload) || 0;
     this._loaded = true;
     return this.state;
   }
@@ -59,9 +60,10 @@ class Progress {
   /** Пройден ли уровень. */
   isPassed(id) { return this.state.passed.includes(id); }
 
-  /** Есть ли у героя ружьё и сколько вмещает его магазин. */
+  /** Есть ли у героя ружьё, сколько вмещает магазин и как быстро набивается. */
   get armed() { return this.state.armed; }
   get magazine() { return this.state.magazine; }
+  get perReload() { return this.state.perReload; }
 
   /**
    * Запомнить снаряжение: подобранное ружьё и расширенный магазин.
@@ -69,13 +71,15 @@ class Progress {
    * Пишется только на самом деле новое: подбирают это раз за игру, а каждая
    * лишняя запись идёт в счёт предела, который площадка ведёт на сохранения.
    *
-   * @param {{armed: boolean, magazine: number}} kit
+   * @param {{armed: boolean, magazine: number, perReload: number}} kit
    */
-  setKit({ armed, magazine }) {
-    const same = this.state.armed === armed && this.state.magazine === magazine;
+  setKit({ armed, magazine, perReload }) {
+    const same = this.state.armed === armed
+      && this.state.magazine === magazine
+      && this.state.perReload === perReload;
     if (same) return;
 
-    this.state = { ...this.state, armed, magazine };
+    this.state = { ...this.state, armed, magazine, perReload };
     this._save();
   }
 
@@ -116,7 +120,7 @@ class Progress {
    * оно не должно потеряться, если он тут же закроет вкладку.
    */
   reset() {
-    this.state = { level: null, passed: [], armed: false, magazine: 0 };
+    this.state = { level: null, passed: [], armed: false, magazine: 0, perReload: 0 };
     this._save(true);
   }
 

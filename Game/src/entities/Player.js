@@ -125,6 +125,10 @@ export class Player extends Figure {
     this.frozen = false;   // управление отобрано снаружи: звучит вступление
     this.magazine = CFG.magazine; // сколько вмещает магазин: коробка патронов его расширяет
     this.rounds = this.magazine;  // патронов в магазине
+    // Сколько патронов уходит за круг набивки. Коробка патронов у босса кладёт
+    // их пачкой вдвое больше: магазин на двадцать набивался бы вдвое дольше
+    // прежнего, и вся прибавка уходила бы в ожидание.
+    this.roundsPerReload = CFG.roundsPerReload;
     this.onMagazine = null;       // кому сказать, что вместимость сменилась
     this.refillAt = 0;          // сколько уже длится текущий круг набивки, с
     this.onAmmo = null;         // кому сообщать о смене боезапаса; ставится снаружи
@@ -1074,6 +1078,7 @@ export class Player extends Figure {
     // Расширенный магазин тоже остаётся в прошлой игре: коробку патронов надо
     // найти заново.
     this.magazine = CFG.magazine;
+    this.roundsPerReload = CFG.roundsPerReload;
     this.onMagazine?.(this.magazine);
 
     this.armed = CFG.armed !== false;
@@ -1104,11 +1109,13 @@ export class Player extends Figure {
    * странно. Меньше прежнего не делается.
    *
    * @param {number} size — сколько теперь вмещает
+   * @param {number} [perReload] — и сколько патронов кладётся за круг набивки
    */
-  extendMagazine(size) {
+  extendMagazine(size, perReload = CONFIG.ammoPickup.roundsPerReload) {
     if (size <= this.magazine) return;
 
     this.magazine = size;
+    this.roundsPerReload = perReload;
     this.rounds = size;
     this.onMagazine?.(size);
     this.onAmmo?.(this.rounds);
@@ -1152,7 +1159,7 @@ export class Player extends Figure {
     // вместимость — на девяти из десяти круг доложит один патрон, а не два.
     while (this.refillAt >= this.refillFor && this.rounds < this.magazine) {
       this.refillAt -= this.refillFor;
-      this.rounds = Math.min(this.magazine, this.rounds + CFG.roundsPerReload);
+      this.rounds = Math.min(this.magazine, this.rounds + this.roundsPerReload);
 
       // Щелчок ровно тогда, когда патроны встали в магазин: вместе с ним
       // загораются и гильзы наверху, так что слышно и видно одно и то же.
