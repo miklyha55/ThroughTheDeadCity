@@ -57,6 +57,13 @@ const EN = {
   'skipHint.keys': 'Esc — skip',
   'skipHint.touch': 'double tap to skip',
 
+  'pause.title': 'Paused',
+  'pause.note': 'Shooting, vaulting and throwing he does himself',
+  'pause.hintKeys': 'Lead your man',
+  'pause.hintTouch': 'Lead your man',
+  'pause.tailKeys': 'Enter — resume',
+  'pause.tailTouch': 'touch the screen to resume',
+
   'levelMap.title': 'Levels',
   'levelMap.openLabel': 'Open the level map',
   'levelMap.closeLabel': 'Close the map',

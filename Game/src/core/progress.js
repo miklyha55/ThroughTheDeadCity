@@ -24,7 +24,10 @@ class Progress {
     // `armed`, `magazine` и `perReload` — снаряжение героя: подобранное ружьё и
     // коробка патронов. Без них игрок, вернувшийся на ферму, оказывался там
     // безоружным, хотя ружьё подобрал ещё на вводной.
-    this.state = { level: null, passed: [], armed: false, magazine: 0, perReload: 0 };
+    // `played` — сколько секунд уже идёт поход. Лежит здесь, а не в счёте на
+    // финале: город проходят в несколько присестов, и время закрытой вкладки
+    // пропадало вместе с ней — финал показывал последний заход вместо всего пути.
+    this.state = { level: null, passed: [], armed: false, magazine: 0, perReload: 0, played: 0 };
     this._pending = null;
     this._loaded = false;
   }
@@ -47,6 +50,7 @@ class Progress {
     this.state.armed = Boolean(this.state.armed);
     this.state.magazine = Number(this.state.magazine) || 0;
     this.state.perReload = Number(this.state.perReload) || 0;
+    this.state.played = Number(this.state.played) || 0;
     this._loaded = true;
     return this.state;
   }
@@ -65,6 +69,9 @@ class Progress {
   get magazine() { return this.state.magazine; }
   get perReload() { return this.state.perReload; }
 
+  /** Сколько секунд уже идёт поход — за все заходы вместе. */
+  get played() { return this.state.played; }
+
   /**
    * Запомнить снаряжение: подобранное ружьё и расширенный магазин.
    *
@@ -80,6 +87,24 @@ class Progress {
     if (same) return;
 
     this.state = { ...this.state, armed, magazine, perReload };
+    this._save();
+  }
+
+  /**
+   * Досчитать ко времени похода то, что игрок прошёл с прошлого раза.
+   *
+   * Приходит приростом, а не суммой: счёт на финале знает только про нынешний
+   * заход, а складывать заходы — дело сохранений.
+   *
+   * Держим с точностью до десятой секунды: финал показывает минуты и секунды, а
+   * хвост в тысячных только раздувал бы запись.
+   *
+   * @param {number} seconds
+   */
+  addPlayed(seconds) {
+    if (!(seconds > 0)) return;
+
+    this.state.played = Math.round((this.state.played + seconds) * 10) / 10;
     this._save();
   }
 
@@ -120,7 +145,7 @@ class Progress {
    * оно не должно потеряться, если он тут же закроет вкладку.
    */
   reset() {
-    this.state = { level: null, passed: [], armed: false, magazine: 0, perReload: 0 };
+    this.state = { level: null, passed: [], armed: false, magazine: 0, perReload: 0, played: 0 };
     this._save(true);
   }
 

@@ -693,6 +693,55 @@
         .hint { transition: opacity 600ms ease; transform: none; }
       }
 
+      /* Пауза: мир под ней стоит, поверх — та же подсказка управления, что в
+         начале игры. Лежит ниже карты уровней и экрана смерти: те открываются
+         поверх паузы, а не наоборот. */
+      .pause {
+        position: fixed; inset: 0; z-index: 80;
+        display: flex; align-items: center; justify-content: center;
+        padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+        background: rgba(7, 9, 10, 0.86);
+        -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+        opacity: 0;
+        transition: opacity 280ms ease;
+      }
+      .pause[hidden] { display: none; }
+      .pause--on { opacity: 1; }
+
+      .pause__card {
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+        padding: 26px 30px 20px;
+        border-radius: 16px;
+        border: 1px solid rgba(232, 208, 143, 0.22);
+        background: rgba(7, 9, 10, 0.72);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+        text-align: center;
+      }
+
+      .pause__title {
+        margin: 0 0 4px;
+        color: #e8d08f;
+        font: 600 20px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.18em; text-transform: uppercase;
+      }
+      .pause__hint {
+        margin: 2px 0 0;
+        color: #e8d08f;
+        font: 600 15px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.1em; text-transform: uppercase;
+      }
+      .pause__note {
+        margin: 0;
+        color: rgba(232, 238, 244, 0.72);
+        font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .pause__tail {
+        margin: 6px 0 0;
+        color: rgba(232, 238, 244, 0.48);
+        font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.08em;
+      }
+
       /* Ворота: чёрный экран с одной кнопкой, с которого всё начинается.
          Лежат поверх экрана загрузки: тот уже показывает свои реплики под ними,
          но увидеть его игрок должен только после нажатия. */

@@ -55,9 +55,7 @@ export class ControlsHint {
   }
 
   /** Есть ли у машины мышь с клавиатурой — или это сенсорный экран. */
-  get keyboard() {
-    return matchMedia('(hover: hover) and (pointer: fine)').matches;
-  }
+  get keyboard() { return byKeyboard(); }
 
   /**
    * Показать — один раз за сеанс.
@@ -124,8 +122,24 @@ export class ControlsHint {
 
 const EVENTS = ['pointerdown', 'touchstart', 'keydown'];
 
-/** Клавиши: W сверху, A S D под ней — как они и лежат под рукой. */
-function buildKeys() {
+/**
+ * Чем в это окно тычут: мышь с клавиатурой или палец.
+ *
+ * Не по ширине окна и не по названию браузера: ноутбук с сенсорным экраном
+ * ломает любую догадку по размеру. Спрашивают отсюда и подсказка, и пауза — обе
+ * показывают разное на клавиатуре и на телефоне.
+ */
+export function byKeyboard() {
+  return matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+
+/**
+ * Клавиши: W сверху, A S D под ней — как они и лежат под рукой.
+ *
+ * Отдаётся наружу: ту же пару картинок показывает пауза, и рисовать их второй
+ * раз значило бы держать две подсказки, которые однажды разойдутся.
+ */
+export function buildKeys() {
   const box = document.createElement('div');
   box.className = 'hint__keys';
 
@@ -149,7 +163,7 @@ function key(letter) {
 }
 
 /** Стик: круг с ручкой, отведённой в сторону, — как его и держат пальцем. */
-function buildStick() {
+export function buildStick() {
   const box = document.createElement('div');
   box.className = 'hint__stick';
 

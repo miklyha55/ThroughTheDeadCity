@@ -29,6 +29,7 @@ import { yandex } from './core/yandex.js';
 import { applyLanguage, levelName } from './core/i18n.js';
 import { progress, saveOnLeave } from './core/progress.js';
 import { LevelMap, LevelMapButton } from './ui/LevelMap.js';
+import { Pause } from './ui/Pause.js';
 import { lockViewport } from './core/viewport.js';
 import { SkipHint } from './ui/SkipHint.js';
 import { DeathScreen } from './ui/DeathScreen.js';
@@ -171,7 +172,20 @@ await yandex.start();
 applyLanguage(params.get('lang') ?? yandex.language());
 
 const saved = await progress.load();
-saveOnLeave();
+
+/**
+ * Время похода продолжается с того, на чём вкладку закрыли.
+ *
+ * Счёт на финале ведёт нынешний заход, а сумму хранят сохранения: город
+ * проходят в несколько присестов, и без этого финал показывал время последнего
+ * захода вместо всего пути.
+ *
+ * Само время отдаётся приростом, на каждой остановке часов: смена уровня, экран
+ * смерти, карта, свёрнутая вкладка. Отдельной записи ради него не заводится —
+ * прирост ложится в ту же отложенную запись, что и место с снаряжением.
+ */
+tally.seed(progress.played);
+tally.onSpent = (seconds) => progress.addPlayed(seconds);
 
 /**
  * Куда игра открывается.
@@ -447,6 +461,7 @@ let finished = false;
 // Открыта ли карта уровней: пока да, мир под ней стоит. Объявлено здесь, рядом
 // с таким же флагом финала, и заведомо раньше игрового цикла — тот читает оба.
 let mapOpen = false;
+let paused = false; // игрок сам остановил игру: `Escape`
 
 /**
  * Игра пройдена — но финал показывается не сразу.
@@ -564,11 +579,11 @@ engine.add({
       return;
     }
 
-    // Под заставкой, на финальном экране и под картой уровней мир замер: там
-    // либо старый уровень уже снят со сцены, либо игра кончилась, либо игрок
-    // выбирает, куда идти, — а бежать всё это время персонаж иначе продолжал бы
-    // как ни в чём не бывало.
-    if (locations.loading || finished || mapOpen || pausedByHost) return;
+    // Под заставкой, на финальном экране, на паузе и под картой уровней мир
+    // замер: там либо старый уровень уже снят со сцены, либо игра кончилась,
+    // либо игрок сам её остановил, — а бежать всё это время персонаж иначе
+    // продолжал бы как ни в чём не бывало.
+    if (locations.loading || finished || mapOpen || paused || pausedByHost) return;
 
     /**
      * Камера показывает вожака — мир стоит.
@@ -915,6 +930,34 @@ endMessage.mapButton = mapButton;
 const deathScreen = new DeathScreen();
 
 /**
+ * Пауза: `Escape` ставит, `Enter` снимает.
+ *
+ * Останавливает ровно то же, что и карта уровней, и по той же причине: под
+ * открытым экраном зомби дошли бы до героя сами. Время пути тоже стоит — иначе
+ * поставленная на ночь пауза приписала бы игроку восемь часов похода.
+ */
+const pause = new Pause();
+
+pause.onToggle = (on) => {
+  paused = on;
+  if (on) tally.pause(); else tally.resume(); // на паузе время пути стоит
+  if (on) yandex.pause(); else yandex.play(); // и для площадки это тоже пауза
+  joystick.setEnabled(!on); // стик под экраном не ловит палец
+  input.enabled = !on;
+};
+
+/**
+ * Можно ли вставать на паузу прямо сейчас.
+ *
+ * Под заставкой и финальной речью `Escape` занят пропуском: одно нажатие иначе
+ * и оборвало бы речь, и подняло экран. На экране смерти, под картой и на финале
+ * мир и так стоит — вставать там не от чего.
+ */
+pause.canOpen = () => !locations.loading && !finished && !mapOpen && !editor?.active
+  && !deathScreen.shown && !startMessage.locked && !endMessage.speaking;
+
+
+/**
  * Площадка просит остановиться и продолжить.
  *
  * Приходит при показе рекламы, переключении вкладки и сворачивании окна. Своё
@@ -923,8 +966,35 @@ const deathScreen = new DeathScreen();
  * возвращать её в ход по чужой команде нельзя.
  */
 let pausedByHost = false;
-yandex.onPause = () => { pausedByHost = true; };
-yandex.onResume = () => { pausedByHost = false; };
+yandex.onPause = () => { pausedByHost = true; tally.pause(); };
+yandex.onResume = () => { pausedByHost = false; if (running()) tally.resume(); };
+
+/**
+ * Идёт ли мир прямо сейчас.
+ *
+ * По этому же решают и часы пути: время засчитывается ровно тогда, когда игрок
+ * и правда идёт по городу, — не под рекламой, не под картой, не на экране
+ * смерти и не в свёрнутой вкладке.
+ */
+function running() {
+  return !locations.loading && !finished && !mapOpen && !paused && !pausedByHost
+    && !deathScreen.shown && player.alive && !document.hidden;
+}
+
+// Вкладку убрали из виду — часы встают: свёрнутый браузер и переключение на
+// другое приложение это не игра. Площадка присылает об этом и своё событие, но
+// вне её никаких событий нет, а время идти не должно всё равно.
+//
+// Подписано ДО `saveOnLeave`: уходя со страницы, часы сперва отдают недосчитанный
+// отрезок, и только потом сохранения дожимают отложенную запись. В обратном
+// порядке последние минуты не успевали бы уйти.
+addEventListener('visibilitychange', () => {
+  if (document.hidden) tally.pause();
+  else if (running()) tally.resume();
+});
+addEventListener('pagehide', () => tally.pause());
+
+saveOnLeave();
 
 /**
  * Ещё раз: тот же уровень с начала, через рекламный ролик.
