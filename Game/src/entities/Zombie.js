@@ -92,6 +92,7 @@ export class Zombie extends Figure {
     this.enraged = false;  // поднят всей толпой: знает, где герой, где бы тот ни был
     this.sfx = null;       // голос; ставится снаружи
     this.heardAt = Infinity; // как далеко от персонажа он сейчас — для громкости
+    this.stepPhase = 1;    // где был клип бега в прошлом кадре: по нему ловится шаг
     this.chaseMoving = true;
     this.blindTime = 0;    // сколько уже не видит цель, с: погоня бросается не сразу
     this.state = STATE.PATROL;
@@ -341,6 +342,10 @@ export class Zombie extends Figure {
         this._hurt(dt, distance, player);
         break;
     }
+
+    // Шаги считаются после состояний, но ДО `mixer.update`: клип в этот миг
+    // стоит там же, где его видит игрок в нынешнем кадре.
+    this._steps();
     this.mixer.update(dt);
   }
 
@@ -457,15 +462,61 @@ export class Zombie extends Figure {
    * @param {number} chance — с какой вероятностью он вообще подаст голос
    * @param {number} pitch — сдвиг высоты тона: им предсмертный хрип отличается
    *   от окрика, хотя записи у них одни и те же
+   * @param {number} range — с какого расстояния его уже не слышно. У шагов он
+   *   свой, вдвое короче: окрик через двор слышен, а шарканье — нет
    */
-  _voice(sound, loudness, chance = CFG.voiceChance, pitch = 1) {
+  _voice(sound, loudness, chance = CFG.voiceChance, pitch = 1, range = CFG.voiceRange) {
     if (!this.sfx || Math.random() > chance) return;
 
-    const away = this.heardAt ?? CFG.voiceRange;
-    if (away >= CFG.voiceRange) return;
+    const away = this.heardAt ?? range;
+    if (away >= range) return;
 
-    const near = 1 - away / CFG.voiceRange;
+    const near = 1 - away / range;
     this.sfx.play(sound, loudness * near, 1, pitch);
+  }
+
+  /**
+   * Шаги: слышно только того, кто подошёл.
+   *
+   * Отметки берутся из самого клипа бега, как у героя и у вожака, — тогда топот
+   * совпадает с ногами при любом темпе, а темп у зомби разный: на прогулке он
+   * бредёт, в погоне идёт заметно быстрее.
+   *
+   * Громкость падает с расстоянием и обрывается вовсе за `stepRange`. Это не
+   * экономия, а смысл звука: зомби на локации под сотню, и топот всей толпы был
+   * бы ровным шорохом, из которого не выделить того единственного, кто заходит
+   * со спины. Слышно ровно того, кто уже близко, — и это и есть предупреждение.
+   */
+  _steps() {
+    const moving = this.state === STATE.CHASE || this.state === STATE.PATROL;
+    if (!moving || this.current !== this.actions.get('Run')) {
+      this.stepPhase = 1; // встал — следующий шаг начнётся с начала цикла
+      return;
+    }
+
+    // Дальше слышимости даже не считаем фазу: это самый частый случай — почти
+    // вся толпа всегда далеко.
+    if ((this.heardAt ?? Infinity) >= CFG.stepRange) {
+      this.stepPhase = 1;
+      return;
+    }
+
+    const clip = this.current.getClip();
+    const phase = (this.current.time % clip.duration) / clip.duration;
+
+    for (const at of CFG.stepPhases) {
+      // отметку прошли, если она между прошлым кадром и нынешним
+      const crossed = this.stepPhase < phase
+        ? at > this.stepPhase && at <= phase
+        : at > this.stepPhase || at <= phase; // цикл начался заново
+
+      if (!crossed) continue;
+
+      this._voice('zombieStep', CFG.stepVolume, 1, CFG.stepPitch, CFG.stepRange);
+      break;
+    }
+
+    this.stepPhase = phase;
   }
 
   /** Расстояние до персонажа по земле: высота не в счёт. */
