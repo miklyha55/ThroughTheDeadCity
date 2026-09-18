@@ -542,6 +542,20 @@ export class Zombie extends Figure {
     this.stepPhase = phase;
   }
 
+  /**
+   * С какого расстояния он дотягивается до цели.
+   *
+   * Сама дистанция удара у зомби одна, но цель бывает разной ширины: до героя он
+   * достаёт вплотную, а машину не достаёт вовсе — её кузов шире, и расталкивание
+   * держит его в двух метрах, тогда как бьёт он с полутора. Поэтому к дистанции
+   * прибавляется то, на сколько цель толще человека.
+   *
+   * @param {{radius?: number}} target
+   */
+  _reachOf(target) {
+    return CFG.attackRadius + ((target?.radius ?? CONFIG.player.radius) - CONFIG.player.radius);
+  }
+
   /** Расстояние до персонажа по земле: высота не в счёт. */
   _distanceTo(player) {
     _toPlayer.subVectors(player.position, this.root.position).setY(0);
@@ -770,7 +784,7 @@ export class Zombie extends Figure {
       }
     }
     // Дотянулся — бьёт.
-    if (distance <= CFG.attackRadius) {
+    if (distance <= this._reachOf(player)) {
       this._enter(STATE.ATTACK);
       return;
     }
@@ -797,7 +811,7 @@ export class Zombie extends Figure {
     // Целится он при этом чуть ближе, чем нужно для удара, — на `attackMargin`
     // внутрь. Иначе он вставал ровно на черте, а любая мелочь потом отжимала его
     // на волос наружу: удар не начинался, а шага, чтобы дойти, уже не хватало.
-    const room = distance - (CFG.attackRadius - CFG.attackMargin);
+    const room = distance - (this._reachOf(player) - CFG.attackMargin);
 
     // Дошёл и ждёт — значит стоит и дышит, а не перебирает ногами на месте.
     // Пороги разведены: идущий держится до меньшего, стоящий трогается с большего.
@@ -852,7 +866,7 @@ export class Zombie extends Figure {
     if (!this.hitDone && this.attackTime >= this.attackLength * CFG.hitAt) {
       this.hitDone = true;
       // бьём, только если цель всё ещё в досягаемости — иначе удар в воздух
-      if (distance <= CFG.attackRadius + CFG.reach) player.takeDamage(CFG.damage, this.root.position);
+      if (distance <= this._reachOf(player) + CFG.reach) player.takeDamage(CFG.damage, this.root.position);
     }
 
     if (this.attackTime < this.attackLength) return;
@@ -863,7 +877,7 @@ export class Zombie extends Figure {
     // вернулся бы в удар, а между ними успевал вклиниться кадр бега — в замах
     // постоянно подмешивался рывок ногами.
     if (!player.alive) this._enter(STATE.IDLE);
-    else if (distance <= CFG.attackRadius) this._enter(STATE.ATTACK, true);
+    else if (distance <= this._reachOf(player)) this._enter(STATE.ATTACK, true);
     else this._enter(STATE.CHASE);
   }
 

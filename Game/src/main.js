@@ -14,6 +14,7 @@ import { GunPickup } from './entities/GunPickup.js';
 import { EndMessage } from './core/EndMessage.js';
 import { tally } from './core/tally.js';
 import { AmmoPickup } from './entities/AmmoPickup.js';
+import { Car } from './entities/Car.js';
 import { Pointer } from './fx/Pointer.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
@@ -30,6 +31,7 @@ import { applyLanguage, levelName } from './core/i18n.js';
 import { progress, saveOnLeave } from './core/progress.js';
 import { LevelMap, LevelMapButton } from './ui/LevelMap.js';
 import { Pause } from './ui/Pause.js';
+import { CarHealth } from './ui/CarHealth.js';
 import { lockViewport } from './core/viewport.js';
 import { SkipHint } from './ui/SkipHint.js';
 import { DeathScreen } from './ui/DeathScreen.js';
@@ -355,6 +357,89 @@ const gunPickup = new GunPickup(engine.scene);
  * Коробка патронов на последнем уровне: подобрал — магазин на двадцать.
  * Взята — стрелка идёт к следующей цели, как и после ружья.
  */
+/**
+ * Таран на шоссе: подошёл — сел, и уровень дальше едет, а не идёт.
+ *
+ * Машина есть ровно на одном уровне, поэтому всё про неё собрано здесь, а игра
+ * о ней знает одно: пока `car.driving`, ввод уходит ей, а не герою.
+ */
+const car = new Car(engine.scene);
+const carHealth = new CarHealth();
+
+car.onBoard = () => {
+  // Герой уезжает внутри машины: модель снимается с глаз, стрельба отбирается
+  // вместе с ней. Прятать, а не выбрасывать: обратно он появится, если машину
+  // разобьют.
+  player.root.visible = false;
+  player.frozen = true; // и стрелять он не может: за рулём его вовсе не обновляют
+
+  // За рулём туман войны снимается весь: машина идёт вдвое быстрее героя, и
+  // прорезать им дорожку по метру бессмысленно — игрок всё равно видит трассу
+  // раньше, чем туман успевает открыться. Пешком он останется как был.
+  fog.revealAll();
+
+  camera.target = car;      // камера ведёт машину
+  ammo.root.hidden = true;  // патроны за рулём не считают
+  carHealth.show(true);
+  pointer.attach(car.root); // стрелка переезжает на машину
+  aimPointer();
+};
+
+car.onHealth = (left, total) => carHealth.set(left, total);
+
+car.onRam = (at, speed) => {
+  // Сбитый читается ударом: толчок камере, пыль из-под колёс и глухой стук.
+  camera.shake(CONFIG.car.ramShake, CONFIG.car.ramShakeFor);
+  puffs.burst(at);
+  sfx.play('throw', CONFIG.car.ramVolume * Math.min(1, speed / CONFIG.car.maxSpeed),
+    1, 0.7, { echo: false, spread: false });
+};
+
+car.onWreck = (at) => {
+  // Машина догорела: взрыв на её месте, и герой выходит там же — дальше пешком,
+  // со стрельбой, как на всех прочих уровнях.
+  if (at) {
+    explosions.burst(at.clone().setY(1));
+    shards.burst(at, car.root);
+    camera.shake(CONFIG.explosion.shake, CONFIG.explosion.shakeFor);
+    sfx.play('explosion', CONFIG.explosion.volume, CONFIG.explosion.layers, 1,
+      { echo: false, spread: false });
+
+    /**
+     * Взрыв сносит тех, кто добивал машину.
+     *
+     * Без этого высадка была приговором: машину доламывает толпа, стоящая
+     * вплотную, герой появляется ровно между ними и гибнет в тот же кадр — с
+     * одного удара, ещё не увидев, что случилось. Теперь у него есть расчищенный
+     * круг и мгновение, чтобы оглядеться.
+     */
+    for (const zombie of locations.current.zombies) {
+      if (!zombie.alive || zombie === locations.current.boss) continue;
+      if (zombie.position.distanceTo(at) > CONFIG.explosion.radius) continue;
+
+      zombie.crush(at, CONFIG.explosion.gore, 'blast');
+    }
+
+    // Выходит он сбоку от кузова, а не внутрь него: поставленный в ту же точку,
+    // герой стоял прямо в модели — торчал из крыши.
+    const side = car.yaw + Math.PI / 2;
+    const out = at.clone();
+    out.x += Math.sin(side) * CONFIG.car.radius * 1.6;
+    out.z += Math.cos(side) * CONFIG.car.radius * 1.6;
+    locations.current.clampPosition(out);
+    player.placeAt(out, car.yaw);
+  }
+
+  player.root.visible = true;
+  player.frozen = false;
+
+  camera.target = player;
+  ammo.root.hidden = !player.armed;
+  carHealth.show(false);
+  pointer.attach(player.root);
+  aimPointer();
+};
+
 const ammoPickup = new AmmoPickup(engine.scene);
 ammoPickup.onTaken = () => {
   rememberKit();
@@ -601,22 +686,38 @@ engine.add({
 
     input.update();
     watchDeath(); // упал и долежал — поднимаем экран с кнопкой
-    player.frozen = startMessage.locked; // пока звучит вступление, он только слушает
-    radio.toggle(player.frozen);         // рация висит ровно столько же
-    player.update(dt, input.move, camera.moveYaw, locations.current);
+    player.frozen = startMessage.locked || car.driving; // за рулём он тоже не ходит
+    radio.toggle(startMessage.locked);   // рация висит ровно столько, сколько речь
     const here = locations.current;
 
-    // Дошёл до вехи — она гаснет, и стрелка ведёт к следующей цели.
-    if (here.reachGuide(player.position)) aimPointer();
-
-    if (here.reachedExit(player.position)) {
-      locations.advance(); // вышел через проём — следующая локация
+    if (car.driving) {
+      // За рулём ввод уходит машине, а герой едет внутри: его не двигают и не
+      // обновляют вовсе — кроме миксера, чтобы поза не застыла на полушаге.
+      car.update(dt, input.move, camera.moveYaw, here);
+      player.root.position.copy(car.position); // тело едет внутри кузова
     } else {
+      player.update(dt, input.move, camera.moveYaw, here);
+
+      // Подошёл к машине — сел. Отдельной кнопки нет: на уровне она одна, и
+      // подходить к ней незачем, кроме как чтобы ехать.
+      if (car.reachable(player.position)) car.board();
+    }
+
+    // Кто сейчас идёт по уровню: герой или машина. Вехи, выход и зомби смотрят
+    // на него одного — им всё равно, на чём игрок приехал.
+    const hero = car.driving ? car : player;
+
+    // Дошёл до вехи — она гаснет, и стрелка ведёт к следующей цели.
+    if (here.reachGuide(hero.position)) aimPointer();
+
+    if (here.reachedExit(hero.position)) {
+      locations.advance(); // вышел через проём — следующая локация
+    } else if (!car.driving) {
       // в прыжке он летит над препятствием, поэтому выталкивать его оттуда нельзя
       if (!player.jumping) here.obstacles.resolve(player.position, CONFIG.player.radius);
       here.clampPosition(player.position); // и за забор тоже
     }
-    here.update(dt, player); // зомби: заметить, дойти, ударить
+    here.update(dt, hero); // зомби: заметить, дойти, ударить
     gunEffects.update(dt);
     blood.update(dt);
     playerBlood.update(dt);
@@ -656,9 +757,9 @@ function rememberKit() {
   });
 }
 
-/** Патроны показываем, только когда есть чем стрелять. */
+/** Патроны показываем, только когда есть чем стрелять — и не из-за руля. */
 function showAmmo() {
-  ammo.root.hidden = !player.armed;
+  ammo.root.hidden = !player.armed || car.driving;
 }
 
 /**
@@ -706,6 +807,11 @@ function aimPointer() {
    */
   const gun = gunPickup.object && !player.armed ? gunPickup.object : null;
   if (gun && !wayDone) targets.push({ at: gun, halo: true });
+
+  // Машина: пока в неё не сели, это главное на уровне — к ней и ведём, с кругом
+  // на полу, как к вещи, которую надо подобрать. Села — стрелка идёт дальше, к
+  // вехам и выезду, а обратно к машине ей уже незачем.
+  if (car.object && !car.driving && !car.wrecked) targets.push({ at: car.object, halo: true });
 
   // Коробка патронов: с кругом, как ружьё, — пока игрок её не проигнорировал.
   // В очереди её держит только это: выход она не запирает, брать необязательно.
@@ -1147,12 +1253,24 @@ locations.onChange = (location) => {
   };
   gunPickup.place(location, player, locations.editing); // в правке лежит всегда
   ammoPickup.place(location, player, locations.editing);
+
+  // Машина есть ровно на одном уровне; на всех прочих `place` просто снимает
+  // прежнюю. Заодно возвращаем герою вид и управление: уровень начинается с
+  // того, что он стоит на своих двоих, даже если прошлый кончился за рулём.
+  car.place(location);
+  carHealth.show(false);
+  player.root.visible = true;
+  camera.target = player;
+  pointer.attach(player.root);
+
   aimPointer();
   showAmmo();
   showHud();
   updateDebugView();
   fog.reset(location.width, location.depth); // новый уровень — заново закрытая карта
-  music.play(location.data.number ?? 1); // у каждого уровня своя дорожка
+  // Своя дорожка у каждого уровня, кроме тех, где её нет: `music: null` в файле
+  // уровня — это тишина под ветер, а не отсутствующий файл.
+  music.play(location.data.music === null ? null : (location.data.music ?? location.data.number ?? 1));
 };
 
 /**
@@ -1279,6 +1397,7 @@ if (import.meta.env.DEV) {
       // Положит его заново `onChange` при пересборке локации ниже.
       gunPickup.clear();
       ammoPickup.clear(); // модель у неё из библиотеки уровня, которую сейчас сменят
+      car.clear();        // и машина оттуда же
 
       player.dispose();
       player = new Player(freshPlayer);
@@ -1329,7 +1448,7 @@ player.onMagazine = (size) => ammo.resize(size); // коробка патрон�
 
   window.__game = {
     engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash, fog,
-    gunPickup, ammoPickup, pointer, controlsHint, skipHint, deathScreen, levelMap,
+    gunPickup, ammoPickup, car, pointer, controlsHint, skipHint, deathScreen, levelMap,
     endMessage, // ответная передача: её удобно щупать из консоли
     yandex, progress, // площадка и сохранения: их удобно щупать из консоли
     /** Переключение локаций из консоли: __game.go('gas_station') */

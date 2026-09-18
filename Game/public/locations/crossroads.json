@@ -1,7 +1,7 @@
 {
   "id": "crossroads",
   "name": "Северный перекрёсток",
-  "number": 3,
+  "number": 4,
   "next": "north_exit",
   "size": [
     112,

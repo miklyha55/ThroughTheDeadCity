@@ -88,6 +88,14 @@ export class Music {
   play(track) {
     if (track === this.track) return;
 
+    // Уровень без дорожки: на шоссе её нет вовсе, и это нарочно. Ставить
+    // несуществующий файл нельзя — браузер отклонит воспроизведение, а по
+    // отказу мы снимаем разрешение на звук и вместе с музыкой замолкает ветер.
+    if (track === null || track === undefined) {
+      this.silence();
+      return;
+    }
+
     this.track = track;
     this.audio.src = `${CFG.folder}${track}.mp3`;
 

@@ -453,7 +453,9 @@ export class Location {
         continue;
       }
 
-      const gap = zombie.bodyRadius + CONFIG.player.radius;
+      // Радиус берётся у самой цели: за рулём это машина, и она шире героя —
+      // с её радиусом толпа обтекает кузов, а не влипает в него.
+      const gap = zombie.bodyRadius + (player.radius ?? CONFIG.player.radius);
       const dx = position.x - zombie.position.x;
       const dz = position.z - zombie.position.z;
       const distance = Math.hypot(dx, dz);
