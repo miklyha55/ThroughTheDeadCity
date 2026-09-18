@@ -61,7 +61,7 @@ const EN = {
   'pause.note': 'Shooting, vaulting and throwing he does himself',
   'pause.hintKeys': 'Lead your man',
   'pause.hintTouch': 'Lead your man',
-  'pause.tailKeys': 'Enter — resume',
+  'pause.tailKeys': 'Esc or Enter — resume',
   'pause.tailTouch': 'touch the screen to resume',
 
   'levelMap.title': 'Levels',
