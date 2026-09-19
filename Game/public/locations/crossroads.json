@@ -550,7 +550,8 @@
         -36.68,
         -0.64
       ],
-      "rotation": -137.6
+      "rotation": -137.6,
+      "scale": 1.15
     },
     {
       "prop": "Weapon_Cleaver",
@@ -566,7 +567,8 @@
         -18.61,
         -3.27
       ],
-      "rotation": 60.6
+      "rotation": 60.6,
+      "scale": 1.15
     },
     {
       "prop": "Prop_Barrel",
@@ -606,7 +608,8 @@
         31.21,
         0.45
       ],
-      "rotation": 42.3
+      "rotation": 42.3,
+      "scale": 1.15
     },
     {
       "prop": "Prop_Barrel",
@@ -870,7 +873,8 @@
         -7.54,
         -7.12
       ],
-      "rotation": 115.1
+      "rotation": 115.1,
+      "scale": 1.15
     },
     {
       "prop": "Prop_Jerrycan",
@@ -878,7 +882,8 @@
         6.73,
         -6.7
       ],
-      "rotation": 125.9
+      "rotation": 125.9,
+      "scale": 1.15
     },
     {
       "prop": "Bush_Tumbleweed",
@@ -1683,7 +1688,8 @@
         -7.34,
         3.36
       ],
-      "rotation": 125.9
+      "rotation": 125.9,
+      "scale": 1.15
     },
     {
       "prop": "Weapon_Cleaver",
