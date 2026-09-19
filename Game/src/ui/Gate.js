@@ -95,7 +95,7 @@ export class Gate {
   press(onPress) {
     return new Promise((done) => {
       const go = () => {
-        this.root.removeEventListener('pointerdown', go);
+        this.root.removeEventListener('click', go);
         removeEventListener('keydown', onKey);
         onPress?.();
         done();
@@ -109,9 +109,10 @@ export class Gate {
         if (event.code === 'Enter' || event.code === 'NumpadEnter') go();
       };
 
-      // Именно `pointerdown`, а не `click`: касание должно засчитаться в момент,
-      // когда палец лёг, а не когда поднялся.
-      this.root.addEventListener('pointerdown', go);
+      // По отпусканию, как и все кнопки: нажал — кнопка сжалась, отпустил —
+      // игра пошла. Отпускание браузер тоже засчитывает как жест игрока, и звук
+      // от него разрешается так же.
+      this.root.addEventListener('click', go);
       addEventListener('keydown', onKey);
     });
   }

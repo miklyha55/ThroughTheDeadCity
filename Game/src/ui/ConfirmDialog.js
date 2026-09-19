@@ -50,8 +50,9 @@ export class ConfirmDialog {
     this._answer = null;
     this._fade = null;
 
-    this.no.addEventListener('pointerdown', (e) => this._close(e, false));
-    this.yes.addEventListener('pointerdown', (e) => this._close(e, true));
+    // По отпусканию: нажал — кнопка сжалась, отпустил — сработала.
+    this.no.addEventListener('click', (e) => this._close(e, false));
+    this.yes.addEventListener('click', (e) => this._close(e, true));
 
     // Мимо карточки — то же, что «отмена»: так ведут себя все окна такого рода,
     // и искать кнопку глазами не приходится.

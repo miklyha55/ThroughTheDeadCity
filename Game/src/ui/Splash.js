@@ -21,6 +21,18 @@ export class Splash {
     this.root.className = 'splash';
     this.root.hidden = true;
 
+    /**
+     * Чёрная вуаль под заставкой.
+     *
+     * Заставка уходит одним кадром — и без вуали на её месте сразу возникал
+     * готовый уровень: резкая подмена картинки читалась как сбой. Теперь под
+     * заставкой чёрное, и когда она уходит, чернота растворяется, открывая
+     * уровень из темноты. Висит поверх игры и её кнопок, но ниже заставки.
+     */
+    this.veil = document.createElement('div');
+    this.veil.className = 'veil veil--black';
+    container.appendChild(this.veil);
+
     this.image = document.createElement('div');
     this.image.className = 'splash__image';
 
@@ -68,6 +80,7 @@ export class Splash {
     this.progress = 0;
     this.shownAt = performance.now();
 
+    this.veil.classList.add('veil--black'); // под заставкой — сразу чёрное, без перехода
     this.root.hidden = false;
     this._draw();
 
@@ -178,6 +191,11 @@ export class Splash {
     if (turn !== this.turn) return;
 
     this.root.hidden = true;
+
+    // Вуаль растворяется сама, стилями: уровень проступает из темноты. Кадр на
+    // то, чтобы браузер успел заметить её чёрной, — иначе переходу не с чего
+    // начинаться, и она пропадёт рывком.
+    requestAnimationFrame(() => this.veil.classList.remove('veil--black'));
   }
 
   _draw() {

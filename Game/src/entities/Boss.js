@@ -264,7 +264,7 @@ export class Boss extends Zombie {
    * бормотание из толпы, а то, из-за чего игрок оборачивается.
    */
   _roar() {
-    this.sfx?.play('bossRoar', CFG.voiceVolume, 1, CFG.voicePitch, { echo: false });
+    this.sfx?.playAt('bossRoar', this.root.position, CFG.voiceVolume, CFG.hearing, 1, CFG.voicePitch, { echo: false });
   }
 
   /**
@@ -289,7 +289,7 @@ export class Boss extends Zombie {
 
       if (!crossed) continue;
 
-      this.sfx?.play('bossStep', CFG.stepVolume, 1, 1, { echo: false });
+      this.sfx?.playAt('bossStep', this.root.position, CFG.stepVolume, CFG.hearing, 1, 1, { echo: false });
       this.onStep?.(this.heardAt); // и земля под ним вздрагивает
       break;
     }
@@ -605,7 +605,7 @@ export class Boss extends Zombie {
     item.lethalTo = player;
     item.lethalFor = time + CFG.lethalAfter;
 
-    this.sfx?.play('throw', CFG.voiceVolume);
+    this.sfx?.playAt('throw', this.root.position, CFG.voiceVolume, CFG.hearing);
   }
 
   /** Уронить недокинутое: убили или сбили на замахе. */

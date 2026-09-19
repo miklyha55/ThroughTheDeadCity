@@ -33,6 +33,7 @@ import { applyLanguage, levelName } from './core/i18n.js';
 import { progress, saveOnLeave } from './core/progress.js';
 import { LevelMap, LevelMapButton } from './ui/LevelMap.js';
 import { Pause } from './ui/Pause.js';
+import { LevelResult } from './ui/LevelResult.js';
 import { lockViewport } from './core/viewport.js';
 import { SkipHint } from './ui/SkipHint.js';
 import { DeathScreen } from './ui/DeathScreen.js';
@@ -303,6 +304,9 @@ const dayNight = new DayNight({ scene: engine.scene, ...world });
 const visibility = new Visibility(engine.camera);
 
 const sfx = new Sfx(CONFIG.sounds.files);
+// Звуки мира слушает герой — или машина, пока он за рулём: от них и считается
+// расстояние. `car` и `player` объявлены ниже, но спрашивают их только в игре.
+sfx.hearFrom = () => (car?.driving ? car.position : player.position);
 const carSound = new CarSound(); // мотор машины: своя дорожка по кругу
 
 const loading = Promise.all([
@@ -441,7 +445,7 @@ car.onRam = (at, speed) => {
   // Сбитый читается ударом: толчок камере, пыль из-под колёс и глухой стук.
   camera.shake(CONFIG.car.ramShake, CONFIG.car.ramShakeFor);
   puffs.burst(at);
-  sfx.play('throw', CONFIG.car.ramVolume * Math.min(1, speed / CONFIG.car.maxSpeed),
+  sfx.playAt('throw', at, CONFIG.car.ramVolume * Math.min(1, speed / CONFIG.car.maxSpeed), undefined,
     1, 0.7, { echo: false, spread: false });
 };
 
@@ -663,6 +667,8 @@ let finished = false;
 // с таким же флагом финала, и заведомо раньше игрового цикла — тот читает оба.
 let mapOpen = false;
 let paused = false; // игрок сам остановил игру: `Escape`
+let resultOpen = false; // висит итог пройденного уровня: мир стоит до «Продолжить»
+let levelStart = { id: null, kills: 0, deaths: 0, seconds: 0 }; // счёт на входе в уровень
 
 /**
  * Игра пройдена — но финал показывается не сразу.
@@ -705,6 +711,7 @@ ending.onAgain = () => {
   endMessage.skip();
 
   tally.reset();
+  levelStart.id = null; // счёт начат заново — и снимок уровня вместе с ним
   progress.reset();
   player.revive();
   player.disarm();
@@ -816,7 +823,7 @@ engine.add({
     // замер: там либо старый уровень уже снят со сцены, либо игра кончилась,
     // либо игрок сам её остановил, — а бежать всё это время персонаж иначе
     // продолжал бы как ни в чём не бывало.
-    if (locations.loading || finished || mapOpen || paused || pausedByHost) return;
+    if (locations.loading || finished || mapOpen || paused || resultOpen || pausedByHost) return;
 
     /**
      * Камера показывает вожака — мир стоит.
@@ -1115,14 +1122,16 @@ function wireHorde(location) {
 
   // Один пролёт на весь прорыв: камера уходит к заграждению, показывает, как
   // оно разлетается, и возвращается к герою. Игра при этом не останавливается.
+  let hordeAt = null; // где стоит толпа: оттуда она и ревёт
   location.onHorde = (at) => {
+    hordeAt = at.clone(); // отсюда же потом ревёт толпа
     fog.revealAll(); // толпа бежит по всей дороге — прятать в тумане больше нечего
     camera.show(at.clone(), 1.4, { pause: false, timing: CFG.camera });
     aimPointer();    // к заграждению больше не ведём: герой его уже нашёл
   };
 
   location.onHordeWake = () => {
-    sfx.play('zombieAlert', CFG.roarVolume, 3, CFG.roarPitch);
+    sfx.playAt('zombieAlert', hordeAt, CFG.roarVolume, CFG.hearing, 3, CFG.roarPitch);
   };
 
   let crashed = false;
@@ -1168,7 +1177,7 @@ function wireHorde(location) {
 
     // Одной дорожкой и без отзвука: раскат от домов и наложенные копии делали
     // из удара кашу — грохот расползался и терял тот самый миг обвала.
-    sfx.play('explosion', CONFIG.explosion.volume * CFG.crashVolume,
+    sfx.playAt('explosion', at, CONFIG.explosion.volume * CFG.crashVolume, CFG.hearing,
       1, 0.62, { echo: false, spread: false });
   };
 
@@ -1185,12 +1194,10 @@ function wireBlasts(location) {
     camera.shake(CFG.shake, CFG.shakeFor);
 
     // Дальний взрыв слышно тише: иначе бочка на том конце площадки грохочет
-    // так же, как та, что рванула под ногами.
-    const near = Math.max(0, 1 - at.distanceTo(player.position) / CFG.hearing);
-    // Без отзвука и без разброса между дорожками: у взрыва свой длинный хвост,
-    // и повтор сэмпла вдогонку слышался не как эхо, а как второй взрыв через
-    // долю секунды. Дорожки с разной скоростью расходились так же.
-    if (near > 0) sfx.play('explosion', CFG.volume * near, CFG.layers, 1, { echo: false, spread: false });
+    // так же, как та, что рванула под ногами. Без отзвука и без разброса между
+    // дорожками: у взрыва свой длинный хвост, и повтор сэмпла вдогонку слышался
+    // не как эхо, а как второй взрыв через долю секунды.
+    sfx.playAt('explosion', at, CFG.volume, CFG.hearing, CFG.layers, 1, { echo: false, spread: false });
   };
 }
 
@@ -1260,13 +1267,47 @@ pause.onToggle = (on) => {
 };
 
 /**
+ * Итог уровня: после выхода с каждого уровня, кроме последнего.
+ *
+ * Тот же вид, что у финала, но цифры за один уровень — считаются от снимка,
+ * снятого на входе в него. Мир на это время стоит так же, как под паузой, а
+ * следующий уровень грузится только по «Продолжить».
+ */
+const levelResult = new LevelResult();
+
+locations.onLevelDone = (id, proceed) => {
+  resultOpen = true;
+  tally.pause();   // время за итогом в путь не идёт
+  yandex.pause();  // для площадки это пауза
+  joystick.setEnabled(false);
+  input.enabled = false;
+
+  const data = locations.current?.data ?? {};
+  levelResult.show({
+    name: levelName(id, data.name ?? id),
+    number: data.number ?? 1,
+    kills: tally.kills - levelStart.kills,
+    deaths: tally.deaths - levelStart.deaths,
+    seconds: tally.seconds - levelStart.seconds,
+  });
+
+  levelResult.onContinue = () => {
+    resultOpen = false;
+    joystick.setEnabled(true);
+    input.enabled = true;
+    yandex.play();
+    proceed(); // заставка и следующий уровень — дальше всё как раньше
+  };
+};
+
+/**
  * Можно ли вставать на паузу прямо сейчас.
  *
  * Под заставкой и финальной речью `Escape` занят пропуском: одно нажатие иначе
  * и оборвало бы речь, и подняло экран. На экране смерти, под картой и на финале
  * мир и так стоит — вставать там не от чего.
  */
-pause.canOpen = () => !locations.loading && !finished && !mapOpen && !editor?.active
+pause.canOpen = () => !locations.loading && !finished && !mapOpen && !resultOpen && !editor?.active
   && !deathScreen.shown && !startMessage.locked && !endMessage.speaking;
 
 
@@ -1290,7 +1331,7 @@ yandex.onResume = () => { pausedByHost = false; if (running()) tally.resume(); }
  * смерти и не в свёрнутой вкладке.
  */
 function running() {
-  return !locations.loading && !finished && !mapOpen && !paused && !pausedByHost
+  return !locations.loading && !finished && !mapOpen && !paused && !resultOpen && !pausedByHost
     && !deathScreen.shown && player.alive && !document.hidden;
 }
 
@@ -1355,6 +1396,7 @@ deathScreen.onFromStart = async () => {
   // минуты игра для него начинается с чистого листа.
   progress.reset(); // вместе с прогрессом уходит и снаряжение
   tally.reset();
+  levelStart.id = null; // счёт начат заново — и снимок уровня вместе с ним
 
   player.revive();
   player.disarm();
@@ -1443,6 +1485,11 @@ locations.onChange = (location) => {
   car.place(location);
   player.root.visible = true;
   camera.target = player;
+
+  // Камера встаёт на героя сразу, без перелёта. Менеджер уровней уже ставил её
+  // мгновенно — но на прежнюю цель: если уровень кончился за рулём, это была
+  // машина на старом месте, и камера потом ехала оттуда через всю карту.
+  camera.snap();
   pointer.attach(player.root);
 
   aimPointer();
@@ -1466,6 +1513,13 @@ locations.onChange = (location) => {
  */
 locations.onOpened = (location) => {
   tally.resume(); // уровень открылся — путь пошёл
+
+  // Итог уровня считается от входа в него. Перезапуск после смерти — это тот же
+  // уровень, и снимок не сбрасывается: смерти на нём и время всех попыток
+  // входят в его итог.
+  if (levelStart.id !== location.data.id) {
+    levelStart = { id: location.data.id, kills: tally.kills, deaths: tally.deaths, seconds: tally.seconds };
+  }
   startMessage.arm(location.data.number ?? 1);
 
   /**

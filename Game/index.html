@@ -279,7 +279,7 @@
         -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease, transform 120ms ease;
+        transition: background 160ms ease;
       }
       .mapbutton[hidden] { display: none; }
       .mapbutton:hover { background: rgba(20, 24, 26, 0.85); }
@@ -358,7 +358,7 @@
         text-align: left;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
+        transition: background 160ms ease, border-color 160ms ease;
       }
       .levelmap__card:hover { background: rgba(28, 31, 34, 0.95); border-color: rgba(232, 208, 143, 0.4); }
       .levelmap__card:active { transform: scale(0.99); }
@@ -502,7 +502,7 @@
         background: rgba(232, 208, 143, 0.06);
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease, transform 120ms ease;
+        transition: background 160ms ease;
       }
       .death__again:hover { background: rgba(232, 208, 143, 0.14); }
       .death__again:active { transform: scale(0.96); }
@@ -587,9 +587,8 @@
         letter-spacing: 0.1em; text-transform: uppercase;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease, transform 120ms ease;
+        transition: background 160ms ease;
       }
-      .confirm__no:active, .confirm__yes:active { transform: scale(0.97); }
 
       .confirm__no {
         color: #e8d08f;
@@ -597,6 +596,7 @@
         background: rgba(232, 208, 143, 0.06);
       }
       .confirm__no:hover { background: rgba(232, 208, 143, 0.14); }
+      .confirm__no:active, .confirm__yes:active { transform: scale(0.97); }
 
       /* Согласие красным и без заливки: после него ничего не вернуть, и звать
          к нему нечем. */
@@ -818,9 +818,10 @@
         cursor: pointer;
         /* Серую вспышку по тапу гасим: на чёрном экране она читается как сбой. */
         -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease, transform 120ms ease;
+        transition: background 160ms ease;
       }
       .gate__play:hover { background: rgba(232, 208, 143, 0.14); }
+      .gate__play:active { transform: scale(0.96); }
 
       .gate__action {
         display: flex; flex-direction: column; align-items: center; gap: 18px;
@@ -841,7 +842,6 @@
         border-bottom-width: 2px;
         border-radius: 5px;
       }
-      .gate__play:active { transform: scale(0.96); }
 
       /* Мягкое дыхание: на пустом чёрном экране неподвижная кнопка читается как
          картинка, а не как то, на что надо нажать. */
@@ -970,7 +970,7 @@
         background: rgba(232, 208, 143, 0.08);
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease, transform 120ms ease;
+        transition: background 160ms ease;
       }
       .ending__rate {
         color: rgba(232, 208, 143, 0.75);
@@ -1001,6 +1001,18 @@
       @media (prefers-reduced-motion: reduce) {
         .ending--on { animation: none; }
       }
+
+      /* Чёрная вуаль под заставкой: когда та уходит, уровень проступает из
+         темноты, а не возникает рывком. Выше игры и её кнопок, ниже заставки;
+         нажатия пропускает насквозь — она только картинка. */
+      .veil {
+        position: fixed; inset: 0; z-index: 59;
+        background: #000000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 800ms ease;
+      }
+      .veil--black { opacity: 1; transition: none; }
 
       .splash {
         position: fixed; inset: 0; z-index: 60;

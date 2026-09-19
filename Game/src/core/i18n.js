@@ -81,6 +81,12 @@ const EN = {
   'ending.againLabel': 'Play again',
   'ending.rateLabel': 'Rate the game',
 
+  'levelResult.doneLabel': 'cleared',
+  'levelResult.killsLabel': 'Put down',
+  'levelResult.deathsLabel': 'Deaths',
+  'levelResult.timeLabel': 'On the road',
+  'levelResult.continueLabel': 'Continue',
+
   'endMessage.file': asset('assets/audio/end_message_eng.mp3'),
   'endMessage.lines': [
     'I hear you. God, I hear you.',

@@ -39,6 +39,7 @@ export class Sfx {
     this.pools = new Map();  // имя → голоса наготове
     this.next = new Map();   // имя → кого занимать, когда все заняты
     this.echoes = new Set(); // отложенные отзвуки: их тоже надо уметь отменить
+    this.hearFrom = null;    // откуда слушать: герой или машина — ставится снаружи
   }
 
   /**
@@ -85,6 +86,30 @@ export class Sfx {
    * взрыва приходит, когда собственный хвост ещё звучит, и снова слышится
    * вторым взрывом.
    */
+  /**
+   * Сыграть звук в точке мира: чем дальше она от героя, тем тише, а за `range`
+   * не слышно вовсе.
+   *
+   * Слушает всегда герой — или машина, пока он за рулём: откуда слушать, игра
+   * говорит через `hearFrom`. Без этого рёв вожака на том конце карты звучал
+   * так же, как у самого уха.
+   *
+   * @param {string} name
+   * @param {THREE.Vector3} at — где звучит
+   * @param {number} [loudness] — громкость вплотную
+   * @param {number} [range] — м, дальше которых звука нет
+   * @param {number} [layers] @param {number} [pitch] @param {object} [opts] — как у `play`
+   */
+  playAt(name, at, loudness = 1, range = CFG.range, layers = 1, pitch = 1, opts = {}) {
+    const ear = this.hearFrom?.();
+    if (ear && at) {
+      const away = Math.hypot(at.x - ear.x, at.z - ear.z);
+      if (away >= range) return;
+      loudness *= 1 - away / range;
+    }
+    this.play(name, loudness, layers, pitch, opts);
+  }
+
   play(name, loudness = 1, layers = 1, pitch = 1, opts = {}) {
     // Пока звук не разрешён, запускать нечего: голос всё равно был бы выброшен,
     // а отзвук прилетел бы в тишину уже после того, как всё началось.

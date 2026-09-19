@@ -79,12 +79,13 @@ export class Ending {
     this.onAgain = null; // пройти город заново
     this.onRate = null;  // и оценить игру: спрашивает площадка, а не мы
 
-    this.again.addEventListener('pointerdown', (event) => {
+    // По отпусканию: нажал — кнопка сжалась, отпустил — сработала.
+    this.again.addEventListener('click', (event) => {
       event.preventDefault();
       this.onAgain?.();
     });
 
-    this.rate.addEventListener('pointerdown', (event) => {
+    this.rate.addEventListener('click', (event) => {
       event.preventDefault();
       this.rate.hidden = true; // спрашивают один раз
       this.onRate?.();

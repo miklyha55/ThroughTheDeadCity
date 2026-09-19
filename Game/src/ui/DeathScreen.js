@@ -119,7 +119,7 @@ export class DeathScreen {
      * Отказались — экран смерти остаётся на месте, как будто и не нажимали.
      * Согласились — уходим и начинаем заново.
      */
-    this.fromStart.addEventListener('pointerdown', async (event) => {
+    this.fromStart.addEventListener('click', async (event) => {
       event.preventDefault();
       if (!this.shown) return;
 
@@ -152,7 +152,8 @@ export class DeathScreen {
   }
 
   _press(button, act) {
-    button.addEventListener('pointerdown', (event) => {
+    // По отпусканию: нажал — кнопка сжалась, отпустил — сработала.
+    button.addEventListener('click', (event) => {
       event.preventDefault();
       if (!this.shown) return;
 
