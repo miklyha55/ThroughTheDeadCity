@@ -788,7 +788,7 @@ engine.add({
     if (car.driving) {
       // За рулём ввод уходит машине, а герой едет внутри: его не двигают и не
       // обновляют вовсе — кроме миксера, чтобы поза не застыла на полушаге.
-      car.update(dt, input.move, camera.moveYaw, here);
+      car.update(dt, input.move, camera.moveYaw, here, input.fromKeys);
       player.root.position.copy(car.position); // тело едет внутри кузова
     } else {
       player.update(dt, input.move, camera.moveYaw, here);

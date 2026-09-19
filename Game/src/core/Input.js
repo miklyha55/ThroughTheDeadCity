@@ -29,6 +29,7 @@ export class Input {
   constructor(joystick) {
     this.joystick = joystick;
     this.move = new THREE.Vector2();
+    this.fromKeys = false; // ход пришёл с клавиатуры, а не со стика
 
     // Пока правят расстановку, клавиши принадлежат редактору: там теми же
     // WASD ездит камера, и персонаж уходил бы вместе с ней.
@@ -81,6 +82,9 @@ export class Input {
 
     // Держат и то, и другое — берём клавиши: джойстик мог просто остаться
     // прижатым пальцем, а нажатие клавиши всегда намеренное.
+    // С клавиш ли ход: машина ведётся ими иначе, чем стиком, — см. Car.
+    this.fromKeys = this._keys.lengthSq() > 0;
+
     if (this._keys.lengthSq() > 0) this.move.copy(this._keys);
     else if (this.joystick?.active) this.move.copy(this.joystick.value);
     else this.move.set(0, 0);

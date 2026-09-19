@@ -180,8 +180,10 @@ export class Car {
    * @param {number} cameraYaw — куда смотрит камера: стик задаётся от экрана,
    *   а ехать надо по миру
    * @param {import('../world/Location.js').Location} location
+   * @param {boolean} [fromKeys] — ведут ли с клавиатуры: у клавиш управление своё,
+   *   относительно самой машины, см. `_driveKeys`
    */
-  update(dt, move, cameraYaw, location) {
+  update(dt, move, cameraYaw, location, fromKeys = false) {
     if (!this.root || !this.driving || this.wrecked) return;
 
     // Притормаживание от сбитых сходит само: удар гасит ход на мгновение, а
@@ -189,7 +191,7 @@ export class Car {
     this.slowed = Math.max(0, this.slowed - CFG.ramRecover * dt);
 
     const yawBefore = this.yaw;
-    this._drive(dt, move, cameraYaw);
+    this._drive(dt, move, cameraYaw, fromKeys);
     this._pivot(yawBefore, location);
     this._roll(dt, location);
     this._ram(location);
@@ -256,84 +258,124 @@ export class Car {
    * направлению со своей скоростью и едет туда, куда уже смотрит: пока корпус
    * доворачивает, её сносит прежним курсом.
    */
-  _drive(dt, move, cameraYaw = 0) {
-    const push = Math.min(1, Math.hypot(move?.x ?? 0, move?.y ?? 0));
-
-    if (push > 0.001) {
-      // «вперёд» — от камеры от нас, «вправо» — поперёк ему: как у героя.
-      const fx = Math.sin(cameraYaw), fz = Math.cos(cameraYaw);
-      const wx = fx * move.y - fz * move.x;
-      const wz = fz * move.y + fx * move.x;
-
-      const want = Math.atan2(wx, wz);
-
-      // Доворот носа по кратчайшей дуге. Стоящая машина вертится лениво,
-      // разогнанная — охотно: руль работает от скорости, а не сам по себе.
-      let turn = want - this.yaw;
-      while (turn > Math.PI) turn -= 2 * Math.PI;
-      while (turn < -Math.PI) turn += 2 * Math.PI;
-
-      const speed = this.velocity.length();
-
-      // Стик заведён назад, а машина уже почти встала — значит упёрлась, и
-      // разворачиваться ей негде. Тогда она пятится, не доворачивая: так
-      // выезжают из угла и в жизни.
-      if (Math.abs(turn) > THREE.MathUtils.degToRad(CFG.reverseAngle) && speed < CFG.reverseBelow) {
-        _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
-        this.velocity.copy(_dir).multiplyScalar(-CFG.maxReverse);
-        this.root.rotation.y = this._facing;
-        return;
-      }
-
-      const agility = CFG.turnStill + (1 - CFG.turnStill) * Math.min(1, speed / CFG.turnFullAt);
-      const step = CFG.turnSpeed * agility * dt;
-      this.yaw += THREE.MathUtils.clamp(turn, -step, step);
-
-      /**
-       * Ход раскладывается на две части: вдоль корпуса и поперёк него.
-       *
-       * Вдоль — это тяга. Она идёт прямо от стика, как шаг героя: отклонили
-       * наполовину — едем вполовину, без разгона и раскачки.
-       *
-       * Поперёк — это занос. Колёса гасят его сами, но не мгновенно, и тем
-       * хуже, чем быстрее машина идёт. Пока он не погас, её несёт боком: нос уже
-       * смотрит в поворот, а inertia тащит прежним курсом. Резко переложить руль
-       * на полном ходу — сорваться в скольжение; сбросить газ — поймать его,
-       * потому что на малом ходу колёса держат почти намертво.
-       */
-      _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));   // вдоль корпуса
-      _side.set(_dir.z, 0, -_dir.x);                          // и поперёк него
-
-      const forward = this.velocity.dot(_dir);
-      const lateral = this.velocity.dot(_side);
-
-      // Сколько машина идёт вообще — всегда полный ход, как шаг героя: длина
-      // отклонения стика на скорость не влияет, только направление. Это общий
-      // бюджет, и делят его тяга и занос: сколько ушло вбок, столько не
-      // достанется движению вперёд.
-      const pull = CFG.maxSpeed * (1 - this.slowed);
-
-      // Сцепление поперёк: на месте держит, на полном ходу отпускает.
-      const loose = Math.min(1, speed / CFG.maxSpeed);
-      const grip = CFG.grip * (1 - loose * (1 - CFG.gripAtSpeed));
-      const slip = lateral * Math.max(0, 1 - grip * dt);
-
-      // Остаток бюджета — вперёд. Чем сильнее несёт боком, тем меньше остаётся:
-      // на глубоком заносе машина почти не едет туда, куда смотрит.
-      const ahead = Math.sqrt(Math.max(0, pull * pull - slip * slip));
-
-      this.velocity.copy(_dir).multiplyScalar(ahead).addScaledVector(_side, slip);
-    } else {
-      // Стик отпущен или клавиши отжаты — машина встаёт, но не в тот же кадр:
-      // короткий накат, около трети секунды и пары метров. Мгновенная остановка
-      // читалась как удар о стену, а у машины должен остаться вес.
-      const brake = CFG.stopBrake * dt;
-      const speed = this.velocity.length();
-      if (speed <= brake) this.velocity.set(0, 0, 0);
-      else this.velocity.multiplyScalar((speed - brake) / speed);
-    }
+  _drive(dt, move, cameraYaw = 0, fromKeys = false) {
+    if (fromKeys) this._driveKeys(dt, move);
+    else this._driveStick(dt, move, cameraYaw);
 
     this.root.rotation.y = this._facing;
+  }
+
+  /**
+   * Стик: куда отклонён — туда машина и едет, носом вперёд.
+   *
+   * Стик задаёт направление в осях экрана — те же оси, в которых ходит герой,
+   * поэтому и переводится он так же. Машина разворачивает нос к этому
+   * направлению со своей скоростью и едет туда, куда уже смотрит.
+   */
+  _driveStick(dt, move, cameraYaw) {
+    const push = Math.min(1, Math.hypot(move?.x ?? 0, move?.y ?? 0));
+    if (push <= 0.001) {
+      this._coast(dt);
+      return;
+    }
+
+    // «вперёд» — от камеры от нас, «вправо» — поперёк ему: как у героя.
+    const fx = Math.sin(cameraYaw), fz = Math.cos(cameraYaw);
+    const wx = fx * move.y - fz * move.x;
+    const wz = fz * move.y + fx * move.x;
+
+    const want = Math.atan2(wx, wz);
+
+    // Доворот носа по кратчайшей дуге. Стоящая машина вертится лениво,
+    // разогнанная — охотно: руль работает от скорости, а не сам по себе.
+    let turn = want - this.yaw;
+    while (turn > Math.PI) turn -= 2 * Math.PI;
+    while (turn < -Math.PI) turn += 2 * Math.PI;
+
+    const speed = this.velocity.length();
+
+    // Стик заведён назад, а машина уже почти встала — значит упёрлась, и
+    // разворачиваться ей негде. Тогда она пятится, не доворачивая: так
+    // выезжают из угла и в жизни.
+    if (Math.abs(turn) > THREE.MathUtils.degToRad(CFG.reverseAngle) && speed < CFG.reverseBelow) {
+      _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+      this.velocity.copy(_dir).multiplyScalar(-CFG.maxReverse);
+      return;
+    }
+
+    const agility = CFG.turnStill + (1 - CFG.turnStill) * Math.min(1, speed / CFG.turnFullAt);
+    const step = CFG.turnSpeed * agility * dt;
+    this.yaw += THREE.MathUtils.clamp(turn, -step, step);
+
+    this._push(dt, CFG.maxSpeed * (1 - this.slowed));
+  }
+
+  /**
+   * Клавиши: как в машине, а не как в меню.
+   *
+   * W тянет вперёд — туда, куда смотрит капот, а не вверх по экрану. S — назад.
+   * A и D — руль влево и вправо относительно самой машины. На стике так нельзя:
+   * там палец показывает, куда ехать, а не как крутить руль. На клавишах же
+   * «куда ехать по экрану» превращало бы поворот трассы в перебор четырёх
+   * кнопок, а не в руление.
+   *
+   * Руль, как и у настоящей машины, работает только на ходу — на месте колёса
+   * корпус не вертят, — а задним ходом ведёт наоборот.
+   */
+  _driveKeys(dt, move) {
+    const throttle = Math.sign(move?.y ?? 0);
+    const steer = Math.sign(move?.x ?? 0);
+
+    _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    const along = this.velocity.dot(_dir);
+
+    if (steer) {
+      const grip = Math.min(1, Math.abs(along) / CFG.turnFullAt);
+      const backwards = along < -0.1 ? -1 : 1;
+      // Направо — это уменьшение курса: курс отсчитывается от +Z против часовой.
+      this.yaw -= steer * backwards * CFG.turnSpeed * grip * dt;
+    }
+
+    if (throttle > 0) this._push(dt, CFG.maxSpeed * (1 - this.slowed));
+    else if (throttle < 0) this._push(dt, -CFG.maxReverse);
+    else this._coast(dt);
+  }
+
+  /**
+   * Ход раскладывается на две части: вдоль корпуса и поперёк него.
+   *
+   * Вдоль — это тяга, постоянная, как шаг героя. Поперёк — это занос. Колёса
+   * гасят его сами, но не мгновенно, и тем хуже, чем быстрее машина идёт. Пока
+   * он не погас, её несёт боком. Общий бюджет хода один: сколько ушло вбок,
+   * столько не достанется движению вдоль.
+   *
+   * @param {number} pull — ход вдоль корпуса; минус — задним ходом
+   */
+  _push(dt, pull) {
+    _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));   // вдоль корпуса
+    _side.set(_dir.z, 0, -_dir.x);                          // и поперёк него
+
+    const speed = this.velocity.length();
+    const lateral = this.velocity.dot(_side);
+
+    const loose = Math.min(1, speed / CFG.maxSpeed);
+    const grip = CFG.grip * (1 - loose * (1 - CFG.gripAtSpeed));
+    const slip = lateral * Math.max(0, 1 - grip * dt);
+
+    const ahead = Math.sign(pull) * Math.sqrt(Math.max(0, pull * pull - slip * slip));
+    this.velocity.copy(_dir).multiplyScalar(ahead).addScaledVector(_side, slip);
+  }
+
+  /**
+   * Газ отпущен — машина встаёт, но не в тот же кадр: короткий накат, около
+   * трети секунды и пары метров. Мгновенная остановка читалась как удар о стену,
+   * а у машины должен остаться вес.
+   */
+  _coast(dt) {
+    const brake = CFG.stopBrake * dt;
+    const speed = this.velocity.length();
+    if (speed <= brake) this.velocity.set(0, 0, 0);
+    else this.velocity.multiplyScalar((speed - brake) / speed);
   }
 
   /**
