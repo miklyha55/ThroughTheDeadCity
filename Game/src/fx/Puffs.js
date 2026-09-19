@@ -1,8 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 
-const CFG = CONFIG.puffs;
-
 const _matrix = new THREE.Matrix4();
 const _position = new THREE.Vector3();
 const _quaternion = new THREE.Quaternion();
@@ -16,7 +14,15 @@ const _scale = new THREE.Vector3();
  * именно след удара подошвы о сухую землю: вверх, в стороны и вниз.
  */
 export class Puffs {
-  constructor(scene) {
+  /**
+   * @param {THREE.Scene} scene
+   * @param {object} [cfg] — свои настройки. Пыль из-под ног берёт общие, а
+   *   выхлоп машины — свои: тот же механизм, только дым серый, живёт дольше и
+   *   поднимается, а не оседает
+   */
+  constructor(scene, cfg = CONFIG.puffs) {
+    this.cfg = cfg;
+    const CFG = cfg;
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshStandardMaterial({
       color: CFG.color,
@@ -50,6 +56,7 @@ export class Puffs {
   }
 
   _hide() {
+    const CFG = this.cfg;
     _scale.setScalar(0);
     _matrix.compose(_position.set(0, -1000, 0), _quaternion.identity(), _scale);
     for (let i = 0; i < CFG.pool; i++) this.mesh.setMatrixAt(i, _matrix);
@@ -59,8 +66,11 @@ export class Puffs {
   /**
    * Взбить пыль в точке.
    * @param {THREE.Vector3} at — где ступила нога
+   * @param {THREE.Vector3} [push] — куда её несёт вдобавок: выхлоп бьёт из трубы
+   *   назад, а не вверх
    */
-  burst(at) {
+  burst(at, push = null) {
+    const CFG = this.cfg;
     const count = CFG.minGrains + Math.floor(Math.random() * (CFG.maxGrains - CFG.minGrains + 1));
 
     for (let i = 0; i < count; i++) {
@@ -79,6 +89,7 @@ export class Puffs {
         CFG.lift * (0.5 + Math.random()),
         (Math.random() - 0.5) * CFG.scatter
       );
+      if (push) grain.velocity.add(push);
 
       grain.size = CFG.minSize + Math.random() * (CFG.maxSize - CFG.minSize);
       grain.life = CFG.life * (0.7 + Math.random() * 0.6);
@@ -87,6 +98,7 @@ export class Puffs {
   }
 
   update(dt) {
+    const CFG = this.cfg;
     let alive = false;
 
     for (let i = 0; i < this.grains.length; i++) {

@@ -446,7 +446,6 @@ level = {
     'name': 'Шоссе на перекрёсток',
     'number': 3,
     'next': 'crossroads',
-    'music': None,           # дорожки у шоссе нет: под мотор играет один ветер
     'size': [W, D],
     'ground': {'color': '#3f3a34', 'y': -0.06},
     'spawn': {'position': [round(START[0], 2), round(START[1], 2)], 'rotation': round(START[2], 1)},

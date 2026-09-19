@@ -3,7 +3,6 @@
   "name": "Шоссе на перекрёсток",
   "number": 3,
   "next": "crossroads",
-  "music": null,
   "size": [
     276,
     180
@@ -2080,8 +2079,8 @@
     {
       "prop": "Car_SuvHardtop",
       "at": [
-        -17.6,
-        12
+        -17.37,
+        12.18
       ],
       "rotation": -165.2
     },
@@ -2112,10 +2111,10 @@
     {
       "prop": "Car_SedanWreck",
       "at": [
-        60,
-        -33.6
+        61.16,
+        -32.38
       ],
-      "rotation": 96.5
+      "rotation": 54.1
     },
     {
       "prop": "Heavy_SemiTruck",

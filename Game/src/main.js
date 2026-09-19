@@ -16,6 +16,7 @@ import { EndMessage } from './core/EndMessage.js';
 import { tally } from './core/tally.js';
 import { AmmoPickup } from './entities/AmmoPickup.js';
 import { Car } from './entities/Car.js';
+import { CarSound } from './core/CarSound.js';
 import { Pointer } from './fx/Pointer.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
@@ -302,6 +303,7 @@ const dayNight = new DayNight({ scene: engine.scene, ...world });
 const visibility = new Visibility(engine.camera);
 
 const sfx = new Sfx(CONFIG.sounds.files);
+const carSound = new CarSound(); // мотор машины: своя дорожка по кругу
 
 const loading = Promise.all([
   loadGLTF(CONFIG.player.modelUrl),
@@ -311,6 +313,7 @@ const loading = Promise.all([
   // Звуки разбираются в память здесь же: на телефоне отложенная загрузка
   // означала тишину первые полминуты боя.
   sfx.load(),
+  carSound.load(),
 ]);
 
 // Дальше — только после нажатия. Загрузка к этому моменту идёт уже давно, так
@@ -328,6 +331,7 @@ const healthBars = new HealthBars(engine.scene);
 const explosions = new Explosions(engine.scene);
 const shards = new Shards(engine.scene); // обломки взорванного: летят, падают, пропадают
 const puffs = new Puffs(engine.scene);
+const exhaust = new Puffs(engine.scene, CONFIG.exhaust); // дым из выхлопной трубы машины
 const ammo = new Ammo(CONFIG.player.magazine); // патроны вверху по центру
 
 // Счётчик кадров: в разработке всегда, в собранной игре — по `?fps` в адресе.
@@ -365,7 +369,56 @@ const gunPickup = new GunPickup(engine.scene);
  */
 const car = new Car(engine.scene);
 
+/**
+ * Звук машины.
+ *
+ * Мотор гудит, пока в ней сидят и игра идёт: на паузе, под картой и в свёрнутой
+ * вкладке он стоит, как стоит и сама машина. Проверяется отдельным обновлением,
+ * которое идёт всегда, — основной кадр на паузе обрывается раньше, и мотор так
+ * и продолжал бы гудеть над стоящим миром.
+ */
+let carAccelerating = false; // набирала ли машина ход в прошлом кадре
+let carPushing = false;      // держали ли газ в прошлом кадре: по этому ловим отпускание
+let carGasWait = 0;          // с до следующего рыка: подряд он не повторяется
+let carSmoke = 0;            // накопленные доли клуба выхлопа: выпускаем целыми
+
+/**
+ * Выпустить клубы из выхлопной трубы.
+ *
+ * Труба — сзади и чуть сбоку, как у настоящей машины; её место задано в осях
+ * кузова и поворачивается вместе с ним. Дым выдувается назад от машины, а дальше
+ * поднимается и расплывается сам.
+ *
+ * @param {number} count — сколько клубов
+ */
+function smoke(count) {
+  if (count <= 0 || !car.root) return;
+
+  const [back, up, side] = CONFIG.car.exhaustAt;
+  const fx = Math.sin(car.yaw), fz = Math.cos(car.yaw); // вперёд по кузову
+  const rx = fz, rz = -fx;                               // и вбок
+
+  const at = new THREE.Vector3(
+    car.position.x + fx * back + rx * side,
+    up,
+    car.position.z + fz * back + rz * side,
+  );
+  const blow = new THREE.Vector3(fx, 0, fz).multiplyScalar(-CONFIG.car.exhaustBlow);
+
+  for (let i = 0; i < count; i++) exhaust.burst(at, blow);
+}
+engine.add({
+  update(dt) {
+    // `running()` спрашиваем, только когда в машине сидят: это обновление
+    // заводится раньше, чем объявлено всё, о чём он спрашивает.
+    carSound.set(car.driving && running(), dt, car.driving ? car.speed / CONFIG.car.maxSpeed : 0);
+  },
+});
+
 car.onBoard = () => {
+  carPushing = false;
+  carAccelerating = false;
+  carGasWait = 0;
   // Герой уезжает внутри машины: модель снимается с глаз, стрельба отбирается
   // вместе с ней. Прятать, а не выбрасывать: обратно он появится, если машину
   // разобьют.
@@ -788,7 +841,40 @@ engine.add({
     if (car.driving) {
       // За рулём ввод уходит машине, а герой едет внутри: его не двигают и не
       // обновляют вовсе — кроме миксера, чтобы поза не застыла на полушаге.
+      const speedBefore = car.speed;
       car.update(dt, input.move, camera.moveYaw, here, input.fromKeys);
+
+      /**
+       * Разгон — по приросту скорости, а не по нажатию: машина могла и так идти
+       * на полном ходу. Когда она и правда набирает ход, она рычит и труба
+       * выплёвывает клуб дыма — тем сильнее, чем больше ей предстоит набрать.
+       */
+      const CAR = CONFIG.car;
+      const accelerating = dt > 0 && (car.speed - speedBefore) / dt > CAR.gasFrom;
+      carGasWait = Math.max(0, carGasWait - dt);
+      if (accelerating && !carAccelerating && carGasWait <= 0) {
+        const headroom = Math.max(CAR.gasMinShare, 1 - speedBefore / CAR.maxSpeed);
+        sfx.play('carGas', CAR.gasVolume * headroom, 1, 1, { echo: false });
+        carGasWait = CAR.gasEvery;
+        smoke(Math.round(CAR.exhaustKick * headroom)); // и труба выплёвывает клуб
+      }
+      carAccelerating = accelerating;
+
+      // Остановка — когда газ бросили, а машина шла ходко.
+      const pushing = input.move.lengthSq() > 0;
+      if (!pushing && carPushing && speedBefore > CAR.stopFrom) {
+        sfx.play('carStop', CAR.stopVolume, 1, 1, { echo: false });
+      }
+      carPushing = pushing;
+
+      // Выхлоп струйкой: на холостых тонко, чем дальше отведён газ — тем гуще.
+      const push = Math.min(1, input.move.length());
+      carSmoke += (CAR.exhaustIdle + (CAR.exhaustFull - CAR.exhaustIdle) * push) * dt;
+      if (carSmoke >= 1) {
+        smoke(Math.floor(carSmoke));
+        carSmoke -= Math.floor(carSmoke);
+      }
+
       player.root.position.copy(car.position); // тело едет внутри кузова
     } else {
       player.update(dt, input.move, camera.moveYaw, here);
@@ -822,6 +908,7 @@ engine.add({
     ammoPickup.update(dt, player); // и коробка патронов — точно так же
     pointer.update(dt); // стрелка держит цель: поворот носителя — героя или машины — вычитает сама
     puffs.update(dt);
+    exhaust.update(dt);
     camera.update(dt);
     // После камеры: полоски строятся по её осям. Машина в них же — пока в ней едут.
     healthBars.update(engine.camera, here, player, car.driving ? [car] : []);
@@ -1559,6 +1646,7 @@ player.onMagazine = (size) => ammo.resize(size); // коробка патрон�
     gunPickup, ammoPickup, car, pointer, controlsHint, skipHint, deathScreen, levelMap,
     endMessage, // ответная передача: её удобно щупать из консоли
     yandex, progress, // площадка и сохранения: их удобно щупать из консоли
+    sfx, carSound, // звуки: какие играют и насколько громко — для отладки громкостей
     /** Переключение локаций из консоли: __game.go('gas_station') */
     go: (id) => locations.load(id),
   };
