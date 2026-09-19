@@ -21,13 +21,13 @@
   },
   "car": {
     "at": [
-      -79,
+      -85,
       36
     ],
     "rotation": 90
   },
   "exitAt": [
-    102.06,
+    104.58,
     -36,
     7,
     7
@@ -35,19 +35,19 @@
   "guide": [
     {
       "at": [
-        -20,
-        36,
-        14,
-        14
+        -22.39,
+        33.94,
+        17.4,
+        17.4
       ],
       "halo": false
     },
     {
       "at": [
-        -18.57,
-        -34.54,
-        14,
-        14
+        -17.6,
+        -33.54,
+        16.23,
+        16.23
       ],
       "halo": false
     }
@@ -1803,45 +1803,6 @@
       "prop": "Fence_ChainLink",
       "at": [
         -104,
-        32
-      ],
-      "rotation": 90,
-      "scale": [
-        0.98,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -104,
-        36
-      ],
-      "rotation": 90,
-      "scale": [
-        0.98,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -104,
-        40
-      ],
-      "rotation": 90,
-      "scale": [
-        0.98,
-        1,
-        1
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -104,
         44
       ],
       "rotation": 90,
@@ -2079,10 +2040,10 @@
     {
       "prop": "Bush_Hedge",
       "at": [
-        -36.42,
-        -7.2
+        -37.94,
+        -9.74
       ],
-      "rotation": 23.6
+      "rotation": 82.3
     },
     {
       "prop": "Grass_Clump",
@@ -2383,6 +2344,14 @@
     {
       "prop": "Prop_Barrel",
       "at": [
+        -58.68,
+        39.61
+      ],
+      "rotation": -131
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
         -47.32,
         34.71
       ],
@@ -2579,6 +2548,29 @@
         -28.57
       ],
       "rotation": -106.2
+    },
+    {
+      "prop": "Bld_Warehouse",
+      "at": [
+        -25.47,
+        -57.3
+      ]
+    },
+    {
+      "prop": "Bld_Motel",
+      "at": [
+        7.7,
+        43.85
+      ],
+      "rotation": -90
+    },
+    {
+      "prop": "Bld_Ranch",
+      "at": [
+        -11.63,
+        59.2
+      ],
+      "rotation": 180
     }
   ],
   "zombies": [
