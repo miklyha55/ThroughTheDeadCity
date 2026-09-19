@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { Figure } from './Figure.js';
+import { HitFlash } from '../fx/HitFlash.js';
 
 const CFG = CONFIG.zombies;
 const BLADES = CONFIG.blades;
@@ -92,6 +93,7 @@ export class Zombie extends Figure {
     this.enraged = false;  // поднят всей толпой: знает, где герой, где бы тот ни был
     this.sfx = null;       // голос; ставится снаружи
     this.heardAt = Infinity; // как далеко от персонажа он сейчас — для громкости
+    this.hitFlash = new HitFlash(this.root); // красная вспышка и подскок при уроне
     this.stepPhase = 1;    // где был клип бега в прошлом кадре: по нему ловится шаг
     this.growlIn = Math.random() * CFG.growlEveryMax; // через сколько он заурчит
     this.chaseMoving = true;
@@ -147,6 +149,8 @@ export class Zombie extends Figure {
    */
   crush(from = null, gore = 1, cause = 'impact') {
     if (this.state === STATE.DEAD) return false;
+
+    this.hitFlash.trigger(); // мигает сразу — от удара, тарана и взрыва одинаково
 
     this.blood?.splash(
       _hit.copy(this.root.position).setY(this.root.position.y + CONFIG.player.hitHeight),
@@ -256,6 +260,7 @@ export class Zombie extends Figure {
   takeDamage(amount = 1, from = null) {
     if (this.state === STATE.DEAD) return false;
 
+    this.hitFlash.trigger();
     this.health -= amount;
     if (this.health <= 0) {
       this._enter(STATE.DEAD);
@@ -317,6 +322,8 @@ export class Zombie extends Figure {
    * @param {Zombie[]} crowd — соседи, чтобы не слипаться в одну точку
    */
   update(dt, player, location, crowd) {
+    this.hitFlash.update(dt); // и убитому: последний удар тоже вспыхивает
+
     if (this.state === STATE.DEAD) {
       this._rot(dt);
       this.mixer.update(dt);

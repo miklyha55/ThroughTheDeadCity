@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { HitFlash } from '../fx/HitFlash.js';
 
 const CFG = CONFIG.car;
 
@@ -118,9 +119,11 @@ export class Car {
     this.root = model;
     this.object = model;
     this.scene.add(model);
+    this.hitFlash = new HitFlash(model); // красная вспышка и подскок при ударе зомби
 
     this.driving = false;
     this.wrecked = false;
+    this.wreckIn = 0;
     this.health = CFG.health;
     this.velocity.set(0, 0, 0);
     this.slowed = 0;
@@ -128,11 +131,14 @@ export class Car {
 
   /** Снять со сцены: уровень сменился. */
   clear() {
+    this.hitFlash?.stop();
+    this.hitFlash = null;
     this.root?.removeFromParent();
     this.root = null;
     this.object = null;
     this.driving = false;
     this.wrecked = false;
+    this.wreckIn = 0;
     this.velocity.set(0, 0, 0);
     this.slowed = 0;
     this.health = CFG.health;
@@ -166,6 +172,7 @@ export class Car {
   takeDamage(amount = 1) {
     if (this.wrecked) return;
 
+    this.hitFlash?.trigger();
     this.health = Math.max(0, this.health - amount);
     this.onHealth?.(this.health, CFG.health);
 
@@ -184,6 +191,15 @@ export class Car {
    *   относительно самой машины, см. `_driveKeys`
    */
   update(dt, move, cameraYaw, location, fromKeys = false) {
+    this.hitFlash?.update(dt);
+
+    // Разбита, но ещё мигает: стоит на месте и ждёт своего взрыва.
+    if (this.wrecked && this.wreckIn > 0) {
+      this.wreckIn -= dt;
+      if (this.wreckIn <= 0) this._blowUp();
+      return;
+    }
+
     if (!this.root || !this.driving || this.wrecked) return;
 
     // Притормаживание от сбитых сходит само: удар гасит ход на мгновение, а
@@ -450,10 +466,27 @@ export class Car {
   }
 
   /** Жизни кончились: машина встала намертво. */
+  /**
+   * Жизни кончились: машина встала — и взрывается не сразу.
+   *
+   * Сначала она отмигивает красным, как мигает всякий, кого ударили, и только
+   * потом рвётся. Взорвись она в тот же кадр — кузов пропадал бы раньше, чем
+   * вспышка успевала мелькнуть, и последний удар выглядел бы как все прочие.
+   *
+   * Всё это время герой ещё внутри, а для зомби машина уже мертва — бить её
+   * больше незачем.
+   */
   _wreck() {
     this.wrecked = true;
-    this.driving = false;
     this.velocity.set(0, 0, 0);
+    this.hitFlash?.trigger();
+    this.wreckIn = CONFIG.hitFlash.duration;
+  }
+
+  /** Отмигала — взрыв, и герой выходит. */
+  _blowUp() {
+    this.wreckIn = 0;
+    this.driving = false;
     this.onWreck?.(this.root?.position.clone() ?? null);
   }
 }

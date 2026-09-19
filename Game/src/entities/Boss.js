@@ -157,6 +157,7 @@ export class Boss extends Zombie {
   takeDamage(amount = 1, from = null) {
     if (!this.alive) return false;
 
+    this.hitFlash.trigger(); // вспышка и подскок — и от пули, и от взрыва
     this.health -= amount;
     if (this.health <= 0) {
       this._die();
@@ -206,6 +207,7 @@ export class Boss extends Zombie {
   update(dt, player, location, crowd) {
     this.clock += dt;
     this.heardAt = this._distanceTo(player);
+    this.hitFlash.update(dt); // красная вспышка и подскок после удара
 
     if (this.state === STATE.DEAD) {
       // Как и любой зомби: полежит, уйдёт под землю и снимется со сцены.
