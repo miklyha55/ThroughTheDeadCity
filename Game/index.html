@@ -28,6 +28,10 @@
          оттяжка, область выреза — светится серым поверх чёрной игры. */
       :root { color-scheme: dark; background: #07090a; }
 
+      /* Кнопки без браузерной обводки фокуса: синее кольцо при Tab ни к чему,
+         а отклик на нажатие у каждой кнопки свой — сжатие. */
+      button:focus { outline: none; }
+
       /* Высота в динамических единицах: на телефоне адресная строка то
          прячется, то возвращается, и `100%` отмеряется по одному её состоянию,
          оставляя полосу в другом. `100%` оставлен запасным для старых браузеров. */
@@ -282,7 +286,6 @@
         transition: background 160ms ease;
       }
       .mapbutton[hidden] { display: none; }
-      .mapbutton:hover { background: rgba(20, 24, 26, 0.85); }
       .mapbutton:active { transform: scale(0.94); }
 
       /* Три полоски — тот же список сверху вниз, что и на самой карте.
@@ -335,7 +338,6 @@
         -webkit-tap-highlight-color: transparent;
         transition: background 160ms ease;
       }
-      .levelmap__close:hover { background: rgba(232, 208, 143, 0.12); }
 
       .levelmap__list {
         display: flex; flex-direction: column; gap: 10px;
@@ -515,7 +517,6 @@
         -webkit-tap-highlight-color: transparent;
         transition: background 160ms ease;
       }
-      .death__again:hover { background: rgba(232, 208, 143, 0.14); }
       .death__again:active { transform: scale(0.96); }
 
       /* Значок «играть»: квадрат с треугольником внутри. Цвет берёт у кнопки,
@@ -543,10 +544,6 @@
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
         transition: background 160ms ease, color 160ms ease;
-      }
-      .death__start:hover {
-        background: rgba(232, 208, 143, 0.12);
-        color: rgba(232, 208, 143, 0.85);
       }
       .death__start:active { transform: scale(0.96); }
 
@@ -614,7 +611,6 @@
         border: 1px solid rgba(232, 208, 143, 0.5);
         background: rgba(232, 208, 143, 0.06);
       }
-      .confirm__no:hover { background: rgba(232, 208, 143, 0.14); }
       .confirm__no:active, .confirm__yes:active { transform: scale(0.97); }
 
       /* Согласие красным и без заливки: после него ничего не вернуть, и звать
@@ -624,7 +620,6 @@
         border: 1px solid rgba(216, 106, 92, 0.35);
         background: transparent;
       }
-      .confirm__yes:hover { background: rgba(216, 106, 92, 0.12); }
 
       @media (prefers-reduced-motion: reduce) {
       }
@@ -839,7 +834,6 @@
         -webkit-tap-highlight-color: transparent;
         transition: background 160ms ease;
       }
-      .gate__play:hover { background: rgba(232, 208, 143, 0.14); }
       .gate__play:active { transform: scale(0.96); }
 
       .gate__action {
@@ -908,7 +902,7 @@
         top: 20%;
         /* Высота — сколько влезает между лого и репликой: на телефоне лёжа
            экран низкий, и лого в полный рост ушло бы за край. */
-        height: min(105px, calc(50vh - 155px)); width: auto;
+        height: min(89px, calc(50vh - 170px)); width: auto;
         max-width: 62vw;
         pointer-events: none; user-select: none;
       }
@@ -1085,7 +1079,6 @@
         border-color: rgba(232, 208, 143, 0.28);
         background: transparent;
       }
-      .ending__again:hover, .ending__rate:hover { background: rgba(232, 208, 143, 0.16); }
       .ending__again:active, .ending__rate:active { transform: scale(0.96); }
       .ending__rate[hidden] { display: none; }
 

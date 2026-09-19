@@ -1203,7 +1203,18 @@ export class Location {
     const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), flat(CFG.color));
     disc.rotation.x = -Math.PI / 2;
 
-    const ring = new THREE.Mesh(new THREE.RingGeometry(1 - CFG.ringWidth, 1, 48), flat(CFG.ringColor));
+    /**
+     * Кольцо-обводка одной толщины на всех метках, какой бы ни был их размер.
+     *
+     * `RingGeometry` живёт внутри масштабируемой группы, поэтому его толщина
+     * умножается на масштаб метки. Внутренний радиус строится с поправкой
+     * обратно: во сколько раз растянется метка, во столько же раз тоньше
+     * закладываем кольцо — в мире оно всегда `ringWidth`.
+     */
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(1 - CFG.ringWidth / alongX, 1, 48),
+      flat(CFG.ringColor),
+    );
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.01; // на волос выше заливки, чтобы не спорили за глубину
 
