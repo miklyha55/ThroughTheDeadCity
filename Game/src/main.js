@@ -47,6 +47,7 @@ import { Sfx } from './core/Sfx.js';
 import { GunEffects } from './fx/GunEffects.js';
 import { Blood } from './fx/Blood.js';
 import { Puffs } from './fx/Puffs.js';
+import { Dust } from './fx/Dust.js';
 import { HealthBars } from './fx/HealthBars.js';
 import { Explosions } from './fx/Explosions.js';
 import { Shards } from './fx/Shards.js';
@@ -348,6 +349,8 @@ const healthBars = new HealthBars(engine.scene);
 const explosions = new Explosions(engine.scene);
 const shards = new Shards(engine.scene); // обломки взорванного: летят, падают, пропадают
 const puffs = new Puffs(engine.scene);
+// Взвесь в воздухе: часть мира, а не слой поверх кадра — камера идёт сквозь неё.
+const dust = new Dust(engine.scene);
 const exhaust = new Puffs(engine.scene, CONFIG.exhaust); // дым из выхлопной трубы машины
 const ammo = new Ammo(CONFIG.player.magazine); // патроны вверху по центру
 
@@ -1001,6 +1004,9 @@ engine.add({
     puffs.update(dt);
     exhaust.update(dt);
     camera.update(dt);
+    // После камеры: куб пыли кочует за ней, и считать его надо по её новому месту,
+    // а не по прошлому кадру — иначе на быстром ходу взвесь отстаёт.
+    dust.update(dt, engine.camera, engine.renderer, camera.focus);
     // После камеры: полоски строятся по её осям. Машина в них же — пока в ней едут.
     healthBars.update(engine.camera, here, player, car.driving ? [car] : []);
     visibility.update(here); // ушедшее за край экрана не рисуем вовсе
