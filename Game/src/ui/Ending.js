@@ -82,11 +82,7 @@ export class Ending {
     this.boardList = document.createElement('ul');
     this.boardList.className = 'ending__board-list';
 
-    this.boardEmpty = document.createElement('p');
-    this.boardEmpty.className = 'ending__empty';
-    this.boardEmpty.textContent = CFG.boardEmpty;
-
-    this.board.append(this.boardTitle, this.boardHead, this.boardList, this.boardEmpty);
+    this.board.append(this.boardTitle, this.boardHead, this.boardList);
 
     const buttons = document.createElement('div');
     buttons.className = 'ending__buttons';
@@ -123,7 +119,6 @@ export class Ending {
 
     this.rate.addEventListener('click', (event) => {
       event.preventDefault();
-      this.rate.hidden = true; // спрашивают один раз
       this.onRate?.();
     });
 
@@ -150,22 +145,18 @@ export class Ending {
   /**
    * Показать таблицу рекордов.
    *
-   * Зовётся, когда площадка ответила. Пустота приходит из двух разных причин:
-   * лидерборда ещё нет или в нём никого нет — в обоих случаях показываем
-   * заглушку, чтобы игрок знал, что таблица здесь будет.
+   * Зовётся, когда площадка ответила. Пустой ответ — лидерборда нет или в нём
+   * никого нет — означает финал без таблицы: итог пути и так стоит на месте,
+   * и заглушка под ним только отвлекала бы.
    *
    * @param {object|null} board — ответ `getEntries` площадки
    */
   showBoard(board) {
     this.board.hidden = true;
-    this.boardEmpty.hidden = true;
     this.boardList.textContent = '';
 
     const entries = board?.entries;
-    if (!entries?.length) {
-      if (board) this.boardEmpty.hidden = false;
-      else return; // площадка не ответила — финал без таблицы
-    }
+    if (!entries?.length) return; // площадка не ответила или таблица пуста
 
     const userRank = board.userRank ?? -1;
     for (const entry of entries) {
@@ -243,13 +234,24 @@ export class Ending {
     this.frame.style.backgroundImage = `url(${CFG.image})`;
   }
 
-  /** Убрать финал: нужно только в панели разработчика, стрелкой обратно. */
+  /** Убрать финал: по кнопке «заново» или из панели разработчика. */
   hide() {
     if (!this.shown) return;
 
     this.shown = false;
     this.board.hidden = true; // со старой таблицей повторный показ не начинают
+
+    // Сперва «уходит», потом «не показан»: наезд на картинке держится на обоих
+    // классах и не обрывается, пока экран тает. Оборвись он — кадр прыгал бы к
+    // исходному масштабу посреди растворения, и уход выглядел бы как дёрганье.
+    this.root.classList.add('ending--leaving');
     this.root.classList.remove('ending--on');
+
+    clearTimeout(this._leave);
+    this._leave = setTimeout(
+      () => this.root.classList.remove('ending--leaving'),
+      900, // столько же, сколько длится само растворение финала
+    );
   }
 }
 

@@ -58,8 +58,13 @@ export class DeathScreen {
     this.fromStart.type = 'button';
     this.fromStart.textContent = CFG.fromStart;
 
+    // Подсказка «Enter — ещё раз»: только за столом, где клавиша и есть.
+    this.hint = document.createElement('p');
+    this.hint.className = 'death__hint';
+    this.hint.textContent = CFG.enterHint;
+
     buttons.append(this.again, this.fromStart);
-    this.card.append(this.title, this.note, buttons);
+    this.card.append(this.title, this.note, buttons, this.hint);
     this.root.appendChild(this.card);
     container.appendChild(this.root);
 
@@ -207,6 +212,9 @@ export class DeathScreen {
     this.again.disabled = false;
     clearTimeout(this._fade);
     this.root.hidden = false;
+
+    // На телефоне клавиши нет — подсказка про неё там только мешает.
+    this.hint.hidden = !matchMedia('(hover: hover) and (pointer: fine)').matches;
 
     // Кадр на то, чтобы браузер заметил появление: без него переходу
     // прозрачности не с чего начинать, и экран возникнет рывком.

@@ -489,6 +489,17 @@
         display: flex; flex-direction: column; align-items: center; gap: 10px;
       }
 
+      /* Сноска про Enter под кнопками: тем же языком, что и на паузе. */
+      .death__hint, .ending__hint {
+        margin: 0;
+        font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.12em; text-transform: uppercase;
+        color: rgba(232, 208, 143, 0.55);
+      }
+      /* На экране смерти сноска отступает от кнопок заметнее: ей не место
+         вплотную к «С начала», она поясняет кнопку над ней. */
+      .death__hint { margin-top: 8px; }
+
       /* Кнопка та же, что и на воротах: одна игра — один язык кнопок.
          Значок и надпись в строку, значок первым. */
       .death__again {
@@ -517,19 +528,27 @@
         margin-top: 1px;
       }
 
-      /* «С начала» намеренно тише: попасть по ней случайно, метя в соседнюю,
-         значит потерять всё пройденное. Ни рамки, ни заливки — только текст. */
+      /* «С начала» той же формы, что и «Ещё раз», но намеренно блеклая: попасть
+         по ней случайно, метя в соседнюю, значит потерять всё пройденное.
+         Рамка слабее, заливки нет, текст приглушён. */
       .death__start {
-        font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.12em; text-transform: uppercase;
-        color: rgba(232, 238, 244, 0.42);
-        padding: 10px 18px;
-        border: 0; background: transparent;
+        display: flex; align-items: center; gap: 11px;
+        font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        color: rgba(232, 208, 143, 0.55);
+        padding: 14px 34px;
+        border-radius: 99px;
+        border: 1px solid rgba(232, 208, 143, 0.28);
+        background: transparent;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
-        transition: color 160ms ease;
+        transition: background 160ms ease, color 160ms ease;
       }
-      .death__start:hover { color: rgba(232, 238, 244, 0.75); }
+      .death__start:hover {
+        background: rgba(232, 208, 143, 0.12);
+        color: rgba(232, 208, 143, 0.85);
+      }
+      .death__start:active { transform: scale(0.96); }
 
 
       @media (prefers-reduced-motion: reduce) {
@@ -880,14 +899,15 @@
         opacity: 0;
         transition: opacity 320ms ease;
       }
-      /* Лого студии — над репликой, тоже вынуто из потока: реплика под ним
-         бывает в одну строку и в две, и лого не должно от этого прыгать. */
+      /* Лого студии — на пятой части экрана от верха, вынуто из потока:
+         реплика под ним бывает в одну строку и в две, и лого не должно от
+         этого прыгать. */
       .boot__logo {
         position: absolute;
         left: 50%; transform: translateX(-50%);
-        bottom: calc(50% + 145px);
-        /* Высота — сколько влезает между репликой и верхним краем: на телефоне
-           лёжа экран низкий, и лого в полный рост ушло бы за край. */
+        top: 20%;
+        /* Высота — сколько влезает между лого и репликой: на телефоне лёжа
+           экран низкий, и лого в полный рост ушло бы за край. */
         height: min(105px, calc(50vh - 155px)); width: auto;
         max-width: 62vw;
         pointer-events: none; user-select: none;
@@ -1041,13 +1061,6 @@
       }
       .ending__time { color: #f0e4c4; }
       .ending__deaths { color: rgba(232, 208, 143, 0.65); min-width: 24px; text-align: right; }
-
-      .ending__empty {
-        margin: 0;
-        font: 400 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
-        color: rgba(232, 208, 143, 0.55); text-align: center;
-      }
-      .ending__empty[hidden] { display: none; }
 
       /* Скролл списка рекордов: тонкая золотая полоса, не спорящая с игрой. */
       .ending__board-list::-webkit-scrollbar { width: 6px; }

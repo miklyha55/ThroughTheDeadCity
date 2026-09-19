@@ -51,9 +51,15 @@ export class LevelResult {
     this.next.textContent = CFG.continueLabel;
     buttons.append(this.next);
 
+    // Подсказка «Enter — продолжить»: только за столом, где клавиша и есть.
+    this.hint = document.createElement('p');
+    this.hint.className = 'ending__hint';
+    this.hint.textContent = CFG.enterHint;
+    this.hint.hidden = !matchMedia('(hover: hover) and (pointer: fine)').matches;
+
     this.card = document.createElement('div');
     this.card.className = 'ending__card';
-    this.card.append(this.caption, this.stats, buttons);
+    this.card.append(this.caption, this.stats, buttons, this.hint);
 
     this.root.append(this.frame, this.card);
 

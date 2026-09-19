@@ -17,7 +17,7 @@ const CFG = CONFIG.startMessage;
  * сообщение ждёт первого касания: раньше браузер звук всё равно не даст, и
  * играть оно начало бы в тишину.
  *
- * На телефоне речь пропускается следующим касанием, на клавиатуре — Escape.
+ * На телефоне речь пропускается касанием, на клавиатуре — Escape.
  *
  * Звучит один раз за сеанс. Смерть на первом уровне — дело обычное, и слушать
  * одну и ту же речь после каждой перезагрузки уровня было бы наказанием.
@@ -122,7 +122,7 @@ export class StartMessage {
   }
 
   /**
-   * Пропуск вторым касанием — для телефона, где клавиши Escape нет.
+   * Пропуск касанием — для телефона, где клавиши Escape нет.
    *
    * Мышь сюда не попадает: на десктопе речь и так пропускается клавишей, а
    * случайный щелчок по экрану обрывал бы её ни за что. Отличаем не по модели
@@ -174,6 +174,32 @@ export class StartMessage {
     this.audio.pause();
     this.audio.currentTime = 0;
     this._release();
+  }
+
+  /**
+   * Сыграть вступление снова: «С начала» начинает игру как в первый раз.
+   *
+   * Снимает и пометку «уже звучало», и все ожидания — и первого касания, и
+   * пропуска — чтобы следующий заход на вводный уровень голос поднял заново.
+   */
+  reset() {
+    this.audio.pause();
+    this.audio.currentTime = 0;
+    this.played = false;
+    this.state = 'idle';
+    this.text?.stop();
+
+    clearTimeout(this._timer);
+    this._timer = null;
+    clearTimeout(this._tapTimer);
+    this._tapTimer = null;
+    if (this._tap) removeEventListener('pointerdown', this._tap);
+    this._tap = null;
+
+    // Ожидание первого касания, если ворот не было, — тоже начисто.
+    for (const event of ['pointerdown', 'touchstart', 'keydown']) {
+      removeEventListener(event, this.start);
+    }
   }
 
   _release() {

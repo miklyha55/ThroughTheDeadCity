@@ -43,6 +43,7 @@ const EN = {
   'death.note': 'The city forgives no pauses',
   'death.again': 'Once more',
   'death.fromStart': 'From scratch',
+  'death.enterHint': 'Enter — again',
   'death.confirmTitle': 'Start over?',
   'death.confirmNote': 'Levels you have passed will be lost',
   'death.keep': 'Cancel',
@@ -55,7 +56,7 @@ const EN = {
   'controlsHint.tailTouch': 'touch the screen',
 
   'skipHint.keys': 'Esc — skip',
-  'skipHint.touch': 'double tap to skip',
+  'skipHint.touch': 'tap to skip',
 
   'pause.title': 'Paused',
   'pause.note': 'Shooting, vaulting and throwing he does himself',
@@ -83,7 +84,6 @@ const EN = {
   'ending.boardTitle': 'Records',
   'ending.boardTimeLabel': 'Time',
   'ending.boardDeathsLabel': 'Deaths',
-  'ending.boardEmpty': 'Nothing yet — be the first',
   'ending.boardHidden': 'User is hidden',
 
   'levelResult.doneLabel': 'cleared',
@@ -91,6 +91,7 @@ const EN = {
   'levelResult.deathsLabel': 'Deaths',
   'levelResult.timeLabel': 'On the road',
   'levelResult.continueLabel': 'Continue',
+  'levelResult.enterHint': 'Enter — continue',
 
   'endMessage.file': asset('assets/audio/end_message_eng.mp3'),
   'endMessage.lines': [
@@ -102,8 +103,10 @@ const EN = {
     "Walk to the gate, they're waiting for you. You don't have to go anywhere alone anymore.",
     'You made it.',
   ],
-  // Своя запись — свои паузы, замеренные по ней же.
-  'endMessage.times': [0.04, 3.66, 8.6, 14.64, 18.2, 23.12, 25.62],
+  // Своя запись — свои паузы, замеренные по ней же. Третья и пятая реплики
+  // поправлены по огибающей громкости: третья звучит на 7.13, а не 8.6,
+  // пятая начинается на 19.2, а не 18.2 (паузы 15.7 и 17.9 — внутри четвёртой).
+  'endMessage.times': [0.04, 3.66, 7.13, 14.64, 19.2, 23.12, 25.62],
 
   // Голос вступления и его субтитры: своя дорожка и свой текст.
   'startMessage.file': asset('assets/audio/start_message_eng.mp3'),

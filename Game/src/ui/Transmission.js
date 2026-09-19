@@ -116,9 +116,14 @@ export class Transmission {
 
     return this.cfg.lines.map((text, i) => {
       const from = starts[i];
-      const span = Math.max(0.1, (starts[i + 1] ?? end) - from);
-      // хвост реплики — пауза перед следующей: печатаем чуть быстрее, чем длится
-      return { text, from, to: from + span * this.cfg.typeShare };
+      // Длина печати: на фиксированной скорости, если она задана, — так текст
+      // не растягивается на длинные паузы между репликами и не отстаёт от
+      // голоса. Иначе хвост реплики — пауза перед следующей: печатаем чуть
+      // быстрее, чем длится.
+      const length = this.cfg.charPerSec
+        ? text.length / this.cfg.charPerSec
+        : Math.max(0.1, (starts[i + 1] ?? end) - from) * this.cfg.typeShare;
+      return { text, from, to: from + length };
     });
   }
 
