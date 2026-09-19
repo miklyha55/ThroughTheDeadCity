@@ -43,7 +43,7 @@ const EN = {
   'death.note': 'The city forgives no pauses',
   'death.again': 'Once more',
   'death.fromStart': 'From scratch',
-  'death.enterHint': 'Enter — again',
+  'death.enterHint': '↑ ↓ — choose · Enter — confirm',
   'death.confirmTitle': 'Start over?',
   'death.confirmNote': 'Levels you have passed will be lost',
   'death.keep': 'Cancel',

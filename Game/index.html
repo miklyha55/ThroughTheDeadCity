@@ -19,14 +19,94 @@
 
     <title>Through The Dead City</title>
     <style>
-      /* Чёрный в игре один и тот же — тот же, что у ворот, экрана загрузки и
-         тумана. Раньше страница была на тон светлее слоёв поверх неё, и там,
-         где слой не доходил до края (полоса под адресной строкой телефона,
-         оттяжка страницы), проступала светлая линия. */
-      /* Тёмная схема объявлена явно. Иначе подложка страницы у браузера белая,
-         и всё, что не закрыто нашим слоем, — полоса под адресной строкой,
-         оттяжка, область выреза — светится серым поверх чёрной игры. */
-      :root { color-scheme: dark; background: #07090a; }
+      /* ================== ОБЩИЙ ЯЗЫК ИНТЕРФЕЙСА ==================
+
+         Все экраны игры — ворота, загрузка, заставка, пауза, карта уровней,
+         смерть, подтверждение, итог уровня и финал — говорят одним языком:
+         чёрное стекло, золотая линия, моноширинный капитель. Раньше каждый
+         экран набирался своими числами, и одно и то же по смыслу выглядело
+         по-разному: заливка главной кнопки была то 0.06, то 0.08, подложка
+         карточки — то 0.55, то 0.72, то 0.97, а надпись под кнопками на четырёх
+         экранах имела четыре разных цвета и четыре разных разрядки.
+
+         Поэтому всё общее вынесено сюда, в именованные значения. Правило
+         простое: в самих экранах не должно появляться ни сырого цвета, ни
+         сырого радиуса, ни сырой длительности — только имя отсюда. Тогда
+         «сделать рамку теплее» это одна правка, а не сорок.
+
+         Имена — по роли, а не по виду: `--line-strong` останется рамкой главной
+         кнопки, даже если однажды станет не золотой. */
+      :root {
+        color-scheme: dark;
+
+        /* --- цвет --- */
+        /* Чёрный в игре один и тот же — у страницы, ворот, загрузки, заставки
+           и тумана. Раньше страница была на тон светлее слоёв поверх неё, и
+           там, где слой не доходил до края (полоса под адресной строкой
+           телефона, оттяжка страницы), проступала светлая линия. Ворота и
+           загрузка при этом заливались чистым `#000`, то есть той же светлой
+           линией наоборот. */
+        --ink: #07090a;
+        --gold: #e8d08f;        /* акцент: заголовки, кнопки, рамки */
+        --gold-lit: #f0e4c4;    /* он же, но ярче: цифры итога */
+        --paper: #e8eef4;       /* основной светлый текст */
+        --danger: #d86a5c;      /* то, чего не вернуть */
+        --live: #9fd2a4;        /* пройдено, всё хорошо */
+
+        /* Производные золота. Названы по месту, где стоят, а не по числу:
+           так видно, что рамка карточки и рамка кнопки — разные роли, даже
+           когда значения близки. */
+        --line: rgba(232, 208, 143, 0.22);        /* рамка карточки и окна */
+        --line-weak: rgba(232, 208, 143, 0.28);   /* рамка второстепенной кнопки */
+        --line-strong: rgba(232, 208, 143, 0.5);  /* рамка главной кнопки */
+        --line-here: rgba(232, 208, 143, 0.65);   /* «ты здесь»: рамка ярче прочих */
+        --fill: rgba(232, 208, 143, 0.07);        /* заливка главной кнопки */
+        --fill-soft: rgba(232, 208, 143, 0.14);   /* подложка метки-таблетки */
+        --glow: rgba(232, 208, 143, 0.22);        /* свечение вокруг активного */
+
+        /* Текст. Четыре ступени, больше не нужно: заголовок, обычный,
+           приглушённый и сноска. */
+        --text-note: rgba(232, 238, 244, 0.68);   /* пояснение под заголовком */
+        --text-mute: rgba(232, 238, 244, 0.5);    /* совсем негромкое */
+        --text-tail: rgba(232, 208, 143, 0.55);   /* сноска о клавише */
+
+        /* --- стекло --- */
+        /* Пелена поверх игры и подложка карточки на ней. Одна пелена на все
+           окна: раньше карта и пауза гасили игру до 0.86, подтверждение до
+           0.72, а экран смерти — градиентом без размытия вовсе, и переход
+           между ними читался как смена освещения. */
+        --veil: rgba(7, 9, 10, 0.86);
+        --veil-blur: blur(4px);
+        --card: rgba(12, 14, 16, 0.82);
+        --card-blur: blur(8px);
+
+        /* --- форма --- */
+        --r-card: 16px;   /* окно, карточка */
+        --r-tile: 12px;   /* плитка в списке, строка таблицы */
+        --r-chip: 99px;   /* кнопка-таблетка и метка */
+        --r-key: 8px;     /* клавиша, мелкая кнопка */
+
+        /* --- тень --- */
+        /* У карточки их две сразу: провал под ней и золотая нить по верхнему
+           краю. Нить и делает из плоского прямоугольника предмет — без неё
+           карточка читается как дырка в пелене. */
+        --lift: 0 18px 50px rgba(0, 0, 0, 0.55);
+        --edge: inset 0 1px 0 rgba(232, 208, 143, 0.14);
+
+        /* --- движение --- */
+        /* Три длительности на всю игру: отклик кнопки, появление окна и
+           растворение большого экрана. */
+        --t-tap: 160ms;
+        --t-veil: 280ms;
+        --t-screen: 600ms;
+
+        /* --- шрифт --- */
+        /* Моноширинный во всём интерфейсе: игра про сводки по рации, и текст
+           должен выглядеть отстуканным, а не свёрстанным. */
+        --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+        background: var(--ink);
+      }
 
       /* Кнопки без браузерной обводки фокуса: синее кольцо при Tab ни к чему,
          а отклик на нажатие у каждой кнопки свой — сжатие. */
@@ -37,7 +117,7 @@
          оставляя полосу в другом. `100%` оставлен запасным для старых браузеров. */
       html, body {
         margin: 0; height: 100%; height: 100dvh;
-        overflow: hidden; background: #07090a;
+        overflow: hidden; background: var(--ink);
         touch-action: none; -webkit-user-select: none; user-select: none;
         overscroll-behavior: none;
         /* Страница прибита к экрану и ехать ей некуда: ни оттяжки, ни отскока,
@@ -52,6 +132,164 @@
         -webkit-touch-callout: none;
       }
       #app { position: fixed; inset: 0; }
+      #app canvas { display: block; width: 100%; height: 100%; }
+
+      /* ================== ОБЩИЕ ЧАСТИ ==================
+
+         Ниже — то, что встречается на нескольких экранах сразу. Собрано
+         списками селекторов, а не примешано к каждому экрану по отдельности:
+         так их нельзя развести по недосмотру, а разница между экранами видна
+         в одну строку — она ровно в том, что дописано после общего правила. */
+
+      /* Пелена: чем гасится игра под любым окном. */
+      .levelmap, .pause, .confirm, .death {
+        position: fixed; inset: 0;
+        display: flex; justify-content: center;
+        background: var(--veil);
+        -webkit-backdrop-filter: var(--veil-blur); backdrop-filter: var(--veil-blur);
+        opacity: 0;
+        transition: opacity var(--t-veil) ease;
+      }
+      .levelmap[hidden], .pause[hidden], .confirm[hidden], .death[hidden] { display: none; }
+      .levelmap--on, .pause--on, .confirm--on, .death--on { opacity: 1; }
+
+      /* Карточка: чёрное стекло с золотой нитью по верху. */
+      .pause__card, .confirm__card, .hint__card {
+        display: flex; flex-direction: column; align-items: center;
+        border-radius: var(--r-card);
+        border: 1px solid var(--line);
+        background: var(--card);
+        -webkit-backdrop-filter: var(--card-blur); backdrop-filter: var(--card-blur);
+        box-shadow: var(--lift), var(--edge);
+        text-align: center;
+      }
+
+      /* Заголовок окна. Кегль у каждого свой — «Ты погиб» кричит, «Точно?»
+         спрашивает, — а начертание, разрядка и свечение общие. */
+      .levelmap__title, .death__title, .confirm__title, .pause__title,
+      .hint__title, .pause__hint, .ending__caption {
+        margin: 0;
+        color: var(--gold);
+        font-family: var(--mono);
+        font-weight: 600;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        /* Тёплый ореол: буквы будто подсвечены изнутри, а не наклеены. */
+        text-shadow: 0 0 18px rgba(232, 208, 143, 0.22);
+      }
+
+      /* Пояснение под заголовком. */
+      .death__note, .confirm__note, .hint__note, .pause__note {
+        margin: 0;
+        color: var(--text-note);
+        font: 400 13px/1.45 var(--mono);
+      }
+
+      /* Сноска под кнопками: «Enter — ещё раз» и вся её родня. Всегда мельче
+         всего на экране, всегда вразрядку, всегда приглушённым золотом. */
+      .death__hint, .ending__hint, .pause__tail, .hint__tail, .gate__key {
+        margin: 0;
+        color: var(--text-tail);
+        font: 500 11px/1.2 var(--mono);
+        letter-spacing: 0.12em; text-transform: uppercase;
+      }
+
+      /* --- кнопки ---
+
+         Одна форма на всю игру: таблетка, моноширинная капитель вразрядку,
+         золотая рамка. Различаются только голосом:
+           главная    — с заливкой и свечением, к ней ведут;
+           тихая      — рамка слабее, заливки нет, зовёт меньше;
+           красная    — то, после чего ничего не вернуть.
+
+         Сжатие при нажатии мгновенное: `transform` намеренно не попадает в
+         `transition`. Плавное сжатие ощущается как залипшая кнопка. */
+      .gate__play, .death__again, .death__start,
+      .confirm__no, .confirm__yes,
+      .ending__again, .ending__rate {
+        display: flex; align-items: center; justify-content: center; gap: 11px;
+        font-family: var(--mono); font-weight: 600;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        border-radius: var(--r-chip);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background var(--t-tap) ease, border-color var(--t-tap) ease,
+                    box-shadow var(--t-tap) ease, color var(--t-tap) ease;
+      }
+      .gate__play:active, .death__again:active, .death__start:active,
+      .confirm__no:active, .confirm__yes:active,
+      .ending__again:active, .ending__rate:active { transform: scale(0.96); }
+
+      /* Главная: заливка градиентом и блик по верхней кромке — так таблетка
+         выпуклая, а не нарисованная. */
+      .gate__play, .death__again, .confirm__no, .ending__again {
+        color: var(--gold);
+        border: 1px solid var(--line-strong);
+        background: linear-gradient(180deg, rgba(232, 208, 143, 0.13), var(--fill));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+      }
+      .gate__play:hover, .death__again:hover, .confirm__no:hover, .ending__again:hover {
+        background: linear-gradient(180deg, rgba(232, 208, 143, 0.2), rgba(232, 208, 143, 0.11));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 22px var(--glow);
+      }
+
+      /* Тихая: та же форма, но голос ниже. */
+      .death__start, .ending__rate {
+        color: var(--text-tail);
+        border: 1px solid var(--line-weak);
+        background: transparent;
+      }
+      .death__start:hover, .ending__rate:hover {
+        color: var(--gold);
+        border-color: var(--line-strong);
+        background: rgba(232, 208, 143, 0.06);
+      }
+
+      /* Красная: без заливки и без свечения. Звать к ней нечем. */
+      .confirm__yes {
+        color: rgba(216, 106, 92, 0.9);
+        border: 1px solid rgba(216, 106, 92, 0.35);
+        background: transparent;
+      }
+      .confirm__yes:hover {
+        color: var(--danger);
+        border-color: rgba(216, 106, 92, 0.6);
+        background: rgba(216, 106, 92, 0.1);
+      }
+
+      /* Метка-таблетка в списке уровней: «здесь», «пройден», «заперт».
+         Форма одна, цветом и сказана разница. */
+      .levelmap__here, .levelmap__passed, .levelmap__locked {
+        margin-left: auto; flex: none;
+        padding: 4px 9px;
+        border-radius: var(--r-chip);
+        font: 600 10px/1 var(--mono);
+        letter-spacing: 0.1em; text-transform: uppercase;
+      }
+
+      /* Полоса загрузки: у загрузки игры и у заставки уровня она одна и та же,
+         и идут они подряд — разойдись они в толщине или в цвете, переход между
+         экранами читался бы как рывок. */
+      .boot__bar, .splash__bar {
+        position: relative;
+        width: min(46vw, 340px); height: 8px;
+        border-radius: var(--r-chip);
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid var(--line-weak);
+        overflow: hidden;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+      }
+      .boot__fill, .splash__fill {
+        height: 100%; width: 0;
+        border-radius: var(--r-chip);
+        background: linear-gradient(180deg, var(--gold-lit), var(--gold));
+        box-shadow: 0 0 12px var(--glow);
+      }
+      .boot__fill { transition: width 160ms linear; }
+      .splash__fill { transition: width 120ms linear; }
+
+      /* ================== ИГРОВОЙ СЛОЙ ==================
+         То, что видно во время самой игры: субтитры, патроны, стик, рация. */
+
       /* Текст вступления: внизу по центру, над джойстиком. Тёмная подложка —
          иначе светлые буквы теряются на светлой земле. */
       .radiotext {
@@ -71,11 +309,12 @@
       .radiotext__line {
         margin: 0; padding: 10px 16px;
         border-radius: 10px;
-        background: rgba(7, 9, 10, 0.55);
+        background: rgba(7, 9, 10, 0.62);
+        border: 1px solid rgba(232, 208, 143, 0.12);
         /* Тени у букв нет: под ними своя подложка, и она уже отделяет текст от
            земли. Тень поверх неё лишь мылит края и читается как расфокус. */
-        color: #e8eef4;
-        font: 400 15px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: var(--paper);
+        font: 400 15px/1.55 var(--mono);
         letter-spacing: 0.02em;
         text-align: center;
         /* Ни flex, ни balance здесь нельзя.
@@ -118,7 +357,7 @@
 
       /* Мгла лежит поверх кадра, но под всем, чем игрок пользуется. */
       .fog { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
-      #app canvas { display: block; width: 100%; height: 100%; }
+
       /* --- экранный джойстик --- */
       .joystick__zone {
         position: fixed;
@@ -161,1028 +400,6 @@
           inset 0 -4px 8px rgba(0,0,0,0.22),
           inset 0 4px 8px rgba(255,255,255,0.75);
         will-change: transform;
-      }
-
-      /* --- панель разработчика --- */
-      /* Панель разработчика сдвинута вниз: в самом углу теперь кнопка карты
-         уровней, а она видна игроку и потому важнее. */
-      .devpanel {
-        position: fixed;
-        right: calc(14px + env(safe-area-inset-right));
-        top: calc(64px + env(safe-area-inset-top));
-        z-index: 30;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 6px;
-        font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      .devpanel__button {
-        font: inherit;
-        padding: 7px 12px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.35);
-        background: rgba(20,26,32,0.72);
-        color: #e8eef4;
-        cursor: pointer;
-        -webkit-backdrop-filter: blur(3px);
-        backdrop-filter: blur(3px);
-      }
-      .devpanel__button:hover { background: rgba(30,38,46,0.85); }
-      .devpanel__button:disabled { opacity: 0.55; cursor: progress; }
-      .devpanel__status {
-        max-width: 320px;
-        text-align: right;
-        color: #9fb4c7;
-        text-shadow: 0 1px 2px #000;
-      }
-      .devpanel__status[data-kind="ok"] { color: #8fd6a0; }
-      .devpanel__status[data-kind="fail"] { color: #e59a9a; }
-      .devpanel__status[data-kind="busy"] { color: #e8d08f; }
-
-      .editor {
-        position: fixed; left: 12px; bottom: 12px; z-index: 40;
-        padding: 8px 12px; border-radius: 8px;
-        background: rgba(20,26,32,0.78); border: 1px solid rgba(255,255,255,0.3);
-        color: #e8eef4; white-space: pre;
-        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-        /* Панель мышь не ловит, чтобы не мешать правке сцены, — но кнопки в ней
-           ловят: иначе по ним было бы не щёлкнуть. */
-        pointer-events: none;
-        -webkit-backdrop-filter: blur(3px);
-        backdrop-filter: blur(3px);
-      }
-      .editor__levels {
-        display: flex; align-items: center; gap: 10px;
-        margin-bottom: 6px; font-weight: 600;
-      }
-      .editor__arrow {
-        pointer-events: auto;
-        width: 26px; height: 24px;
-        border-radius: 6px; border: 1px solid rgba(255,255,255,0.35);
-        background: rgba(255,255,255,0.08); color: #e8eef4;
-        font: 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        cursor: pointer;
-      }
-      .editor__arrow:hover { background: rgba(255,255,255,0.2); }
-
-      .editor__toggles {
-        display: flex; flex-direction: column; gap: 4px;
-        margin: 8px 0 6px;
-      }
-      .editor__toggle {
-        pointer-events: auto;
-        display: flex; align-items: center; gap: 2px;
-        color: #e8eef4; cursor: pointer;
-      }
-      .editor__toggle input { cursor: pointer; }
-
-      /* Сноска о пропуске речи: мелкая строка прямо над плашкой субтитров.
-
-         Живёт она внутри самого блока субтитров, а не сама по себе на экране.
-         Поставленная отдельно, она налезала на плашку: та прижата к низу, но
-         высота у неё своя на каждом экране — под длинную реплику резервируется
-         несколько строк, — и угадать место над ней снаружи нельзя.
-
-         Нажатий не ловит: пропуск ловят сама речь и её обработчики, а эта
-         строка только сообщает о нём. */
-      .skip {
-        margin: 0 0 6px;
-        text-align: center;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 400ms ease;
-      }
-      .skip[hidden] { display: none; }
-      .skip--on { opacity: 1; }
-
-      /* Подложка только под самими буквами, а не во всю ширину плашки: широкая
-         полоса читалась бы как вторая строка речи. И она обязательна — под
-         сноской идёт сцена, и на светлой стене или на песке серые буквы без неё
-         пропадали совсем. */
-      .skip__label {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 8px;
-        background: rgba(7, 9, 10, 0.55);
-        color: rgba(232, 238, 244, 0.62);
-        font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.1em; text-transform: uppercase;
-      }
-
-      /* Кнопка карты уровней: уголок вверху справа. */
-      .mapbutton {
-        position: fixed; z-index: 55;
-        right: calc(14px + env(safe-area-inset-right));
-        top: calc(12px + env(safe-area-inset-top));
-        display: flex; flex-direction: column; justify-content: center; gap: 4px;
-        width: 42px; height: 42px; padding: 0 11px;
-        border-radius: 12px;
-        border: 1px solid rgba(232, 208, 143, 0.35);
-        background: rgba(7, 9, 10, 0.72);
-        -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease;
-      }
-      .mapbutton[hidden] { display: none; }
-      .mapbutton:active { transform: scale(0.94); }
-
-      /* Три полоски — тот же список сверху вниз, что и на самой карте.
-         Средняя короче: так значок читается как перечень, а не как решётка. */
-      .mapbutton__line {
-        height: 2px; border-radius: 2px;
-        background: #e8d08f;
-      }
-      .mapbutton__line:nth-child(2) { width: 70%; }
-
-      /* Карта уровней: шторка поверх игры со столбцом карточек. */
-      .levelmap {
-        position: fixed; inset: 0; z-index: 85;
-        display: flex; align-items: flex-start; justify-content: center;
-        padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
-        background: rgba(7, 9, 10, 0.86);
-        -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-        opacity: 0;
-        transition: opacity 280ms ease;
-      }
-      .levelmap[hidden] { display: none; }
-      .levelmap--on { opacity: 1; }
-
-      .levelmap__sheet {
-        display: flex; flex-direction: column;
-        width: min(520px, 100%);
-        max-height: 100%;
-        /* Заголовок стоит, список едет: иначе на телефоне уезжает и он. */
-        overflow: hidden;
-      }
-
-      .levelmap__head {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0 4px 12px;
-      }
-      .levelmap__title {
-        margin: 0;
-        color: #e8d08f;
-        font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.14em; text-transform: uppercase;
-      }
-      .levelmap__close {
-        width: 34px; height: 34px;
-        border-radius: 50%;
-        border: 1px solid rgba(232, 208, 143, 0.3);
-        background: transparent;
-        color: rgba(232, 238, 244, 0.7);
-        font: 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease;
-      }
-
-      .levelmap__list {
-        display: flex; flex-direction: column; gap: 10px;
-        overflow-y: auto;
-        /* Страница целиком прибита к экрану и жесты на ней погашены — список
-           свою прокрутку разрешает отдельно, иначе пальцем его не сдвинуть. */
-        touch-action: pan-y;
-        overscroll-behavior: contain;
-        -webkit-overflow-scrolling: touch;
-        padding: 2px;
-      }
-
-      .levelmap__card {
-        display: flex; align-items: center; gap: 14px;
-        padding: 10px 14px 10px 10px;
-        border-radius: 14px;
-        border: 1px solid rgba(232, 208, 143, 0.18);
-        background: rgba(18, 20, 22, 0.9);
-        color: #e8eef4;
-        text-align: left;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease, border-color 160ms ease;
-      }
-      .levelmap__card:hover { background: rgba(28, 31, 34, 0.95); border-color: rgba(232, 208, 143, 0.4); }
-      .levelmap__card:active { transform: scale(0.99); }
-
-      /* Пройденный уровень: карточка приглушена, а заставка на ней выцветает —
-         сразу видно, где игрок уже был, и куда идти дальше. */
-      .levelmap__card[data-passed] { opacity: 0.72; }
-      .levelmap__card[data-passed] .levelmap__shot { filter: saturate(0.5) brightness(0.78); }
-      .levelmap__card[data-passed]:hover { opacity: 1; }
-
-      /* Метка «пройден»: там же, где «здесь», но своим цветом. */
-      .levelmap__passed {
-        margin-left: auto; flex: none;
-        padding: 4px 9px;
-        border-radius: 99px;
-        background: rgba(101, 158, 108, 0.18);
-        color: #9fd2a4;
-        font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.1em; text-transform: uppercase;
-      }
-
-      /* Запертый уровень: туда ещё не дошли. Карточка глухая и не нажимается —
-         заставка почти погашена, чтобы вперёд не подглядывали, а замок объясняет,
-         почему на неё не реагируют. */
-      .levelmap__card[data-locked] {
-        opacity: 0.55;
-        cursor: default;
-      }
-      .levelmap__card[data-locked]:hover {
-        background: rgba(18, 20, 22, 0.9);
-        border-color: rgba(232, 208, 143, 0.18);
-      }
-      .levelmap__card[data-locked]:active { transform: none; }
-      .levelmap__card[data-locked] .levelmap__shot {
-        filter: grayscale(1) brightness(0.32);
-      }
-      .levelmap__locked {
-        margin-left: auto; flex: none;
-        padding: 4px 9px;
-        border-radius: 99px;
-        background: rgba(255, 255, 255, 0.06);
-        color: rgba(232, 238, 244, 0.6);
-        font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.1em; text-transform: uppercase;
-      }
-
-      /* Тот, на котором игрок сейчас: подсвечен рамкой, чтобы не терять место. */
-      .levelmap__card[data-here] {
-        border-color: rgba(232, 208, 143, 0.65);
-        background: rgba(34, 30, 22, 0.95);
-      }
-
-      /* Заставка уровня: по картинке его и узнают, название читают вторым. */
-      .levelmap__shot {
-        flex: none;
-        width: 92px; height: 58px;
-        border-radius: 9px;
-        background: #07090a center/cover no-repeat;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-      }
-
-      .levelmap__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-      .levelmap__number {
-        color: rgba(232, 208, 143, 0.75);
-        font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.12em; text-transform: uppercase;
-      }
-      .levelmap__name {
-        color: #e8eef4;
-        font: 15px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
-        /* Длинное название не должно распирать карточку. */
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      }
-
-      .levelmap__here {
-        margin-left: auto; flex: none;
-        padding: 4px 9px;
-        border-radius: 99px;
-        background: rgba(232, 208, 143, 0.16);
-        color: #e8d08f;
-        font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.1em; text-transform: uppercase;
-      }
-
-      @media (max-width: 420px) {
-        .levelmap__shot { width: 74px; height: 48px; }
-        .levelmap__name { font-size: 14px; }
-      }
-
-      /* Экран смерти: тёмная пелена и кнопка «начать заново».
-
-         Не глухая заливка, а полупрозрачная: сквозь неё видно место, где всё
-         кончилось, — это одна неудачная попытка, а не выход из игры. */
-      .death {
-        position: fixed; inset: 0; z-index: 80;
-        display: flex; align-items: center; justify-content: center;
-        padding: 0 16px;
-        background: radial-gradient(circle at 50% 45%, rgba(7, 9, 10, 0.55), rgba(7, 9, 10, 0.88));
-        opacity: 0;
-        transition: opacity 450ms ease;
-      }
-      .death[hidden] { display: none; }
-      .death--on { opacity: 1; }
-
-      .death__card {
-        display: flex; flex-direction: column; align-items: center; gap: 12px;
-        text-align: center;
-      }
-
-      /* Карточка стоит на месте: ни выезда, ни возврата.
-         Выезд был, и на нажатии кнопки он играл задом наперёд — экран уходил, а
-         карточка съезжала вниз, и кнопки дёргались под пальцем. */
-
-      .death__title {
-        margin: 0;
-        color: #e8d08f;
-        font: 600 26px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.14em; text-transform: uppercase;
-      }
-      .death__note {
-        margin: 0 0 6px;
-        color: rgba(232, 238, 244, 0.55);
-        font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-
-      /* Две кнопки столбиком: та, что нажимают почти всегда, — первой. */
-      .death__buttons {
-        display: flex; flex-direction: column; align-items: center; gap: 10px;
-      }
-
-      /* Сноска про Enter под кнопками: тем же языком, что и на паузе. */
-      .death__hint, .ending__hint {
-        margin: 0;
-        font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.12em; text-transform: uppercase;
-        color: rgba(232, 208, 143, 0.55);
-      }
-      /* На экране смерти сноска отступает от кнопок заметнее: ей не место
-         вплотную к «С начала», она поясняет кнопку над ней. */
-      .death__hint { margin-top: 8px; }
-
-      /* Кнопка та же, что и на воротах: одна игра — один язык кнопок.
-         Значок и надпись в строку, значок первым. */
-      .death__again {
-        display: flex; align-items: center; gap: 11px;
-        font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.14em; text-transform: uppercase;
-        color: #e8d08f;
-        padding: 14px 34px 14px 26px;
-        border-radius: 99px;
-        border: 1px solid rgba(232, 208, 143, 0.5);
-        background: rgba(232, 208, 143, 0.06);
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease;
-      }
-      .death__again:active { transform: scale(0.96); }
-
-      /* Значок «играть»: квадрат с треугольником внутри. Цвет берёт у кнопки,
-         поэтому подсветка при наведении красит его заодно с надписью. */
-      .death__icon {
-        flex: none;
-        width: 20px; height: 20px;
-        /* Прописные буквы стоят выше своей середины — значок опускаем на волос,
-           иначе он кажется приподнятым над строкой. */
-        margin-top: 1px;
-      }
-
-      /* «С начала» той же формы, что и «Ещё раз», но намеренно блеклая: попасть
-         по ней случайно, метя в соседнюю, значит потерять всё пройденное.
-         Рамка слабее, заливки нет, текст приглушён. */
-      .death__start {
-        display: flex; align-items: center; gap: 11px;
-        font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.14em; text-transform: uppercase;
-        color: rgba(232, 208, 143, 0.55);
-        padding: 14px 34px;
-        border-radius: 99px;
-        border: 1px solid rgba(232, 208, 143, 0.28);
-        background: transparent;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease, color 160ms ease;
-      }
-      .death__start:active { transform: scale(0.96); }
-
-
-      @media (prefers-reduced-motion: reduce) {
-      }
-
-      /* Окно «точно?» перед тем, что нельзя отменить.
-
-         Выше экрана смерти, но ниже загрузки и ворот: те закрывают игру
-         целиком, а это окно — только вопрос поверх уже открытого экрана. */
-      .confirm {
-        position: fixed; inset: 0; z-index: 88;
-        display: flex; align-items: center; justify-content: center;
-        padding: 16px;
-        background: rgba(7, 9, 10, 0.72);
-        -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-        opacity: 0;
-        transition: opacity 260ms ease;
-      }
-      .confirm[hidden] { display: none; }
-      .confirm--on { opacity: 1; }
-
-      .confirm__card {
-        display: flex; flex-direction: column; align-items: center; gap: 10px;
-        width: min(360px, 100%);
-        padding: 24px 22px 18px;
-        border-radius: 16px;
-        border: 1px solid rgba(232, 208, 143, 0.22);
-        background: rgba(16, 18, 20, 0.97);
-        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
-        text-align: center;
-      }
-      /* Окно слегка подаётся вверх на появлении: возникшее без движения
-         читается как картинка, а не как остановка перед выбором. */
-
-      .confirm__title {
-        margin: 0;
-        color: #e8d08f;
-        font: 600 15px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.1em; text-transform: uppercase;
-      }
-      .confirm__note {
-        margin: 0 0 8px;
-        color: rgba(232, 238, 244, 0.6);
-        font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      .confirm__note[hidden] { display: none; }
-
-      /* Ответы в ряд, безопасный слева: к нему и должна вести рука. */
-      .confirm__buttons { display: flex; gap: 10px; width: 100%; }
-      .confirm__no, .confirm__yes {
-        flex: 1;
-        padding: 13px 10px;
-        border-radius: 99px;
-        font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.1em; text-transform: uppercase;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease;
-      }
-
-      .confirm__no {
-        color: #e8d08f;
-        border: 1px solid rgba(232, 208, 143, 0.5);
-        background: rgba(232, 208, 143, 0.06);
-      }
-      .confirm__no:active, .confirm__yes:active { transform: scale(0.97); }
-
-      /* Согласие красным и без заливки: после него ничего не вернуть, и звать
-         к нему нечем. */
-      .confirm__yes {
-        color: rgba(216, 106, 92, 0.9);
-        border: 1px solid rgba(216, 106, 92, 0.35);
-        background: transparent;
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-      }
-
-      /* Подсказка по управлению: карточка внизу экрана, один раз за сеанс.
-
-         Лежит она над игрой, но нажатий не ловит: pointer-events отключены на
-         всём, что в ней есть. Первое касание должно уходить в игру — стик под
-         ней, и подсказка гаснет ровно от того же движения, которым игрок
-         трогается с места. */
-      .hint {
-        position: fixed; inset: auto 0 0 0; z-index: 70;
-        display: flex; justify-content: center;
-        padding: 0 16px 8vh;
-        pointer-events: none;
-        opacity: 0;
-        transform: translateY(14px);
-        transition: opacity 600ms ease, transform 600ms cubic-bezier(0.2, 0.7, 0.3, 1);
-      }
-      .hint[hidden] { display: none; }
-      .hint--on { opacity: 1; transform: translateY(0); }
-
-      .hint__card {
-        display: flex; flex-direction: column; align-items: center; gap: 10px;
-        padding: 18px 26px 14px;
-        border-radius: 16px;
-        border: 1px solid rgba(232, 208, 143, 0.22);
-        /* Подложка тёмная и размытая: под ней идёт бой, и текст поверх него
-           иначе не читается. */
-        background: rgba(7, 9, 10, 0.72);
-        backdrop-filter: blur(6px);
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
-        text-align: center;
-      }
-
-      .hint__keys { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-      .hint__keys[hidden], .hint__stick[hidden] { display: none; }
-      .hint__row { display: flex; gap: 5px; }
-
-      .hint__key {
-        display: flex; align-items: center; justify-content: center;
-        width: 38px; height: 38px;
-        border-radius: 8px;
-        border: 1px solid rgba(232, 208, 143, 0.45);
-        /* Клавиша светится изнутри и отбрасывает короткую тень вниз — так она
-           читается как выпуклая, а не как нарисованный квадрат. */
-        background: linear-gradient(180deg, rgba(232, 208, 143, 0.16), rgba(232, 208, 143, 0.05));
-        box-shadow: 0 2px 0 rgba(232, 208, 143, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-        color: #e8d08f;
-        font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-
-      /* Клавиши загораются по очереди — W, A, S, D, — и по ним видно, что это
-         не картинка, а то, что надо нажать. */
-      @keyframes hint-press {
-        0%, 62%, 100% { transform: translateY(0); box-shadow: 0 2px 0 rgba(232, 208, 143, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
-        70% { transform: translateY(2px); box-shadow: 0 0 0 rgba(232, 208, 143, 0), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-      }
-      .hint__key { animation: hint-press 3200ms ease-in-out infinite; }
-      .hint__row:last-child .hint__key:nth-child(1) { animation-delay: 800ms; }
-      .hint__row:last-child .hint__key:nth-child(2) { animation-delay: 1600ms; }
-      .hint__row:last-child .hint__key:nth-child(3) { animation-delay: 2400ms; }
-
-      /* Стик: круг с ручкой, которая ходит по кругу — как палец по экрану. */
-      .hint__stick { display: flex; justify-content: center; }
-      .hint__base {
-        position: relative;
-        width: 66px; height: 66px;
-        border-radius: 50%;
-        border: 1px solid rgba(232, 208, 143, 0.35);
-        background: radial-gradient(circle at 50% 50%, rgba(232, 208, 143, 0.1), rgba(232, 208, 143, 0.02));
-      }
-      .hint__knob {
-        position: absolute; left: 50%; top: 50%;
-        width: 26px; height: 26px; margin: -13px 0 0 -13px;
-        border-radius: 50%;
-        border: 1px solid rgba(232, 208, 143, 0.5);
-        background: rgba(232, 208, 143, 0.22);
-        box-shadow: 0 0 12px rgba(232, 208, 143, 0.25);
-        animation: hint-knob 3600ms ease-in-out infinite;
-      }
-      @keyframes hint-knob {
-        0%   { transform: translate(0, 0); }
-        20%  { transform: translate(0, -15px); }
-        45%  { transform: translate(14px, 6px); }
-        70%  { transform: translate(-14px, 6px); }
-        100% { transform: translate(0, 0); }
-      }
-
-      .hint__title {
-        margin: 2px 0 0;
-        color: #e8d08f;
-        font: 600 15px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.1em; text-transform: uppercase;
-      }
-      .hint__note {
-        margin: 0;
-        color: rgba(232, 238, 244, 0.72);
-        font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      .hint__tail {
-        margin: 2px 0 0;
-        color: rgba(232, 238, 244, 0.38);
-        font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.08em;
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .hint__key, .hint__knob { animation: none; }
-        .hint { transition: opacity 600ms ease; transform: none; }
-      }
-
-      /* Пауза: мир под ней стоит, поверх — та же подсказка управления, что в
-         начале игры. Лежит ниже карты уровней и экрана смерти: те открываются
-         поверх паузы, а не наоборот. */
-      .pause {
-        position: fixed; inset: 0; z-index: 80;
-        display: flex; align-items: center; justify-content: center;
-        padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
-        background: rgba(7, 9, 10, 0.86);
-        -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-        opacity: 0;
-        transition: opacity 280ms ease;
-      }
-      .pause[hidden] { display: none; }
-      .pause--on { opacity: 1; }
-
-      .pause__card {
-        display: flex; flex-direction: column; align-items: center; gap: 10px;
-        padding: 26px 30px 20px;
-        border-radius: 16px;
-        border: 1px solid rgba(232, 208, 143, 0.22);
-        background: rgba(7, 9, 10, 0.72);
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
-        text-align: center;
-      }
-
-      .pause__title {
-        margin: 0 0 4px;
-        color: #e8d08f;
-        font: 600 20px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.18em; text-transform: uppercase;
-      }
-      .pause__hint {
-        margin: 2px 0 0;
-        color: #e8d08f;
-        font: 600 15px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.1em; text-transform: uppercase;
-      }
-      .pause__note {
-        margin: 0;
-        color: rgba(232, 238, 244, 0.72);
-        font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      .pause__tail {
-        margin: 6px 0 0;
-        color: rgba(232, 238, 244, 0.48);
-        font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.08em;
-      }
-
-      /* Ворота: чёрный экран с одной кнопкой, с которого всё начинается.
-         Лежат поверх экрана загрузки: тот уже показывает свои реплики под ними,
-         но увидеть его игрок должен только после нажатия. */
-      .gate {
-        position: fixed; inset: 0; z-index: 95;
-        /* Зазор с запасом: волны от наушников расходятся вдвое шире иконки и не
-           должны наплывать на кнопку. */
-        display: flex; flex-direction: column; gap: 84px;
-        align-items: center; justify-content: center;background: rgb(0, 0, 0);
-      }
-
-      /* Наушники над кнопкой: волны расходятся от них кругами и тают. */
-      .gate__phones {
-        position: relative;
-        width: 64px; height: 64px;
-        color: #e8d08f;
-        pointer-events: none;
-      }
-      .gate__icon {
-        position: relative;
-        width: 100%; height: 100%;
-        animation: gate-phones 2400ms ease-in-out infinite;
-      }
-      .gate__wave {
-        position: absolute; inset: 0;
-        border-radius: 50%;
-        border: 1.5px solid rgba(232, 208, 143, 0.55);
-        opacity: 0;
-        animation: gate-wave 2400ms ease-out infinite;
-      }
-      @keyframes gate-wave {
-        from { transform: scale(0.9); opacity: 0.8; }
-        to   { transform: scale(2.3); opacity: 0; }
-      }
-      @keyframes gate-phones {
-        0%, 100% { transform: scale(1); }
-        50%      { transform: scale(1.06); }
-      }
-      .gate[hidden] { display: none; }
-
-      .gate__play {
-        font: 600 17px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.16em; text-transform: uppercase;
-        color: #e8d08f;
-        padding: 17px 46px;
-        border-radius: 99px;
-        border: 1px solid rgba(232, 208, 143, 0.5);
-        background: rgba(232, 208, 143, 0.06);
-        cursor: pointer;
-        /* Серую вспышку по тапу гасим: на чёрном экране она читается как сбой. */
-        -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease;
-      }
-      .gate__play:active { transform: scale(0.96); }
-
-      .gate__action {
-        display: flex; flex-direction: column; align-items: center; gap: 18px;
-      }
-      .gate__key {
-        margin: 0;
-        font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.12em; text-transform: uppercase;
-        color: rgba(232, 208, 143, 0.55);
-        pointer-events: none;
-      }
-      .gate__key kbd {
-        display: inline-block;
-        margin-left: 4px;
-        padding: 4px 8px 3px;
-        font: inherit; color: #e8d08f;
-        border: 1px solid rgba(232, 208, 143, 0.45);
-        border-bottom-width: 2px;
-        border-radius: 5px;
-      }
-
-      /* Мягкое дыхание: на пустом чёрном экране неподвижная кнопка читается как
-         картинка, а не как то, на что надо нажать. */
-      @keyframes gate-breath {
-        from { box-shadow: 0 0 0 0 rgba(232, 208, 143, 0.28); }
-        to   { box-shadow: 0 0 0 14px rgba(232, 208, 143, 0); }
-      }
-      .gate__play { animation: gate-breath 2200ms ease-out infinite; }
-
-      @media (prefers-reduced-motion: reduce) {
-        .gate__play, .gate__icon, .gate__wave { animation: none; }
-      }
-
-      /* Загрузка самой игры: голый чёрный экран, реплика и полоса под ней.
-         Ни картинок, ни рамок — до заставки уровня показывать ещё нечего. */
-      .boot {
-        position: fixed; inset: 0; z-index: 90;
-        display: flex; align-items: center; justify-content: center;
-        background: #000000;
-      }
-      .boot[hidden] { display: none; }
-
-      /* Реплика вынута из потока и подвешена над полосой.
-         Иначе полоса ехала бы за ней: реплики разной длины, одна встаёт в
-         строку, другая в две — и на каждой смене полоса прыгала бы вниз-вверх.
-         Так она стоит ровно по центру экрана, сколько бы строк ни занял текст. */
-      .boot__line {
-        position: absolute;
-        left: 50%; transform: translateX(-50%);
-        bottom: calc(50% + 22px);
-        width: min(78vw, 560px);
-        text-align: center; text-wrap: balance;
-        color: #cbd6e2; text-shadow: 0 2px 6px #000;
-        font: 400 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.03em;
-        opacity: 0;
-        transition: opacity 320ms ease;
-      }
-      /* Лого студии — на пятой части экрана от верха, вынуто из потока:
-         реплика под ним бывает в одну строку и в две, и лого не должно от
-         этого прыгать. */
-      .boot__logo {
-        position: absolute;
-        left: 50%; transform: translateX(-50%);
-        top: 20%;
-        /* Высота — сколько влезает между лого и репликой: на телефоне лёжа
-           экран низкий, и лого в полный рост ушло бы за край. */
-        height: min(89px, calc(50vh - 170px)); width: auto;
-        max-width: 62vw;
-        pointer-events: none; user-select: none;
-      }
-      .boot__bar {
-        width: min(46vw, 340px); height: 8px;
-        border-radius: 99px;
-        background: rgba(0, 0, 0, 0.7);
-        border: 1px solid rgba(255,255,255,0.28);
-        overflow: hidden;
-      }
-      .boot__fill {
-        height: 100%; width: 0;
-        background: #e8d08f;
-        transition: width 160ms linear;
-      }
-
-      /* Финальный экран: кроет всё, включая заставку, и не отдаёт управление. */
-      .ending {
-        position: fixed; inset: 0; z-index: 80;
-        background: #000000 center / cover no-repeat;
-        opacity: 0; pointer-events: none;
-        transition: opacity 900ms ease;
-      }
-      .ending--on { opacity: 1; pointer-events: auto; }
-
-      /* Сам кадр: отдельным слоем, потому что едет только он. Надписи поверх
-         стоят неподвижно — текст, ползущий вместе с картинкой, не читается. */
-      .ending__frame {
-        position: absolute; inset: 0;
-        background: #000000 center / cover no-repeat;
-        background-image: inherit;
-        transform-origin: 62% 42%; /* к горизонту и герою, а не к середине кадра */
-      }
-      .ending--on .ending__frame,
-      .ending--leaving .ending__frame { animation: ending-drift 26s ease-out forwards; }
-      /* Уходящий экран растворяется, а наезд на картинке идёт дальше: снимись он
-         вместе с показом — картинка в первый же кадр прыгала бы к исходному
-         масштабу, и экран дёргался бы на уходе. */
-
-      /* Медленный наезд с уводом вбок: кадр перестаёт быть стоп-кадром, но и
-         не мельтешит. Масштаб только вверх от единицы — иначе полезли бы края. */
-      @keyframes ending-drift {
-        from { transform: scale(1) translate3d(0, 0, 0); }
-        to   { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
-      }
-
-      /* Титр, итог и кнопки: своим столбцом у нижнего края, на тёмной подложке,
-         чтобы читались поверх любого места картинки. */
-      .ending__card {
-        position: absolute; left: 50%; top: 50%;
-        transform: translate(-50%, -50%);
-        display: flex; flex-direction: column; align-items: center; gap: 18px;
-        padding: 22px 34px;
-        max-width: min(92vw, 560px);
-        /* Карточка не должна вылезать за экран: на низких окнах и телефонах
-           контент прокручивается внутри неё, а не уходит под край. */
-        max-height: calc(100dvh - 8vh);
-        overflow-y: auto;
-        border-radius: 18px;
-        background: rgba(8, 6, 5, 0.55);
-        backdrop-filter: blur(3px);
-        opacity: 0; animation: ending-rise 1200ms ease-out 900ms forwards;
-      }
-      @keyframes ending-rise {
-        from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)); }
-        to   { opacity: 1; transform: translate(-50%, -50%); }
-      }
-
-      .ending__caption {
-        margin: 0;
-        font: 600 clamp(15px, 3.4vw, 21px)/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.18em; text-transform: uppercase;
-        color: #e8d08f; text-align: center;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.7);
-      }
-
-      /* Итог: три пары «что» и «сколько», в строку на широком экране. */
-      .ending__stats {
-        display: flex; flex-wrap: wrap; justify-content: center;
-        gap: 6px 26px; margin: 0;
-        font: 500 12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.1em; text-transform: uppercase;
-      }
-      .ending__stats dt { color: rgba(232, 208, 143, 0.6); }
-      .ending__stats dd {
-        margin: 0 0 0 8px;
-        font-size: 15px; color: #f0e4c4;
-      }
-      .ending__stats dt, .ending__stats dd { display: inline-block; }
-
-      /* Таблица рекордов площадки: заголовок, шапка и строки одной сеткой.
-         Строки скромнее итога — это чужие прохождения, а не твой поход. */
-      .ending__board {
-        width: 100%;
-        display: flex; flex-direction: column; gap: 8px;
-      }
-      .ending__board[hidden] { display: none; }
-
-      .ending__board-title {
-        margin: 0;
-        font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.2em; text-transform: uppercase;
-        color: rgba(232, 208, 143, 0.85); text-align: center;
-      }
-
-      .ending__head, .ending__row {
-        display: grid;
-        grid-template-columns: 26px minmax(0, 1fr) auto auto;
-        gap: 0 10px; align-items: center;
-      }
-      .ending__head {
-        padding: 0 12px;
-        font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.14em; text-transform: uppercase;
-        color: rgba(232, 208, 143, 0.45);
-      }
-      .ending__head-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-      .ending__board-list {
-        display: flex; flex-direction: column; gap: 6px;
-        margin: 0; padding: 0; list-style: none;
-        max-height: 32vh; overflow-y: auto;
-      }
-      .ending__row {
-        padding: 6px 12px;
-        border-radius: 12px;
-        border: 1px solid rgba(232, 208, 143, 0.12);
-        background: rgba(0, 0, 0, 0.35);
-        font: 500 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      /* Своё место в рейтинге: подсвечено рамкой, чтобы игрок нашёл себя. */
-      .ending__row--here {
-        border-color: rgba(232, 208, 143, 0.6);
-        background: rgba(232, 208, 143, 0.1);
-      }
-
-      .ending__place { color: rgba(232, 208, 143, 0.8); text-align: right; }
-      .ending__who { display: flex; align-items: center; gap: 8px; min-width: 0; }
-      .ending__avatar {
-        flex: none; width: 22px; height: 22px;
-        display: flex; align-items: center; justify-content: center;
-        border-radius: 50%;
-        background: rgba(232, 208, 143, 0.18);
-        font-size: 11px; color: #e8d08f;
-        object-fit: cover;
-      }
-      .ending__name {
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        color: #e8eef4;
-      }
-      .ending__time { color: #f0e4c4; }
-      .ending__deaths { color: rgba(232, 208, 143, 0.65); min-width: 24px; text-align: right; }
-
-      /* Скролл списка рекордов: тонкая золотая полоса, не спорящая с игрой. */
-      .ending__board-list::-webkit-scrollbar { width: 6px; }
-      .ending__board-list::-webkit-scrollbar-thumb { background: rgba(232, 208, 143, 0.25); border-radius: 3px; }
-      .ending__board-list::-webkit-scrollbar-track { background: transparent; }
-
-      .ending__buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-      .ending__again, .ending__rate {
-        font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.14em; text-transform: uppercase;
-        color: #e8d08f;
-        padding: 13px 26px;
-        border-radius: 99px;
-        border: 1px solid rgba(232, 208, 143, 0.5);
-        background: rgba(232, 208, 143, 0.08);
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background 160ms ease;
-      }
-      .ending__rate {
-        color: rgba(232, 208, 143, 0.75);
-        border-color: rgba(232, 208, 143, 0.28);
-        background: transparent;
-      }
-      .ending__again:active, .ending__rate:active { transform: scale(0.96); }
-      .ending__rate[hidden] { display: none; }
-
-      /* Телефон: карточка занимает почти весь экран, а таблица — компактная.
-         Иначе титр, итог и десяток строк рекордов в один экран не влезают. */
-      @media (max-width: 640px) {
-        .ending__card {
-          padding: 14px;
-          gap: 12px;
-          /* Портрет телефона: карточка почти во весь экран, но с заметными
-             полями по бокам (по 20px) — в притык к краям её не прижимаем,
-             включая вырезы и скругления современных экранов. */
-          width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 40px);
-          max-width: 100vw;
-          max-height: calc(100dvh - 3vh);
-        }
-        .ending__stats { gap: 4px 18px; font-size: 11px; }
-        .ending__stats dd { font-size: 13px; }
-        .ending__board-list { max-height: 24vh; }
-        .ending__head, .ending__row {
-          grid-template-columns: 20px minmax(0, 1fr) auto auto;
-          gap: 0 8px;
-        }
-        .ending__row { padding: 5px 10px; font-size: 11px; }
-        .ending__who { gap: 6px; }
-        .ending__avatar { width: 18px; height: 18px; font-size: 9px; }
-        .ending__again, .ending__rate { padding: 11px 20px; font-size: 12px; }
-      }
-
-      /* Чёрный экран ответной передачи: он стоит между последним уровнем и
-         финалом, и под ним уже ничего не происходит. */
-      .endmsg {
-        /* Ниже рации и субтитров: он для них подложка, а не крышка. Выше самой
-           игры и её интерфейса — под ним уже ничего не показывают. */
-        position: fixed; inset: 0; z-index: 44;
-        background: #000000;
-        opacity: 0; transition: opacity 600ms ease;
-      }
-      .endmsg--on { opacity: 1; }
-      .endmsg[hidden] { display: none; }
-
-      @media (prefers-reduced-motion: reduce) {
-        .ending--on .ending__frame { animation: none; }
-        .ending__card { animation: none; opacity: 1; }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .ending--on { animation: none; }
-      }
-
-      /* Чёрная вуаль под заставкой: когда та уходит, уровень проступает из
-         темноты, а не возникает рывком. Выше игры и её кнопок, ниже заставки;
-         нажатия пропускает насквозь — она только картинка. */
-      .veil {
-        position: fixed; inset: 0; z-index: 59;
-        background: #000000;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 800ms ease;
-      }
-      .veil--black { opacity: 1; transition: none; }
-
-      .splash {
-        position: fixed; inset: 0; z-index: 60;
-        display: flex; align-items: center; justify-content: center;
-        background: #000000;
-      }
-      /* display: flex сильнее атрибута hidden, и без этой строки заставка
-         остаётся висеть поверх игры, сколько её ни прячь. */
-      .splash[hidden] { display: none; }
-      /* Картинка кроет экран целиком при любом соотношении сторон: лишнее
-         обрезается, пустых полей не остаётся. */
-      .splash__image {
-        position: absolute; inset: 0;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-size: cover;
-      }
-      /* Подпись подвешена над полосой ровно так же, как реплика на загрузке
-         игры: у обоих экранов полоса стоит по центру и никуда не едет, сколько
-         бы строк ни занял текст. Иначе на переходе от одной загрузки к другой
-         полоса прыгает — а идут они подряд, и прыжок этот хорошо виден. */
-      .splash__caption {
-        position: absolute;
-        left: 50%; transform: translateX(-50%);
-        bottom: calc(50% + 22px);
-        width: min(78vw, 560px);
-        text-align: center; text-wrap: balance;
-        color: #e8eef4; text-shadow: 0 2px 6px #000;
-        font: 600 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.04em;
-      }
-      .splash__bar {
-        position: relative;
-        width: min(46vw, 340px); height: 8px;
-        border-radius: 99px;
-        background: rgba(0, 0, 0, 0.7);
-        border: 1px solid rgba(255,255,255,0.35);
-        overflow: hidden;
-      }
-      .splash__fill {
-        height: 100%; width: 0;
-        background: #e8d08f;
-        transition: width 120ms linear;
       }
 
       /* Рация: видна, пока по ней говорят. Появляется и уходит прозрачностью,
@@ -1240,15 +457,824 @@
         .radio--on .radio__wave { animation: none; }
       }
 
-      /* Счётчик кадров: правый верхний угол, мимо патронов и кнопки. */
-      /* Вниз, а не вверх: наверху и без него тесно — там имя уровня, патроны
+      /* Сноска о пропуске речи: мелкая строка прямо над плашкой субтитров.
+
+         Живёт она внутри самого блока субтитров, а не сама по себе на экране.
+         Поставленная отдельно, она налезала на плашку: та прижата к низу, но
+         высота у неё своя на каждом экране — под длинную реплику резервируется
+         несколько строк, — и угадать место над ней снаружи нельзя.
+
+         Нажатий не ловит: пропуск ловят сама речь и её обработчики, а эта
+         строка только сообщает о нём. */
+      .skip {
+        margin: 0 0 6px;
+        text-align: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 400ms ease;
+      }
+      .skip[hidden] { display: none; }
+      .skip--on { opacity: 1; }
+
+      /* Подложка только под самими буквами, а не во всю ширину плашки: широкая
+         полоса читалась бы как вторая строка речи. И она обязательна — под
+         сноской идёт сцена, и на светлой стене или на песке серые буквы без неё
+         пропадали совсем. */
+      .skip__label {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: var(--r-key);
+        background: rgba(7, 9, 10, 0.62);
+        border: 1px solid rgba(232, 208, 143, 0.12);
+        color: var(--text-tail);
+        font: 500 11px/1 var(--mono);
+        letter-spacing: 0.12em; text-transform: uppercase;
+      }
+
+      /* ================== КАРТА УРОВНЕЙ ================== */
+
+      /* Кнопка карты уровней: уголок вверху справа. */
+      .mapbutton {
+        position: fixed; z-index: 55;
+        right: calc(14px + env(safe-area-inset-right));
+        top: calc(12px + env(safe-area-inset-top));
+        display: flex; flex-direction: column; justify-content: center; gap: 4px;
+        width: 42px; height: 42px; padding: 0 11px;
+        border-radius: var(--r-tile);
+        border: 1px solid var(--line-weak);
+        background: rgba(7, 9, 10, 0.72);
+        -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+        box-shadow: var(--edge);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background var(--t-tap) ease, border-color var(--t-tap) ease,
+                    box-shadow var(--t-tap) ease;
+      }
+      .mapbutton[hidden] { display: none; }
+      .mapbutton:hover {
+        background: rgba(18, 20, 22, 0.85);
+        border-color: var(--line-strong);
+        box-shadow: var(--edge), 0 0 18px var(--glow);
+      }
+      .mapbutton:active { transform: scale(0.94); }
+
+      /* Три полоски — тот же список сверху вниз, что и на самой карте.
+         Средняя короче: так значок читается как перечень, а не как решётка. */
+      .mapbutton__line {
+        height: 2px; border-radius: 2px;
+        background: var(--gold);
+      }
+      .mapbutton__line:nth-child(2) { width: 70%; }
+
+      /* Карта уровней: шторка поверх игры со столбцом карточек. */
+      .levelmap {
+        z-index: 85;
+        align-items: flex-start;
+        padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+      }
+
+      .levelmap__sheet {
+        display: flex; flex-direction: column;
+        width: min(520px, 100%);
+        max-height: 100%;
+        /* Заголовок стоит, список едет: иначе на телефоне уезжает и он. */
+        overflow: hidden;
+      }
+
+      .levelmap__head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 4px 12px;
+      }
+      .levelmap__title { font-size: 15px; }
+
+      .levelmap__close {
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        border: 1px solid var(--line-weak);
+        background: transparent;
+        color: var(--text-tail);
+        font: 14px/1 var(--mono);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background var(--t-tap) ease, border-color var(--t-tap) ease,
+                    color var(--t-tap) ease;
+      }
+      /* Раньше у неё был объявлен переход, но ни одного состояния, к которому
+         он вёл: единственная кнопка в игре, не отвечавшая на палец. */
+      .levelmap__close:hover {
+        background: rgba(232, 208, 143, 0.08);
+        border-color: var(--line-strong);
+        color: var(--gold);
+      }
+      .levelmap__close:active { transform: scale(0.94); }
+
+      .levelmap__list {
+        display: flex; flex-direction: column; gap: 10px;
+        overflow-y: auto;
+        /* Страница целиком прибита к экрану и жесты на ней погашены — список
+           свою прокрутку разрешает отдельно, иначе пальцем его не сдвинуть. */
+        touch-action: pan-y;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding: 2px;
+      }
+
+      .levelmap__card {
+        display: flex; align-items: center; gap: 14px;
+        padding: 10px 14px 10px 10px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        box-shadow: var(--edge);
+        color: var(--paper);
+        text-align: left;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background var(--t-tap) ease, border-color var(--t-tap) ease,
+                    box-shadow var(--t-tap) ease;
+      }
+      .levelmap__card:hover {
+        background: rgba(28, 31, 34, 0.9);
+        border-color: var(--line-strong);
+        box-shadow: var(--edge), 0 0 20px var(--glow);
+      }
+      .levelmap__card:active { transform: scale(0.99); }
+
+      /* Пройденный уровень: карточка приглушена, а заставка на ней выцветает —
+         сразу видно, где игрок уже был, и куда идти дальше. */
+      .levelmap__card[data-passed] { opacity: 0.72; }
+      .levelmap__card[data-passed] .levelmap__shot { filter: saturate(0.5) brightness(0.78); }
+      .levelmap__card[data-passed]:hover { opacity: 1; }
+
+      /* Запертый уровень: туда ещё не дошли. Карточка глухая и не нажимается —
+         заставка почти погашена, чтобы вперёд не подглядывали, а замок объясняет,
+         почему на неё не реагируют. */
+      .levelmap__card[data-locked] {
+        opacity: 0.55;
+        cursor: default;
+      }
+      .levelmap__card[data-locked]:hover {
+        background: var(--card);
+        border-color: var(--line);
+        box-shadow: var(--edge);
+      }
+      .levelmap__card[data-locked]:active { transform: none; }
+      .levelmap__card[data-locked] .levelmap__shot {
+        filter: grayscale(1) brightness(0.32);
+      }
+
+      /* Тот, на котором игрок сейчас: подсвечен рамкой, чтобы не терять место. */
+      .levelmap__card[data-here] {
+        border-color: var(--line-here);
+        background: rgba(34, 30, 22, 0.92);
+        box-shadow: var(--edge), 0 0 22px var(--glow);
+      }
+
+      /* Заставка уровня: по картинке его и узнают, название читают вторым. */
+      .levelmap__shot {
+        flex: none;
+        width: 92px; height: 58px;
+        border-radius: 9px;
+        background: var(--ink) center/cover no-repeat;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .levelmap__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+      .levelmap__number {
+        color: rgba(232, 208, 143, 0.75);
+        font: 600 11px/1 var(--mono);
+        letter-spacing: 0.12em; text-transform: uppercase;
+      }
+      .levelmap__name {
+        color: var(--paper);
+        font: 400 15px/1.25 var(--mono);
+        /* Длинное название не должно распирать карточку. */
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+
+      /* Цвета меток: форма у них общая, разное только это. */
+      .levelmap__here {
+        background: var(--fill-soft);
+        color: var(--gold);
+      }
+      .levelmap__passed {
+        background: rgba(101, 158, 108, 0.18);
+        color: var(--live);
+      }
+      .levelmap__locked {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text-mute);
+      }
+
+      @media (max-width: 420px) {
+        .levelmap__shot { width: 74px; height: 48px; }
+        .levelmap__name { font-size: 14px; }
+      }
+
+      /* ================== ЭКРАН СМЕРТИ ================== */
+
+      /* Не глухая заливка, а полупрозрачная: сквозь неё видно место, где всё
+         кончилось, — это одна неудачная попытка, а не выход из игры. Поэтому
+         поверх общей пелены ложится ещё и тёплый провал к центру. */
+      .death {
+        z-index: 80;
+        align-items: center;
+        padding: 0 16px;
+        background:
+          radial-gradient(circle at 50% 45%, rgba(40, 10, 8, 0.22), transparent 62%),
+          var(--veil);
+        transition: opacity 450ms ease;
+      }
+
+      .death__card {
+        display: flex; flex-direction: column; align-items: center; gap: 12px;
+        text-align: center;
+      }
+
+      /* Карточка стоит на месте: ни выезда, ни возврата.
+         Выезд был, и на нажатии кнопки он играл задом наперёд — экран уходил, а
+         карточка съезжала вниз, и кнопки дёргались под пальцем. */
+
+      .death__title {
+        font-size: 26px; line-height: 1.1;
+      }
+      .death__note { margin-bottom: 6px; }
+
+      /* Две кнопки столбиком: та, что нажимают почти всегда, — первой. */
+      .death__buttons {
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+      }
+
+      /* На экране смерти сноска отступает от кнопок заметнее: ей не место
+         вплотную к «С начала», она поясняет кнопку над ней. */
+      .death__hint { margin-top: 8px; }
+
+      /* Значок и надпись в строку, значок первым — потому и отступ слева
+         меньше правого. */
+      .death__again {
+        font-size: 15px;
+        padding: 14px 34px 14px 26px;
+      }
+
+      /* Значок «играть»: квадрат с треугольником внутри. Цвет берёт у кнопки,
+         поэтому подсветка при наведении красит его заодно с надписью. */
+      .death__icon {
+        flex: none;
+        width: 20px; height: 20px;
+        /* Прописные буквы стоят выше своей середины — значок опускаем на волос,
+           иначе он кажется приподнятым над строкой. */
+        margin-top: 1px;
+      }
+
+      /* «С начала» той же формы, что и «Ещё раз», но намеренно блеклая: попасть
+         по ней случайно, метя в соседнюю, значит потерять всё пройденное. */
+      .death__start {
+        font-size: 15px;
+        padding: 14px 34px;
+      }
+
+      /* Кнопка, на которой стоит выбор стрелками: её и нажмёт Enter.
+
+         Метка сильнее наведения мышью — и должна быть: наведение это «палец
+         рядом», а выбор это «нажму вот сюда». Показывается она только за
+         столом, где есть чем выбирать; ставит её сам экран смерти. */
+      .death__again.is-picked, .death__start.is-picked {
+        color: var(--gold);
+        border-color: var(--gold);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 26px var(--glow);
+      }
+      .death__again.is-picked {
+        background: linear-gradient(180deg, rgba(232, 208, 143, 0.22), rgba(232, 208, 143, 0.12));
+      }
+      .death__start.is-picked {
+        background: rgba(232, 208, 143, 0.1);
+      }
+
+      /* ================== ПОДТВЕРЖДЕНИЕ ================== */
+
+      /* Окно «точно?» перед тем, что нельзя отменить.
+
+         Выше экрана смерти, но ниже загрузки и ворот: те закрывают игру
+         целиком, а это окно — только вопрос поверх уже открытого экрана. */
+      .confirm {
+        z-index: 88;
+        align-items: center;
+        padding: 16px;
+      }
+
+      .confirm__card {
+        gap: 10px;
+        width: min(360px, 100%);
+        padding: 24px 22px 18px;
+      }
+      /* Окно слегка подаётся вверх на появлении: возникшее без движения
+         читается как картинка, а не как остановка перед выбором. */
+
+      .confirm__title { font-size: 15px; line-height: 1.3; }
+      .confirm__note { margin-bottom: 8px; }
+      .confirm__note[hidden] { display: none; }
+
+      /* Ответы в ряд, безопасный слева: к нему и должна вести рука. */
+      .confirm__buttons { display: flex; gap: 10px; width: 100%; }
+      .confirm__no, .confirm__yes {
+        flex: 1;
+        padding: 13px 10px;
+        font-size: 12px;
+        letter-spacing: 0.1em;
+      }
+
+      /* ================== ПОДСКАЗКА ПО УПРАВЛЕНИЮ ================== */
+
+      /* Карточка внизу экрана, один раз за сеанс.
+
+         Лежит она над игрой, но нажатий не ловит: pointer-events отключены на
+         всём, что в ней есть. Первое касание должно уходить в игру — стик под
+         ней, и подсказка гаснет ровно от того же движения, которым игрок
+         трогается с места. */
+      .hint {
+        position: fixed; inset: auto 0 0 0; z-index: 70;
+        display: flex; justify-content: center;
+        padding: 0 16px 8vh;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(14px);
+        transition: opacity var(--t-screen) ease,
+                    transform var(--t-screen) cubic-bezier(0.2, 0.7, 0.3, 1);
+      }
+      .hint[hidden] { display: none; }
+      .hint--on { opacity: 1; transform: translateY(0); }
+
+      .hint__card {
+        gap: 10px;
+        padding: 18px 26px 14px;
+      }
+
+      .hint__keys { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+      .hint__keys[hidden], .hint__stick[hidden] { display: none; }
+      .hint__row { display: flex; gap: 5px; }
+
+      .hint__key {
+        display: flex; align-items: center; justify-content: center;
+        width: 38px; height: 38px;
+        border-radius: var(--r-key);
+        border: 1px solid rgba(232, 208, 143, 0.45);
+        /* Клавиша светится изнутри и отбрасывает короткую тень вниз — так она
+           читается как выпуклая, а не как нарисованный квадрат. */
+        background: linear-gradient(180deg, rgba(232, 208, 143, 0.16), rgba(232, 208, 143, 0.05));
+        box-shadow: 0 2px 0 rgba(232, 208, 143, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        color: var(--gold);
+        font: 600 15px/1 var(--mono);
+      }
+
+      /* Клавиши загораются по очереди — W, A, S, D, — и по ним видно, что это
+         не картинка, а то, что надо нажать. */
+      @keyframes hint-press {
+        0%, 62%, 100% { transform: translateY(0); box-shadow: 0 2px 0 rgba(232, 208, 143, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+        70% { transform: translateY(2px); box-shadow: 0 0 0 rgba(232, 208, 143, 0), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+      }
+      .hint__key { animation: hint-press 3200ms ease-in-out infinite; }
+      .hint__row:last-child .hint__key:nth-child(1) { animation-delay: 800ms; }
+      .hint__row:last-child .hint__key:nth-child(2) { animation-delay: 1600ms; }
+      .hint__row:last-child .hint__key:nth-child(3) { animation-delay: 2400ms; }
+
+      /* Стик: круг с ручкой, которая ходит по кругу — как палец по экрану. */
+      .hint__stick { display: flex; justify-content: center; }
+      .hint__base {
+        position: relative;
+        width: 66px; height: 66px;
+        border-radius: 50%;
+        border: 1px solid rgba(232, 208, 143, 0.35);
+        background: radial-gradient(circle at 50% 50%, rgba(232, 208, 143, 0.1), rgba(232, 208, 143, 0.02));
+      }
+      .hint__knob {
+        position: absolute; left: 50%; top: 50%;
+        width: 26px; height: 26px; margin: -13px 0 0 -13px;
+        border-radius: 50%;
+        border: 1px solid var(--line-strong);
+        background: rgba(232, 208, 143, 0.22);
+        box-shadow: 0 0 12px var(--glow);
+        animation: hint-knob 3600ms ease-in-out infinite;
+      }
+      @keyframes hint-knob {
+        0%   { transform: translate(0, 0); }
+        20%  { transform: translate(0, -15px); }
+        45%  { transform: translate(14px, 6px); }
+        70%  { transform: translate(-14px, 6px); }
+        100% { transform: translate(0, 0); }
+      }
+
+      .hint__title { margin-top: 2px; font-size: 15px; line-height: 1.2; }
+      .hint__tail { margin-top: 2px; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hint__key, .hint__knob { animation: none; }
+        .hint { transition: opacity var(--t-screen) ease; transform: none; }
+      }
+
+      /* ================== ПАУЗА ================== */
+
+      /* Мир под ней стоит, поверх — та же подсказка управления, что в начале
+         игры. Лежит ниже карты уровней и экрана смерти: те открываются поверх
+         паузы, а не наоборот. */
+      .pause {
+        z-index: 80;
+        align-items: center;
+        padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+      }
+
+      .pause__card {
+        gap: 10px;
+        padding: 26px 30px 20px;
+      }
+
+      .pause__title {
+        margin-bottom: 4px;
+        font-size: 20px; line-height: 1.2;
+        letter-spacing: 0.18em;
+      }
+      .pause__hint { margin-top: 2px; font-size: 15px; line-height: 1.2; }
+      .pause__tail { margin-top: 6px; }
+
+      /* ================== ВОРОТА ================== */
+
+      /* Чёрный экран с одной кнопкой, с которого всё начинается. Лежат поверх
+         экрана загрузки: тот уже показывает свои реплики под ними, но увидеть
+         его игрок должен только после нажатия. */
+      .gate {
+        position: fixed; inset: 0; z-index: 95;
+        /* Зазор с запасом: волны от наушников расходятся вдвое шире иконки и не
+           должны наплывать на кнопку. */
+        display: flex; flex-direction: column; gap: 84px;
+        align-items: center; justify-content: center;
+        background: var(--ink);
+      }
+      .gate[hidden] { display: none; }
+
+      /* Наушники над кнопкой: волны расходятся от них кругами и тают. */
+      .gate__phones {
+        position: relative;
+        width: 64px; height: 64px;
+        color: var(--gold);
+        pointer-events: none;
+      }
+      .gate__icon {
+        position: relative;
+        width: 100%; height: 100%;
+        animation: gate-phones 2400ms ease-in-out infinite;
+      }
+      .gate__wave {
+        position: absolute; inset: 0;
+        border-radius: 50%;
+        border: 1.5px solid var(--line-strong);
+        opacity: 0;
+        animation: gate-wave 2400ms ease-out infinite;
+      }
+      @keyframes gate-wave {
+        from { transform: scale(0.9); opacity: 0.8; }
+        to   { transform: scale(2.3); opacity: 0; }
+      }
+      @keyframes gate-phones {
+        0%, 100% { transform: scale(1); }
+        50%      { transform: scale(1.06); }
+      }
+
+      .gate__play {
+        font-size: 17px;
+        letter-spacing: 0.16em;
+        padding: 17px 46px;
+      }
+
+      .gate__action {
+        display: flex; flex-direction: column; align-items: center; gap: 18px;
+      }
+      .gate__key {
+        font-size: 12px;
+        pointer-events: none;
+      }
+      .gate__key kbd {
+        display: inline-block;
+        margin-left: 4px;
+        padding: 4px 8px 3px;
+        font: inherit; color: var(--gold);
+        border: 1px solid rgba(232, 208, 143, 0.45);
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        background: rgba(232, 208, 143, 0.06);
+      }
+
+      /* Мягкое дыхание: на пустом чёрном экране неподвижная кнопка читается как
+         картинка, а не как то, на что надо нажать. */
+      @keyframes gate-breath {
+        from { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 0 0 0 rgba(232, 208, 143, 0.28); }
+        to   { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 0 0 14px rgba(232, 208, 143, 0); }
+      }
+      .gate__play { animation: gate-breath 2200ms ease-out infinite; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .gate__play, .gate__icon, .gate__wave { animation: none; }
+      }
+
+      /* ================== ЗАГРУЗКА ИГРЫ ================== */
+
+      /* Голый чёрный экран, реплика и полоса под ней. Ни картинок, ни рамок —
+         до заставки уровня показывать ещё нечего. */
+      .boot {
+        position: fixed; inset: 0; z-index: 90;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--ink);
+      }
+      .boot[hidden] { display: none; }
+
+      /* Реплика вынута из потока и подвешена над полосой.
+         Иначе полоса ехала бы за ней: реплики разной длины, одна встаёт в
+         строку, другая в две — и на каждой смене полоса прыгала бы вниз-вверх.
+         Так она стоит ровно по центру экрана, сколько бы строк ни занял текст. */
+      .boot__line {
+        position: absolute;
+        left: 50%; transform: translateX(-50%);
+        bottom: calc(50% + 22px);
+        width: min(78vw, 560px);
+        text-align: center; text-wrap: balance;
+        color: var(--text-note); text-shadow: 0 2px 6px #000;
+        font: 400 15px/1.5 var(--mono);
+        letter-spacing: 0.03em;
+        opacity: 0;
+        transition: opacity 320ms ease;
+      }
+      /* Лого студии — на пятой части экрана от верха, вынуто из потока:
+         реплика под ним бывает в одну строку и в две, и лого не должно от
+         этого прыгать. */
+      .boot__logo {
+        position: absolute;
+        left: 50%; transform: translateX(-50%);
+        top: 20%;
+        /* Высота — сколько влезает между лого и репликой: на телефоне лёжа
+           экран низкий, и лого в полный рост ушло бы за край. */
+        height: min(89px, calc(50vh - 170px)); width: auto;
+        max-width: 62vw;
+        pointer-events: none; user-select: none;
+      }
+
+      /* ================== ЗАСТАВКА УРОВНЯ ================== */
+
+      /* Чёрная вуаль под заставкой: когда та уходит, уровень проступает из
+         темноты, а не возникает рывком. Выше игры и её кнопок, ниже заставки;
+         нажатия пропускает насквозь — она только картинка. */
+      .veil {
+        position: fixed; inset: 0; z-index: 59;
+        background: var(--ink);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 800ms ease;
+      }
+      .veil--black { opacity: 1; transition: none; }
+
+      .splash {
+        position: fixed; inset: 0; z-index: 60;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--ink);
+      }
+      /* display: flex сильнее атрибута hidden, и без этой строки заставка
+         остаётся висеть поверх игры, сколько её ни прячь. */
+      .splash[hidden] { display: none; }
+      /* Картинка кроет экран целиком при любом соотношении сторон: лишнее
+         обрезается, пустых полей не остаётся. */
+      .splash__image {
+        position: absolute; inset: 0;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+      }
+      /* Подпись подвешена над полосой ровно так же, как реплика на загрузке
+         игры: у обоих экранов полоса стоит по центру и никуда не едет, сколько
+         бы строк ни занял текст. Иначе на переходе от одной загрузки к другой
+         полоса прыгает — а идут они подряд, и прыжок этот хорошо виден. */
+      .splash__caption {
+        position: absolute;
+        left: 50%; transform: translateX(-50%);
+        bottom: calc(50% + 22px);
+        width: min(78vw, 560px);
+        text-align: center; text-wrap: balance;
+        color: var(--paper); text-shadow: 0 2px 6px #000;
+        font: 600 15px/1.5 var(--mono);
+        letter-spacing: 0.04em;
+      }
+
+      /* ================== ФИНАЛ И ИТОГ УРОВНЯ ==================
+         Один и тот же экран: итог уровня поднимает его же с классом
+         `ending--level`. Поэтому всё общее и живёт здесь. */
+
+      /* Кроет всё, включая заставку, и не отдаёт управление. */
+      .ending {
+        position: fixed; inset: 0; z-index: 80;
+        background: var(--ink) center / cover no-repeat;
+        opacity: 0; pointer-events: none;
+        transition: opacity 900ms ease;
+      }
+      .ending--on { opacity: 1; pointer-events: auto; }
+
+      /* Сам кадр: отдельным слоем, потому что едет только он. Надписи поверх
+         стоят неподвижно — текст, ползущий вместе с картинкой, не читается. */
+      .ending__frame {
+        position: absolute; inset: 0;
+        background: var(--ink) center / cover no-repeat;
+        background-image: inherit;
+        transform-origin: 62% 42%; /* к горизонту и герою, а не к середине кадра */
+      }
+      .ending--on .ending__frame,
+      .ending--leaving .ending__frame { animation: ending-drift 26s ease-out forwards; }
+      /* Уходящий экран растворяется, а наезд на картинке идёт дальше: снимись он
+         вместе с показом — картинка в первый же кадр прыгала бы к исходному
+         масштабу, и экран дёргался бы на уходе. */
+
+      /* Медленный наезд с уводом вбок: кадр перестаёт быть стоп-кадром, но и
+         не мельтешит. Масштаб только вверх от единицы — иначе полезли бы края. */
+      @keyframes ending-drift {
+        from { transform: scale(1) translate3d(0, 0, 0); }
+        to   { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
+      }
+
+      /* Титр, итог и кнопки: своим столбцом посреди кадра, на тёмном стекле,
+         чтобы читались поверх любого его места. Рамку и нить по верху берёт
+         те же, что у прочих карточек, — иначе финал выглядел бы экраном из
+         другой игры. */
+      .ending__card {
+        position: absolute; left: 50%; top: 50%;
+        transform: translate(-50%, -50%);
+        display: flex; flex-direction: column; align-items: center; gap: 18px;
+        padding: 22px 34px;
+        max-width: min(92vw, 560px);
+        /* Карточка не должна вылезать за экран: на низких окнах и телефонах
+           контент прокручивается внутри неё, а не уходит под край. */
+        max-height: calc(100dvh - 8vh);
+        overflow-y: auto;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(8, 6, 5, 0.62);
+        -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+        box-shadow: var(--lift), var(--edge);
+        opacity: 0; animation: ending-rise 1200ms ease-out 900ms forwards;
+      }
+      @keyframes ending-rise {
+        from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)); }
+        to   { opacity: 1; transform: translate(-50%, -50%); }
+      }
+
+      .ending__caption {
+        font-size: clamp(15px, 3.4vw, 21px); line-height: 1.2;
+        letter-spacing: 0.18em;
+        text-align: center;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.7), 0 0 22px rgba(232, 208, 143, 0.25);
+      }
+
+      /* Итог: три пары «что» и «сколько», в строку на широком экране. */
+      .ending__stats {
+        display: flex; flex-wrap: wrap; justify-content: center;
+        gap: 6px 26px; margin: 0;
+        font: 500 12px/1.3 var(--mono);
+        letter-spacing: 0.1em; text-transform: uppercase;
+      }
+      .ending__stats dt { color: rgba(232, 208, 143, 0.6); }
+      .ending__stats dd {
+        margin: 0 0 0 8px;
+        font-size: 15px; color: var(--gold-lit);
+      }
+      .ending__stats dt, .ending__stats dd { display: inline-block; }
+
+      /* Таблица рекордов площадки: заголовок, шапка и строки одной сеткой.
+         Строки скромнее итога — это чужие прохождения, а не твой поход. */
+      .ending__board {
+        width: 100%;
+        display: flex; flex-direction: column; gap: 8px;
+      }
+      .ending__board[hidden] { display: none; }
+
+      .ending__board-title {
+        margin: 0;
+        font: 600 11px/1 var(--mono);
+        letter-spacing: 0.2em; text-transform: uppercase;
+        color: rgba(232, 208, 143, 0.85); text-align: center;
+      }
+
+      .ending__head, .ending__row {
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr) auto auto;
+        gap: 0 10px; align-items: center;
+      }
+      .ending__head {
+        padding: 0 12px;
+        font: 600 9px/1 var(--mono);
+        letter-spacing: 0.14em; text-transform: uppercase;
+        color: rgba(232, 208, 143, 0.45);
+      }
+      .ending__head-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+      .ending__board-list {
+        display: flex; flex-direction: column; gap: 6px;
+        margin: 0; padding: 0; list-style: none;
+        max-height: 32vh; overflow-y: auto;
+      }
+      .ending__row {
+        padding: 6px 12px;
+        border-radius: var(--r-tile);
+        border: 1px solid rgba(232, 208, 143, 0.12);
+        background: rgba(0, 0, 0, 0.35);
+        font: 500 12px/1.2 var(--mono);
+      }
+      /* Своё место в рейтинге: подсвечено рамкой, чтобы игрок нашёл себя. */
+      .ending__row--here {
+        border-color: var(--line-here);
+        background: rgba(232, 208, 143, 0.1);
+        box-shadow: 0 0 18px var(--glow);
+      }
+
+      .ending__place { color: rgba(232, 208, 143, 0.8); text-align: right; }
+      .ending__who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .ending__avatar {
+        flex: none; width: 22px; height: 22px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 50%;
+        background: var(--fill-soft);
+        font-size: 11px; color: var(--gold);
+        object-fit: cover;
+      }
+      .ending__name {
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        color: var(--paper);
+      }
+      .ending__time { color: var(--gold-lit); }
+      .ending__deaths { color: rgba(232, 208, 143, 0.65); min-width: 24px; text-align: right; }
+
+      /* Скролл списка рекордов: тонкая золотая полоса, не спорящая с игрой. */
+      .ending__board-list::-webkit-scrollbar { width: 6px; }
+      .ending__board-list::-webkit-scrollbar-thumb { background: rgba(232, 208, 143, 0.25); border-radius: 3px; }
+      .ending__board-list::-webkit-scrollbar-track { background: transparent; }
+
+      .ending__buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+      .ending__again, .ending__rate {
+        font-size: 13px;
+        padding: 13px 26px;
+      }
+      .ending__rate[hidden] { display: none; }
+
+      /* Телефон: карточка занимает почти весь экран, а таблица — компактная.
+         Иначе титр, итог и десяток строк рекордов в один экран не влезают. */
+      @media (max-width: 640px) {
+        .ending__card {
+          padding: 14px;
+          gap: 12px;
+          /* Портрет телефона: карточка почти во весь экран, но с заметными
+             полями по бокам (по 20px) — в притык к краям её не прижимаем,
+             включая вырезы и скругления современных экранов. */
+          width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 40px);
+          max-width: 100vw;
+          max-height: calc(100dvh - 3vh);
+        }
+        .ending__stats { gap: 4px 18px; font-size: 11px; }
+        .ending__stats dd { font-size: 13px; }
+        .ending__board-list { max-height: 24vh; }
+        .ending__head, .ending__row {
+          grid-template-columns: 20px minmax(0, 1fr) auto auto;
+          gap: 0 8px;
+        }
+        .ending__row { padding: 5px 10px; font-size: 11px; }
+        .ending__who { gap: 6px; }
+        .ending__avatar { width: 18px; height: 18px; font-size: 9px; }
+        .ending__again, .ending__rate { padding: 11px 20px; font-size: 12px; }
+      }
+
+      /* Чёрный экран ответной передачи: он стоит между последним уровнем и
+         финалом, и под ним уже ничего не происходит. */
+      .endmsg {
+        /* Ниже рации и субтитров: он для них подложка, а не крышка. Выше самой
+           игры и её интерфейса — под ним уже ничего не показывают. */
+        position: fixed; inset: 0; z-index: 44;
+        background: var(--ink);
+        opacity: 0; transition: opacity var(--t-screen) ease;
+      }
+      .endmsg--on { opacity: 1; }
+      .endmsg[hidden] { display: none; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .ending--on { animation: none; }
+        .ending--on .ending__frame { animation: none; }
+        .ending__card { animation: none; opacity: 1; }
+      }
+
+      /* ================== СЛУЖЕБНОЕ ==================
+         Счётчик кадров, строка состояния и панели разработчика. Игрок этого не
+         видит: панели поднимаются только на dev-сервере. Держатся того же
+         языка, но нарочно суше — это приборы, а не интерфейс игры. */
+
+      /* Счётчик кадров: правый нижний угол, мимо патронов и кнопки.
+         Вниз, а не вверх: наверху и без него тесно — там имя уровня, патроны
          и кнопка панели, и счётчик ложился прямо на гильзы. */
       .stats {
         position: fixed; z-index: 26;
         right: calc(12px + env(safe-area-inset-right));
         bottom: calc(12px + env(safe-area-inset-bottom));
         pointer-events: none;
-        font: 400 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        font: 400 12px/1.4 var(--mono);
         color: #9fe6b0; text-shadow: 0 1px 3px #000;
         white-space: pre;
       }
@@ -1257,10 +1283,86 @@
         position: fixed; z-index: 25;
         left: calc(12px + env(safe-area-inset-left));
         top: calc(10px + env(safe-area-inset-top));
-        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        font: 400 12px/1.5 var(--mono);
         color: #9fb4c7; text-shadow: 0 1px 2px #000; pointer-events: none;
       }
-      /* --- телефон ---
+
+      /* Панель разработчика сдвинута вниз: в самом углу теперь кнопка карты
+         уровней, а она видна игроку и потому важнее. */
+      .devpanel {
+        position: fixed;
+        right: calc(14px + env(safe-area-inset-right));
+        top: calc(64px + env(safe-area-inset-top));
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        font: 400 12px/1.4 var(--mono);
+      }
+      .devpanel__button {
+        font: inherit;
+        padding: 7px 12px;
+        border-radius: var(--r-key);
+        border: 1px solid rgba(255,255,255,0.35);
+        background: rgba(20,26,32,0.72);
+        color: var(--paper);
+        cursor: pointer;
+        -webkit-backdrop-filter: blur(3px);
+        backdrop-filter: blur(3px);
+        transition: background var(--t-tap) ease;
+      }
+      .devpanel__button:hover { background: rgba(30,38,46,0.85); }
+      .devpanel__button:disabled { opacity: 0.55; cursor: progress; }
+      .devpanel__status {
+        max-width: 320px;
+        text-align: right;
+        color: #9fb4c7;
+        text-shadow: 0 1px 2px #000;
+      }
+      .devpanel__status[data-kind="ok"] { color: var(--live); }
+      .devpanel__status[data-kind="fail"] { color: #e59a9a; }
+      .devpanel__status[data-kind="busy"] { color: var(--gold); }
+
+      .editor {
+        position: fixed; left: 12px; bottom: 12px; z-index: 40;
+        padding: 8px 12px; border-radius: var(--r-key);
+        background: rgba(20,26,32,0.78); border: 1px solid rgba(255,255,255,0.3);
+        color: var(--paper); white-space: pre;
+        font: 400 12px/1.5 var(--mono);
+        /* Панель мышь не ловит, чтобы не мешать правке сцены, — но кнопки в ней
+           ловят: иначе по ним было бы не щёлкнуть. */
+        pointer-events: none;
+        -webkit-backdrop-filter: blur(3px);
+        backdrop-filter: blur(3px);
+      }
+      .editor__levels {
+        display: flex; align-items: center; gap: 10px;
+        margin-bottom: 6px; font-weight: 600;
+      }
+      .editor__arrow {
+        pointer-events: auto;
+        width: 26px; height: 24px;
+        border-radius: 6px; border: 1px solid rgba(255,255,255,0.35);
+        background: rgba(255,255,255,0.08); color: var(--paper);
+        font: 400 14px/1 var(--mono);
+        cursor: pointer;
+        transition: background var(--t-tap) ease;
+      }
+      .editor__arrow:hover { background: rgba(255,255,255,0.2); }
+
+      .editor__toggles {
+        display: flex; flex-direction: column; gap: 4px;
+        margin: 8px 0 6px;
+      }
+      .editor__toggle {
+        pointer-events: auto;
+        display: flex; align-items: center; gap: 2px;
+        color: var(--paper); cursor: pointer;
+      }
+      .editor__toggle input { cursor: pointer; }
+
+      /* ================== ТЕЛЕФОН ==================
 
          На широком экране интерфейс расходится сам собой, на телефоне — нет.
          Наверху одну полосу делят имя уровня, ряд патронов и кнопка панели;
@@ -1286,9 +1388,6 @@
         .radiotext__line { font-size: 13px; padding: 8px 12px; }
 
         .devpanel__status { max-width: min(320px, 52vw); }
-
-        /* Под рядом патронов: на узком экране он опущен ниже. */
-
       }
 
       /* Низкий экран: телефон в ландшафте. Места по высоте мало, поэтому текст
@@ -1304,8 +1403,6 @@
           width: min(70vw, 520px);
         }
         .radiotext__line { font-size: 13px; padding: 7px 12px; }
-
-        /* Высоты мало: строка идёт сразу под патронами, которые тут выше. */
       }
     </style>
   </head>
