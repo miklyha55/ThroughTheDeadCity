@@ -30,6 +30,24 @@ class Progress {
     this.state = { level: null, passed: [], armed: false, magazine: 0, perReload: 0, played: 0 };
     this._pending = null;
     this._loaded = false;
+    this._held = false; // сохранения остановлены: игрок меняет аккаунт
+  }
+
+  /**
+   * Перестать сохранять совсем — до перезагрузки страницы.
+   *
+   * Зовётся, когда игрок открыл выбор аккаунта: с этой секунды неизвестно, чей
+   * прогресс мы держим в руках. Писать его нельзя ни отложенно, ни на уходе со
+   * страницы — запись ушла бы либо прежнему аккаунту, либо, что хуже, новому,
+   * но с чужим уровнем и чужим снаряжением.
+   *
+   * Обратного хода нет намеренно: закрытие диалога перезагружает страницу, и
+   * прогресс читается заново — уже того, кто играет теперь.
+   */
+  hold() {
+    clearTimeout(this._pending);
+    this._pending = null;
+    this._held = true;
   }
 
   /**
@@ -156,7 +174,7 @@ class Progress {
    * Отложенная запись в этот момент просто не успела бы уйти.
    */
   flush() {
-    if (!this._pending) return;
+    if (this._held || !this._pending) return;
 
     clearTimeout(this._pending);
     this._pending = null;
@@ -164,6 +182,7 @@ class Progress {
   }
 
   _save(now = false) {
+    if (this._held) return;    // чей это прогресс — сейчас неизвестно
     if (!this._loaded) return; // читать ещё не читали — писать нечего
 
     clearTimeout(this._pending);

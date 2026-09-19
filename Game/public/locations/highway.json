@@ -2131,14 +2131,6 @@
       "rotation": 20.3
     },
     {
-      "prop": "Prop_Barrel",
-      "at": [
-        -159.89,
-        67.12
-      ],
-      "rotation": -88.9
-    },
-    {
       "prop": "Prop_Pallet",
       "at": [
         -151.34,
@@ -2345,14 +2337,6 @@
         58.81
       ],
       "rotation": 173.5
-    },
-    {
-      "prop": "Prop_Barrel",
-      "at": [
-        -117.79,
-        33.47
-      ],
-      "rotation": -27.8
     },
     {
       "prop": "Prop_Barrel",

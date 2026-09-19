@@ -24,6 +24,9 @@ class Yandex {
 
     this.onPause = null;  // площадка просит остановить игру
     this.onResume = null; // и продолжить
+
+    this.onAccountOpen = null;  // игрок открыл выбор аккаунта
+    this.onAccountClose = null; // и закрыл его: кто теперь играет — неизвестно
   }
 
   /**
@@ -58,6 +61,24 @@ class Yandex {
   _listen() {
     this.sdk.on?.('game_api_pause', () => this.onPause?.());
     this.sdk.on?.('game_api_resume', () => this.onResume?.());
+
+    /**
+     * Выбор аккаунта: игрок может сменить его прямо посреди игры.
+     *
+     * Молчать об этом нельзя. Объект игрока мы берём один раз и держим весь
+     * сеанс, а прогресс пишем в него: не узнав о смене, игра продолжила бы
+     * писать прошлому аккаунту и показывать его уровень новому.
+     *
+     * Имена событий берём у самого SDK, а не строками: строковых значений
+     * документация не обещает, а константы у него есть. Нет константы — SDK
+     * старый и таких событий не шлёт, подписываться не на что.
+     */
+    const events = this.sdk.EVENTS ?? {};
+    const open = events.ACCOUNT_SELECTION_DIALOG_OPENED;
+    const close = events.ACCOUNT_SELECTION_DIALOG_CLOSED;
+
+    if (open) this.sdk.on?.(open, () => this.onAccountOpen?.());
+    if (close) this.sdk.on?.(close, () => this.onAccountClose?.());
   }
 
   /** Язык интерфейса площадки. Вне её — язык браузера. */
