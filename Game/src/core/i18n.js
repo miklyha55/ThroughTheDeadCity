@@ -31,6 +31,8 @@ const EN = {
   'gate.label': 'Play',
   'gate.keyBefore': 'or press',
 
+  'boot.failed': 'The game did not load. Check your connection and reload the page.',
+
   'boot.lines': [
     'Loading ammo… and a little optimism.',
     'The zombies are waiting patiently… almost.',
@@ -172,6 +174,20 @@ export function pickLanguage(code) {
  */
 export function applyLanguage(code) {
   current = pickLanguage(code);
+
+  /**
+   * Сказать языку страницы, что он сменился.
+   *
+   * Не косметика и не про читалки одни. Браузер смотрит на `lang` и, увидев
+   * русский документ у англоязычного игрока, предлагает перевести страницу —
+   * своей полосой поверх игры. А переводить тут нечего: весь текст игра ставит
+   * сама и уже на нужном языке.
+   *
+   * Ставится до выхода по родному языку: русский тоже надо объявить, если до
+   * этого в разметке стояло другое.
+   */
+  document.documentElement.lang = current;
+
   if (current === LANGUAGES[0]) return; // родной язык уже в настройках
 
   const words = current === 'en' ? EN : null;
