@@ -1443,45 +1443,6 @@
       "rotation": -103.4
     },
     {
-      "prop": "Fence_ChainLink",
-      "at": [
-        11,
-        38
-      ]
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        37
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        13
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        12,
-        -69
-      ],
-      "rotation": 90
-    },
-    {
-      "prop": "Fence_ChainLink",
-      "at": [
-        -12,
-        -69
-      ],
-      "rotation": 90
-    },
-    {
       "prop": "Car_SedanWreck",
       "at": [
         -25.22,

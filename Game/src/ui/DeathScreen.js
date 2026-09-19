@@ -59,13 +59,8 @@ export class DeathScreen {
     this.fromStart.type = 'button';
     this.fromStart.textContent = CFG.fromStart;
 
-    // Подсказка про стрелки и Enter: только за столом, где клавиши и есть.
-    this.hint = document.createElement('p');
-    this.hint.className = 'death__hint';
-    this.hint.textContent = CFG.enterHint;
-
     buttons.append(this.again, this.fromStart);
-    this.card.append(this.title, this.note, buttons, this.hint);
+    this.card.append(this.title, this.note, buttons);
     this.root.appendChild(this.card);
     container.appendChild(this.root);
 
@@ -90,6 +85,12 @@ export class DeathScreen {
       [this.again, this.fromStart],
       () => this.shown && !this.dialog.shown && !this.again.disabled,
     );
+
+    // Подсказка про клавиши — последней строкой карточки. Отступ у неё здесь
+    // заметнее обычного: она поясняет кнопки над собой, и вплотную к «С начала»
+    // ей не место.
+    this.choice.hint.classList.add('keyhint--apart');
+    this.card.append(this.choice.hint);
 
     this._fade = null;
 
@@ -219,11 +220,9 @@ export class DeathScreen {
     clearTimeout(this._fade);
     this.root.hidden = false;
 
-    // Выбор — на «Ещё раз», и метка вместе с ним. На телефоне подсказка про
-    // клавиши только мешает, и прячется она по тому же признаку, по которому
-    // выбор решает, показывать ли метку.
+    // Выбор — на «Ещё раз», а вместе с ним метка и подсказка про клавиши: обе
+    // появляются только там, где этими клавишами есть чем нажать.
     this.choice.reset();
-    this.hint.hidden = !this.choice.keyboard;
 
     // Кадр на то, чтобы браузер заметил появление: без него переходу
     // прозрачности не с чего начинать, и экран возникнет рывком.

@@ -79,6 +79,7 @@ export class ConfirmDialog {
      * Enter'ом теряют одинаково много.
      */
     this.choice = new Choice([this.no, this.yes], () => this.shown);
+    this.card.append(this.choice.hint);
   }
 
   /**

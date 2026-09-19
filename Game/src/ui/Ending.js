@@ -132,6 +132,7 @@ export class Ending {
      * никуда не ведут, а Enter жмёт «Ещё раз».
      */
     this.choice = new Choice([this.again, this.rate], () => this.shown);
+    this.card.append(this.choice.hint);
 
     this._paint();
     this.shown = false;
@@ -185,7 +186,20 @@ export class Ending {
 
     const place = document.createElement('span');
     place.className = 'ending__place';
-    place.textContent = String(entry.rank + 1);
+
+    /**
+     * Место — как прислала площадка, без поправок.
+     *
+     * Здесь стояло `rank + 1`, и первая строка таблицы выводилась как «2».
+     * Нумерация у площадки идёт с единицы: ноль она держит под ответ «этого
+     * игрока в таблице нет» — им приходит `userRank` тому, кто не авторизован
+     * или ещё не попал в рейтинг. С нуля она считает только `ranges[].start`,
+     * и это в документации оговорено отдельно, как исключение.
+     *
+     * Подсветка своей строки рядом сравнивает `rank` с `userRank` напрямую — и
+     * была права всё это время. Расходились они только здесь.
+     */
+    place.textContent = String(entry.rank);
 
     const who = document.createElement('span');
     who.className = 'ending__who';
@@ -222,9 +236,16 @@ export class Ending {
     return row;
   }
 
-  /** Показать кнопку оценки: площадка сказала, что примет её. */
+  /**
+   * Показать или убрать кнопку оценки: примет её площадка или нет, решает она.
+   *
+   * Ответ приходит уже на открытом финале, поэтому следом пересчитываем
+   * подсказку про клавиши: с появлением второй кнопки у стрелок впервые
+   * появляется куда вести, и молчать об этом нельзя.
+   */
   offerRate(can) {
     this.rate.hidden = !can;
+    this.choice.refresh();
   }
 
   /**
