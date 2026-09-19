@@ -2079,10 +2079,10 @@
     {
       "prop": "Car_SuvHardtop",
       "at": [
-        -17.37,
-        12.18
+        -16.97,
+        11.48
       ],
-      "rotation": -165.2
+      "rotation": 123.5
     },
     {
       "prop": "Car_SedanWreck",

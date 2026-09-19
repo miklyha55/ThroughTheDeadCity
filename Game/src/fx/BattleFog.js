@@ -205,6 +205,13 @@ export class BattleFog extends ScreenShader {
    * @param {THREE.OrthographicCamera} camera
    * @param {{position: THREE.Vector3}} player
    */
+  /**
+   * Свой радиус чистого круга вокруг героя, м; пусто — обычный, от дальности огня.
+   * Машине он нужен шире: она идёт втрое быстрее, и с пешим кругом дорога
+   * впереди открывалась бы позже, чем до неё доезжаешь.
+   */
+  radius = null;
+
   update(camera, player, dt = 1 / 60) {
     if (!this.ready || !this.field.width) return;
 
@@ -238,7 +245,7 @@ export class BattleFog extends ScreenShader {
     // Первый кадр уровня: тянуть не от чего, просто отпечаток на месте.
     // Считать отрезок от бесконечности нельзя — в кисть уйдёт NaN.
     if (!Number.isFinite(this._was.x)) {
-      this.reveal(at.x, at.z);
+      this.reveal(at.x, at.z, this.radius);
       this._was.set(at.x, at.z);
       return;
     }
@@ -253,7 +260,8 @@ export class BattleFog extends ScreenShader {
       const share = i / steps;
       this.reveal(
         this._was.x + (at.x - this._was.x) * share,
-        this._was.y + (at.z - this._was.y) * share
+        this._was.y + (at.z - this._was.y) * share,
+        this.radius
       );
     }
     this._was.set(at.x, at.z);
