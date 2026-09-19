@@ -58,7 +58,7 @@ export class Boot {
     // горячем кэше к нажатию всё давно готово: обнулившись, полоса стояла пустой
     // весь экран и прыгала на сотню в последний миг.
     this.setProgress(this._share);
-    this._say();
+    this._say(true); // первая — сразу, ждать ей нечего
 
     clearInterval(this._timer);
     this._timer = setInterval(() => this._next(), CFG.swapEvery);
@@ -95,10 +95,27 @@ export class Boot {
     this._say();
   }
 
-  /** Реплика меняется через прозрачность: подмена текста в лоб читается как сбой. */
-  _say() {
-    this.line.style.opacity = '0';
+  /**
+   * Реплика меняется через прозрачность: подмена текста в лоб читается как сбой.
+   *
+   * Смена идёт в два шага — сперва нынешняя гаснет, и только потом на её месте
+   * проступает следующая. Но у первой гаснуть нечему: строка пуста, экран
+   * только что появился. Уходя в общий путь, она зря выжидала время затухания
+   * и показывалась заметно позже самого экрана — на горячем кэше это заметная
+   * доля всей загрузки, и игрок успевал увидеть пустоту под лого.
+   *
+   * @param {boolean} [now] — показать немедленно, не выжидая затухания
+   */
+  _say(now = false) {
     clearTimeout(this._fade);
+
+    if (now) {
+      this.line.textContent = CFG.lines[this._at];
+      this.line.style.opacity = '1';
+      return;
+    }
+
+    this.line.style.opacity = '0';
     this._fade = setTimeout(() => {
       this.line.textContent = CFG.lines[this._at];
       this.line.style.opacity = '1';
