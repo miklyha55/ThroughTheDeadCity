@@ -602,6 +602,9 @@ const controlsHint = new ControlsHint();
 const skipHint = new SkipHint(transmission.root);
 
 startMessage.onSpeak = () => skipHint.arm();
+// Речь оборвали уходом с уровня: сноска о пропуске уходит с ней — пропускать
+// уже нечего.
+startMessage.onStop = () => skipHint.hide();
 startMessage.onDone = () => {
   skipHint.hide();
   controlsHint.show();
@@ -1501,9 +1504,17 @@ function watchDeath() {
  * надо в тот же миг, когда игра и правда встала. Под заставкой мир не живёт,
  * значит и отметка ставится здесь, а не после сборки нового уровня.
  */
-locations.onLoading = () => {
+locations.onLoading = (id) => {
   yandex.pause();
   tally.pause(); // под заставкой герой не идёт — и время ему не идёт
+
+  // Игрок уходит с уровня, на котором звучит вступление, — речь уходит вместе
+  // с ним: иначе голос досказывает вводную уже на другой локации, держа там
+  // персонажа замороженным.
+  //
+  // Тот же уровень заново речь не обрывает: смерть на вводной это всё ещё она,
+  // и обрывать на полуслове то, что игрок как раз слушает, незачем.
+  if (id !== locations.current?.data?.id) startMessage.stop();
 };
 
 locations.onChange = (location) => {
