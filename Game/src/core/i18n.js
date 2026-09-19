@@ -80,6 +80,11 @@ const EN = {
   'ending.timeLabel': 'On the road',
   'ending.againLabel': 'Play again',
   'ending.rateLabel': 'Rate the game',
+  'ending.boardTitle': 'Records',
+  'ending.boardTimeLabel': 'Time',
+  'ending.boardDeathsLabel': 'Deaths',
+  'ending.boardEmpty': 'Nothing yet — be the first',
+  'ending.boardHidden': 'User is hidden',
 
   'levelResult.doneLabel': 'cleared',
   'levelResult.killsLabel': 'Put down',

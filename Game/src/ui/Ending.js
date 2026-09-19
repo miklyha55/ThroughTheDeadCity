@@ -52,6 +52,42 @@ export class Ending {
       this.rows[key] = value;
     }
 
+    /**
+     * Таблица рекордов площадки: лучшие прохождения и место игрока среди них.
+     *
+     * Живёт своей строкой между итогом и кнопками и видна, только если площадка
+     * ответила: вне её и при ошибке запроса место под неё остаётся пустым.
+     */
+    this.board = document.createElement('section');
+    this.board.className = 'ending__board';
+    this.board.hidden = true;
+
+    this.boardTitle = document.createElement('h2');
+    this.boardTitle.className = 'ending__board-title';
+    this.boardTitle.textContent = CFG.boardTitle;
+
+    this.boardHead = document.createElement('div');
+    this.boardHead.className = 'ending__head';
+
+    for (const [part, label] of [
+      ['place', ''], ['name', ''], ['time', CFG.boardTimeLabel],
+      ['deaths', CFG.boardDeathsLabel],
+    ]) {
+      const cell = document.createElement('span');
+      cell.className = `ending__head-${part}`;
+      cell.textContent = label;
+      this.boardHead.appendChild(cell);
+    }
+
+    this.boardList = document.createElement('ul');
+    this.boardList.className = 'ending__board-list';
+
+    this.boardEmpty = document.createElement('p');
+    this.boardEmpty.className = 'ending__empty';
+    this.boardEmpty.textContent = CFG.boardEmpty;
+
+    this.board.append(this.boardTitle, this.boardHead, this.boardList, this.boardEmpty);
+
     const buttons = document.createElement('div');
     buttons.className = 'ending__buttons';
 
@@ -72,7 +108,7 @@ export class Ending {
 
     this.card = document.createElement('div');
     this.card.className = 'ending__card';
-    this.card.append(this.caption, this.stats, buttons);
+    this.card.append(this.caption, this.stats, this.board, buttons);
 
     this.root.append(this.frame, this.card);
 
@@ -105,7 +141,82 @@ export class Ending {
     this.rows.deaths.textContent = String(tally.deaths);
     this.rows.time.textContent = tally.clock;
 
+    // Таблица придёт следом, от площадки: до неё блок не показываем вовсе.
+    this.board.hidden = true;
+
     this.root.classList.add('ending--on');
+  }
+
+  /**
+   * Показать таблицу рекордов.
+   *
+   * Зовётся, когда площадка ответила. Пустота приходит из двух разных причин:
+   * лидерборда ещё нет или в нём никого нет — в обоих случаях показываем
+   * заглушку, чтобы игрок знал, что таблица здесь будет.
+   *
+   * @param {object|null} board — ответ `getEntries` площадки
+   */
+  showBoard(board) {
+    this.board.hidden = true;
+    this.boardEmpty.hidden = true;
+    this.boardList.textContent = '';
+
+    const entries = board?.entries;
+    if (!entries?.length) {
+      if (board) this.boardEmpty.hidden = false;
+      else return; // площадка не ответила — финал без таблицы
+    }
+
+    const userRank = board.userRank ?? -1;
+    for (const entry of entries) {
+      this.boardList.appendChild(this._row(entry, entry.rank === userRank));
+    }
+
+    this.board.hidden = false;
+  }
+
+  /** Одна строка таблицы: место, имя с портретом, время и число смертей. */
+  _row(entry, here) {
+    const row = document.createElement('li');
+    row.className = here ? 'ending__row ending__row--here' : 'ending__row';
+
+    const place = document.createElement('span');
+    place.className = 'ending__place';
+    place.textContent = String(entry.rank + 1);
+
+    const who = document.createElement('span');
+    who.className = 'ending__who';
+
+    const src = entry.player?.getAvatarSrc?.('small');
+    if (src) {
+      const avatar = document.createElement('img');
+      avatar.className = 'ending__avatar';
+      avatar.alt = '';
+      avatar.src = src;
+      who.appendChild(avatar);
+    } else {
+      const initial = document.createElement('span');
+      initial.className = 'ending__avatar';
+      initial.textContent = (entry.player?.publicName || CFG.boardHidden).trim().charAt(0).toUpperCase();
+      who.appendChild(initial);
+    }
+
+    const name = document.createElement('span');
+    name.className = 'ending__name';
+    name.textContent = entry.player?.publicName || CFG.boardHidden;
+    who.appendChild(name);
+
+    const time = document.createElement('span');
+    time.className = 'ending__time';
+    time.textContent = clock(entry.score);
+
+    const deaths = document.createElement('span');
+    deaths.className = 'ending__deaths';
+    const count = Number.parseInt(entry.extraData, 10);
+    deaths.textContent = Number.isFinite(count) ? String(count) : '—';
+
+    row.append(place, who, time, deaths);
+    return row;
   }
 
   /** Показать кнопку оценки: площадка сказала, что примет её. */
@@ -137,6 +248,13 @@ export class Ending {
     if (!this.shown) return;
 
     this.shown = false;
+    this.board.hidden = true; // со старой таблицей повторный показ не начинают
     this.root.classList.remove('ending--on');
   }
+}
+
+/** Время в виде «7:42» — минуты и секунды; на входе миллисекунды. */
+function clock(ms) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }

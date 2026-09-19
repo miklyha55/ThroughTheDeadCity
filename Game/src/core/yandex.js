@@ -255,6 +255,52 @@ class Yandex {
       // сеть отвалилась или выбран предел запросов — игру это ронять не должно
     }
   }
+
+  /**
+   * Записать результат в таблицу рекордов.
+   *
+   * Только авторизованным, раз в секунду — остальных площадка отклонит, и это
+   * не беда: таблица живёт и без их строки.
+   *
+   * @param {string} name — техническое название лидерборда в Консоли
+   * @param {number} score — для типа time это миллисекунды
+   * @param {string} [extra] — что дописать к строке (например, число смертей)
+   * @returns {Promise<boolean>} дошло ли
+   */
+  async setLeaderboard(name, score, extra = '') {
+    if (!this.sdk?.leaderboards?.setScore) return false;
+    try {
+      const ok = await this.sdk.isAvailableMethod?.('leaderboards.setScore');
+      if (!ok) return false;
+      await this.sdk.leaderboards.setScore(name, score, extra);
+      return true;
+    } catch {
+      return false; // сети нет, лидерборда нет или нас отклонили — играем дальше
+    }
+  }
+
+  /**
+   * Таблица рекордов: лучшие строки и место игрока рядом с ними.
+   *
+   * Читается без авторизации, так что видно её всем. Вернёт пустоту, если
+   * лидерборд ещё не создан в Консоли или площадки нет вовсе.
+   *
+   * @param {string} name — техническое название лидерборда
+   * @param {number} top — сколько лучших просят
+   * @returns {Promise<object|null>} ответ `getEntries` или null
+   */
+  async leaderboard(name, top = 10) {
+    if (!this.sdk?.leaderboards?.getEntries) return null;
+    try {
+      return await this.sdk.leaderboards.getEntries(name, {
+        quantityTop: top,
+        includeUser: true,     // чтобы подсветить игрока среди чужих строк
+        quantityAround: 3,     // и показать его, даже если он вне топа
+      });
+    } catch {
+      return null; // запрос не прошёл — финал живёт и без таблицы
+    }
+  }
 }
 
 /**

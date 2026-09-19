@@ -628,6 +628,13 @@ if (progress.magazine > player.magazine) {
 const radio = new Radio(); // и рация в углу: видно, откуда голос и почему нельзя идти
 const ending = new Ending(); // экран, которым игра кончается
 
+// ?board=demo — финал с выдуманной таблицей рекордов: вёрстку таблицы так видно
+// без площадки, где SDK нет и живых строк она не отдаёт.
+if (params.get('board') === 'demo') {
+  const { showBoardDemo } = await import('./dev/boardDemo.js');
+  showBoardDemo(ending);
+}
+
 // Ответная передача: тот же голос по рации, но уже после города. Субтитры у неё
 // свои — другая запись, другие реплики и другие паузы.
 // Ответная передача: свои субтитры — другая запись, другие реплики и паузы, —
@@ -691,6 +698,15 @@ locations.onFinish = () => {
   tally.pause();                    // путь кончился: часы больше не идут
   sfx.silence();                    // мир замер — его звуки замолкают вместе с ним
 
+  // Результат уходит в таблицу рекордов площадки: время похода и число смертей
+  // строкой. Ждать его ответа не нужно — финал показывается и без него, а
+  // таблицу всё равно читаем заново через мгновение.
+  yandex.setLeaderboard(
+    CONFIG.yandex.leaderboard,
+    Math.round(tally.seconds * 1000),
+    String(tally.deaths),
+  );
+
   // Под передачей играет дорожка вводной: с неё голос по рации начинался, ею же
   // и кончается. Громкость у неё своя, приглушённая, — она заведена как раз под
   // речь поверх музыки.
@@ -700,6 +716,11 @@ locations.onFinish = () => {
   endMessage.onDone = () => {
     music.play(CONFIG.ending.track);
     ending.show();
+
+    // Таблица подгружается уже поверх финала: пока её нет, игрок видит итог.
+    yandex
+      .leaderboard(CONFIG.yandex.leaderboard, CONFIG.yandex.leaderboardTop)
+      .then((board) => ending.showBoard(board));
   };
   endMessage.play();
 };

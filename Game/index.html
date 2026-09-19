@@ -938,19 +938,23 @@
       /* Титр, итог и кнопки: своим столбцом у нижнего края, на тёмной подложке,
          чтобы читались поверх любого места картинки. */
       .ending__card {
-        position: absolute; left: 50%; bottom: max(6vh, 28px);
-        transform: translateX(-50%);
+        position: absolute; left: 50%; top: 50%;
+        transform: translate(-50%, -50%);
         display: flex; flex-direction: column; align-items: center; gap: 18px;
         padding: 22px 34px;
         max-width: min(92vw, 560px);
+        /* Карточка не должна вылезать за экран: на низких окнах и телефонах
+           контент прокручивается внутри неё, а не уходит под край. */
+        max-height: calc(100dvh - 8vh);
+        overflow-y: auto;
         border-radius: 18px;
         background: rgba(8, 6, 5, 0.55);
         backdrop-filter: blur(3px);
         opacity: 0; animation: ending-rise 1200ms ease-out 900ms forwards;
       }
       @keyframes ending-rise {
-        from { opacity: 0; transform: translate(-50%, 14px); }
-        to   { opacity: 1; transform: translate(-50%, 0); }
+        from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)); }
+        to   { opacity: 1; transform: translate(-50%, -50%); }
       }
 
       .ending__caption {
@@ -975,6 +979,81 @@
       }
       .ending__stats dt, .ending__stats dd { display: inline-block; }
 
+      /* Таблица рекордов площадки: заголовок, шапка и строки одной сеткой.
+         Строки скромнее итога — это чужие прохождения, а не твой поход. */
+      .ending__board {
+        width: 100%;
+        display: flex; flex-direction: column; gap: 8px;
+      }
+      .ending__board[hidden] { display: none; }
+
+      .ending__board-title {
+        margin: 0;
+        font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.2em; text-transform: uppercase;
+        color: rgba(232, 208, 143, 0.85); text-align: center;
+      }
+
+      .ending__head, .ending__row {
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr) auto auto;
+        gap: 0 10px; align-items: center;
+      }
+      .ending__head {
+        padding: 0 12px;
+        font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        color: rgba(232, 208, 143, 0.45);
+      }
+      .ending__head-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+      .ending__board-list {
+        display: flex; flex-direction: column; gap: 6px;
+        margin: 0; padding: 0; list-style: none;
+        max-height: 32vh; overflow-y: auto;
+      }
+      .ending__row {
+        padding: 6px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(232, 208, 143, 0.12);
+        background: rgba(0, 0, 0, 0.35);
+        font: 500 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      /* Своё место в рейтинге: подсвечено рамкой, чтобы игрок нашёл себя. */
+      .ending__row--here {
+        border-color: rgba(232, 208, 143, 0.6);
+        background: rgba(232, 208, 143, 0.1);
+      }
+
+      .ending__place { color: rgba(232, 208, 143, 0.8); text-align: right; }
+      .ending__who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .ending__avatar {
+        flex: none; width: 22px; height: 22px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 50%;
+        background: rgba(232, 208, 143, 0.18);
+        font-size: 11px; color: #e8d08f;
+        object-fit: cover;
+      }
+      .ending__name {
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        color: #e8eef4;
+      }
+      .ending__time { color: #f0e4c4; }
+      .ending__deaths { color: rgba(232, 208, 143, 0.65); min-width: 24px; text-align: right; }
+
+      .ending__empty {
+        margin: 0;
+        font: 400 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: rgba(232, 208, 143, 0.55); text-align: center;
+      }
+      .ending__empty[hidden] { display: none; }
+
+      /* Скролл списка рекордов: тонкая золотая полоса, не спорящая с игрой. */
+      .ending__board-list::-webkit-scrollbar { width: 6px; }
+      .ending__board-list::-webkit-scrollbar-thumb { background: rgba(232, 208, 143, 0.25); border-radius: 3px; }
+      .ending__board-list::-webkit-scrollbar-track { background: transparent; }
+
       .ending__buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
       .ending__again, .ending__rate {
         font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -996,6 +1075,32 @@
       .ending__again:hover, .ending__rate:hover { background: rgba(232, 208, 143, 0.16); }
       .ending__again:active, .ending__rate:active { transform: scale(0.96); }
       .ending__rate[hidden] { display: none; }
+
+      /* Телефон: карточка занимает почти весь экран, а таблица — компактная.
+         Иначе титр, итог и десяток строк рекордов в один экран не влезают. */
+      @media (max-width: 640px) {
+        .ending__card {
+          padding: 14px;
+          gap: 12px;
+          /* Портрет телефона: карточка почти во весь экран, но с заметными
+             полями по бокам (по 20px) — в притык к краям её не прижимаем,
+             включая вырезы и скругления современных экранов. */
+          width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 40px);
+          max-width: 100vw;
+          max-height: calc(100dvh - 3vh);
+        }
+        .ending__stats { gap: 4px 18px; font-size: 11px; }
+        .ending__stats dd { font-size: 13px; }
+        .ending__board-list { max-height: 24vh; }
+        .ending__head, .ending__row {
+          grid-template-columns: 20px minmax(0, 1fr) auto auto;
+          gap: 0 8px;
+        }
+        .ending__row { padding: 5px 10px; font-size: 11px; }
+        .ending__who { gap: 6px; }
+        .ending__avatar { width: 18px; height: 18px; font-size: 9px; }
+        .ending__again, .ending__rate { padding: 11px 20px; font-size: 12px; }
+      }
 
       /* Чёрный экран ответной передачи: он стоит между последним уровнем и
          финалом, и под ним уже ничего не происходит. */
