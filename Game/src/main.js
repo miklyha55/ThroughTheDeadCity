@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { Engine } from './core/Engine.js';
 import { Input } from './core/Input.js';
 import { FollowCamera } from './core/FollowCamera.js';
@@ -31,7 +32,6 @@ import { applyLanguage, levelName } from './core/i18n.js';
 import { progress, saveOnLeave } from './core/progress.js';
 import { LevelMap, LevelMapButton } from './ui/LevelMap.js';
 import { Pause } from './ui/Pause.js';
-import { CarHealth } from './ui/CarHealth.js';
 import { lockViewport } from './core/viewport.js';
 import { SkipHint } from './ui/SkipHint.js';
 import { DeathScreen } from './ui/DeathScreen.js';
@@ -364,7 +364,6 @@ const gunPickup = new GunPickup(engine.scene);
  * о ней знает одно: пока `car.driving`, ввод уходит ей, а не герою.
  */
 const car = new Car(engine.scene);
-const carHealth = new CarHealth();
 
 car.onBoard = () => {
   // Герой уезжает внутри машины: модель снимается с глаз, стрельба отбирается
@@ -380,12 +379,10 @@ car.onBoard = () => {
 
   camera.target = car;      // камера ведёт машину
   ammo.root.hidden = true;  // патроны за рулём не считают
-  carHealth.show(true);
-  pointer.attach(car.root); // стрелка переезжает на машину
+  pointer.attach(car.root, CONFIG.car.pointerOffset); // стрелка переезжает на машину — за край кузова
   aimPointer();
 };
 
-car.onHealth = (left, total) => carHealth.set(left, total);
 
 car.onRam = (at, speed) => {
   // Сбитый читается ударом: толчок камере, пыль из-под колёс и глухой стук.
@@ -399,9 +396,48 @@ car.onWreck = (at) => {
   // Машина догорела: взрыв на её месте, и герой выходит там же — дальше пешком,
   // со стрельбой, как на всех прочих уровнях.
   if (at) {
-    explosions.burst(at.clone().setY(1));
-    shards.burst(at, car.root);
-    camera.shake(CONFIG.explosion.shake, CONFIG.explosion.shakeFor);
+    const CFG = CONFIG.car;
+
+    /**
+     * Взрыв как у бочки — та же светящаяся сфера и те же осколки цвета самой
+     * вещи, — только крупнее: рвётся не канистра, а целая машина.
+     *
+     * Кузов разлетается и пропадает. Раньше он оставался стоять целым, а шар
+     * загорался внутри него, на высоте метра, — и весь взрыв прятался под
+     * крышей. Теперь осколки берут цвет с кузова, пока он ещё есть, и только
+     * потом он убирается.
+     */
+    const at1 = at.clone().setY(CFG.wreckHeight);
+    for (let i = 0; i < CFG.wreckShards; i++) {
+      const wave = () => {
+        shards.burst(at1, car.root);
+        puffs.burst(at);
+        puffs.burst(at.clone().setY(CFG.wreckHeight + 1.2)); // дым столбом, а не только понизу
+      };
+      if (i === 0) wave();
+      else setTimeout(wave, i * CFG.wreckWave * 1000);
+    }
+
+    // Шары — волной вдоль кузова: один, даже большой, — это вспышка посередине,
+    // а рвётся машина от капота до багажника.
+    const along = new THREE.Vector3(Math.sin(car.yaw), 0, Math.cos(car.yaw));
+    for (let i = 0; i < CFG.wreckBlasts; i++) {
+      const shift = CFG.wreckBlasts === 1 ? 0 : (i / (CFG.wreckBlasts - 1) - 0.5) * 2 * CFG.wreckSpread;
+      const spot = at1.clone().addScaledVector(along, shift);
+      spot.x += (Math.random() - 0.5) * 0.8;
+      spot.z += (Math.random() - 0.5) * 0.8;
+      if (i === 0) explosions.burst(spot);
+      else setTimeout(() => explosions.burst(spot), i * CFG.wreckWave * 1000);
+    }
+
+    // Хлам вокруг разлетается от удара, как от бочки.
+    locations.current.debris?.blast(at, CONFIG.explosion.kickRadius, CONFIG.explosion.kick,
+      CONFIG.explosion.lift);
+
+    // Кузова больше нет — осколки уже взяли с него цвет.
+    car.root.visible = false;
+
+    camera.shake(CONFIG.explosion.shake * CFG.wreckShake, CONFIG.explosion.shakeFor);
     sfx.play('explosion', CONFIG.explosion.volume, CONFIG.explosion.layers, 1,
       { echo: false, spread: false });
 
@@ -433,9 +469,15 @@ car.onWreck = (at) => {
   player.root.visible = true;
   player.frozen = false;
 
+  // Пешком — снова в тумане войны. За рулём он снят, потому что машина идёт
+  // быстрее, чем туман успевает открываться; герой же ходит как на любом другом
+  // уровне, и карта перед ним опять закрыта. Прорежется она сама — вокруг него,
+  // по мере хода.
+  const here = locations.current;
+  if (here) closeFog(here.width, here.depth);
+
   camera.target = player;
   ammo.root.hidden = !player.armed;
-  carHealth.show(false);
   pointer.attach(player.root);
   aimPointer();
 };
@@ -533,6 +575,27 @@ const endText = new Transmission(document.body, CONFIG.endMessage, true);
 const endMessage = new EndMessage(endText, radio, null, new SkipHint(endText.root));
 const fog = new BattleFog();  // туман войны: карта открывается по мере хода
 fog.start();
+
+/**
+ * Туман войны в режиме отладки выключен.
+ *
+ * С `?debug=` в адресе смотрят на сам уровень — контуры столкновений, ввод,
+ * расстановку, — и закрытая карта в этом только мешает. Поэтому всякий раз,
+ * когда игра закрывает карту заново, в отладке она тут же открывается целиком.
+ *
+ * То же даёт галочка «без тумана» в панели разработчика: она помнится между
+ * перезагрузками, как и соседние. В собранной игре панели нет, и галочка не
+ * действует.
+ */
+const NO_FOG_KEY = 'dev:noFog';
+let NO_FOG = params.has('debug')
+  || (import.meta.env.DEV && localStorage.getItem(NO_FOG_KEY) === '1');
+
+/** Закрыть карту туманом — или сразу открыть её, если идёт отладка. */
+function closeFog(width, depth) {
+  fog.reset(width, depth);
+  if (NO_FOG) fog.revealAll();
+}
 
 /**
  * Игра пройдена: последний уровень выпустил персонажа наружу.
@@ -656,6 +719,38 @@ const input = new Input(joystick);
 const camera = new FollowCamera(engine.camera, player);
 locations.camera = camera; // при смене уровня камера встаёт на персонажа сразу
 
+/**
+ * Зум в режиме отладки: колесо мыши и клавиши «+», «−», «0».
+ *
+ * В игре масштаб один и тот же всегда — по нему выверены и туман, и подсказки,
+ * и то, сколько зомби видно заранее. А при отладке нужно то отъехать и увидеть
+ * уровень целиком, то приблизиться к одному стыку забора. Поэтому зум есть
+ * только на dev-сервере и с `?debug=` в адресе; в собранной игре его нет.
+ *
+ * Камера ортографическая, и зум у неё — штатный `zoom` three.js: кадрирование
+ * под размер экрана он не трогает, только множит масштаб поверх.
+ */
+if (import.meta.env.DEV || params.has('debug')) {
+  const view = engine.camera;
+  const setZoom = (value) => {
+    view.zoom = Math.min(CONFIG.camera.debugZoomMax, Math.max(CONFIG.camera.debugZoomMin, value));
+    view.updateProjectionMatrix();
+  };
+
+  // Колесо без Ctrl: с Ctrl браузер приближает саму страницу, и это погашено.
+  addEventListener('wheel', (event) => {
+    if (event.ctrlKey) return;
+    setZoom(view.zoom * Math.pow(CONFIG.camera.debugZoomStep, -Math.sign(event.deltaY)));
+  }, { passive: true });
+
+  addEventListener('keydown', (event) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.code === 'Equal' || event.code === 'NumpadAdd') setZoom(view.zoom * CONFIG.camera.debugZoomStep);
+    else if (event.code === 'Minus' || event.code === 'NumpadSubtract') setZoom(view.zoom / CONFIG.camera.debugZoomStep);
+    else if (event.code === 'Digit0' || event.code === 'Numpad0') setZoom(1); // как в игре
+  });
+}
+
 engine.add({
   update(dt) {
     stats?.update(engine.renderer); // считаем кадры раньше всего: они идут всегда
@@ -725,10 +820,11 @@ engine.add({
     shards.update(dt);
     gunPickup.update(dt, player); // лежащее ружьё: крутится, а подошёл — летит в руки
     ammoPickup.update(dt, player); // и коробка патронов — точно так же
-    pointer.update(dt, player.shownYaw); // стрелка под ногами держит цель: вычитает, как развёрнута модель
+    pointer.update(dt); // стрелка держит цель: поворот носителя — героя или машины — вычитает сама
     puffs.update(dt);
     camera.update(dt);
-    healthBars.update(engine.camera, here, player); // после камеры: полоски строятся по её осям
+    // После камеры: полоски строятся по её осям. Машина в них же — пока в ней едут.
+    healthBars.update(engine.camera, here, player, car.driving ? [car] : []);
     visibility.update(here); // ушедшее за край экрана не рисуем вовсе
     watchAmmo();
     // просвечивает только заслонившее героя или зомби у него на прицеле
@@ -1258,7 +1354,6 @@ locations.onChange = (location) => {
   // прежнюю. Заодно возвращаем герою вид и управление: уровень начинается с
   // того, что он стоит на своих двоих, даже если прошлый кончился за рулём.
   car.place(location);
-  carHealth.show(false);
   player.root.visible = true;
   camera.target = player;
   pointer.attach(player.root);
@@ -1267,7 +1362,7 @@ locations.onChange = (location) => {
   showAmmo();
   showHud();
   updateDebugView();
-  fog.reset(location.width, location.depth); // новый уровень — заново закрытая карта
+  closeFog(location.width, location.depth); // новый уровень — заново закрытая карта
   // Своя дорожка у каждого уровня, кроме тех, где её нет: `music: null` в файле
   // уровня — это тишина под ветер, а не отсутствующий файл.
   music.play(location.data.music === null ? null : (location.data.music ?? location.data.number ?? 1));
@@ -1332,6 +1427,19 @@ if (import.meta.env.DEV) {
       onChange: (off) => {
         startMessage.mute(off);
         localStorage.setItem(NO_INTRO, off ? '1' : '0');
+      },
+    }, {
+      label: 'без тумана',
+      value: NO_FOG,
+      onChange: (off) => {
+        localStorage.setItem(NO_FOG_KEY, off ? '1' : '0');
+        NO_FOG = off || params.has('debug');
+
+        // Действует сразу, без перезагрузки: сняли галочку — карта снова
+        // закрыта, и туман прорезается вокруг героя заново.
+        const here = locations.current;
+        if (NO_FOG) fog.revealAll();
+        else if (here) closeFog(here.width, here.depth);
       },
     }, {
       label: 'с оружием',

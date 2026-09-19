@@ -42,10 +42,14 @@ export class Pointer {
    * осталась бы на выброшенном и пропала бы с экрана.
    *
    * @param {THREE.Object3D} carrier
+   * @param {number} [offset] — на сколько вынести стрелку от середины носителя.
+   *   У героя она в шаге от ног; у машины — за краем кузова, иначе крыша её
+   *   закрывает
    */
-  attach(carrier) {
+  attach(carrier, offset = CFG.offset) {
     if (!carrier) return;
     carrier.add(this.mesh);
+    this.offset = offset;
   }
 
   /** Треугольник носом вперёд, с выемкой сзади: так видно, где у него перёд. */
@@ -138,10 +142,8 @@ export class Pointer {
 
   /**
    * @param {number} dt
-   * @param {number} carrierYaw — куда развёрнут сам герой: стрелка живёт внутри
-   *   него и унаследовала бы его поворот, а показывать должна в мир
    */
-  update(dt, carrierYaw = 0) {
+  update(dt) {
     const target = this.target;
     if (!target) {
       this._show(false);
@@ -203,8 +205,16 @@ export class Pointer {
 
     if (!this.lit || away < 1e-3) return;
 
-    // Стрелка сидит на герое и вертится вместе с ним, поэтому его собственный
-    // разворот вычитаем: в мире она должна смотреть на цель, а не мимо.
+    /**
+     * Стрелка сидит на носителе и вертится вместе с ним, поэтому его разворот
+     * вычитаем: в мире она должна смотреть на цель, а не мимо.
+     *
+     * Разворот берётся у того, на ком она сидит сейчас, а не у героя. На шоссе
+     * её пересаживают на машину, а герой за рулём не вертится вовсе — с его
+     * замершим поворотом стрелка врала ровно на курс машины.
+     */
+    const q = this.mesh.parent.quaternion;
+    const carrierYaw = 2 * Math.atan2(q.y, q.w);
     const yaw = Math.atan2(_to.x, _to.z) - carrierYaw;
 
     /**
@@ -219,7 +229,8 @@ export class Pointer {
 
     // Отодвинута от ног в ту же сторону, куда показывает: под самим героем её
     // не видно, а впереди она ещё и подсказывает направление своим местом.
-    this.mesh.position.set(Math.sin(yaw) * CFG.offset, CFG.height, Math.cos(yaw) * CFG.offset);
+    const offset = this.offset ?? CFG.offset;
+    this.mesh.position.set(Math.sin(yaw) * offset, CFG.height, Math.cos(yaw) * offset);
     this.mesh.material.opacity = CFG.opacity + Math.sin(this.time * CFG.pulseSpeed) * CFG.pulse;
   }
 

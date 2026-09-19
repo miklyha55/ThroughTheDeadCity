@@ -112,27 +112,6 @@
          Прячем его, пока герой безоружен: считать ему нечего. */
       .ammo[hidden] { display: none; }
 
-      /* Жизни машины: тот же ряд и то же место, что у патронов, — за рулём
-         стрелять нечем, и одно сменяет другое. Деления не гильзы, а полоски:
-         машина не считает заряды, она держит удары. */
-      .carhp {
-        position: fixed; left: 50%; transform: translateX(-50%);
-        top: calc(34px + env(safe-area-inset-top));
-        max-width: calc(100vw - 24px);
-        z-index: 25; pointer-events: none;
-        display: grid; grid-template-columns: repeat(10, auto);
-        justify-content: center; gap: 4px;
-      }
-      .carhp[hidden] { display: none; }
-      .carhp__cell {
-        width: 28px; height: 9px; min-width: 0;
-        border-radius: 3px;
-        background: #e8d08f;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-        transition: opacity 180ms ease, background 180ms ease;
-      }
-      .carhp__cell--lost { opacity: 0.2; background: #8a1f14; }
-
       /* Мгла лежит поверх кадра, но под всем, чем игрок пользуется. */
       .fog { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
       #app canvas { display: block; width: 100%; height: 100%; }

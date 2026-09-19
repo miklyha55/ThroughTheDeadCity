@@ -4,7 +4,11 @@ import { CONFIG } from '../config.js';
 const CFG = CONFIG.car;
 
 const _dir = new THREE.Vector3();
+const _want = new THREE.Vector3();
+const _side = new THREE.Vector3();
 const _step = new THREE.Vector3();
+const _wanted = new THREE.Vector3();
+const _from = new THREE.Vector3();
 
 /**
  * Таран: машина, которой проезжается шоссе перед вожаком.
@@ -14,10 +18,16 @@ const _step = new THREE.Vector3();
  * уровень задуман как один долгий проезд, и выпускать из машины посреди дороги
  * значило бы отдать игроку пеший бой там, где под это ничего не разложено.
  *
- * Ведут её так же, как героя: куда отклонён стик, туда она и едет — и всегда
- * носом вперёд. Отличие от героя одно и всё в нём: нос доворачивается не
- * мгновенно, а со своей скоростью, и пока корпус разворачивается, машина по
- * инерции ещё катится прежним курсом. Отсюда и вес, и заносы на изломах.
+ * Ведут её так же, как героя: стик задаёт только направление, а скорость всегда
+ * одна и та же — полная, сколько ни отклоняй. Сбрасывается она лишь тогда,
+ * когда палец убрали со стика или отпустили клавиши. Отличие от героя в другом:
+ * у героя ноги, у машины колёса.
+ *
+ * Едет она не туда, куда смотрит нос, а туда, куда несёт. Нос доворачивается к
+ * стику со своей скоростью, а вектор движения догоняет нос отдельно — тем
+ * медленнее, чем быстрее машина идёт. Пока он не догнал, машину несёт боком:
+ * это и есть занос. Резко переложить руль на полном ходу — уйти в скольжение,
+ * отпустить газ и доложить — поймать его.
  *
  * Для зомби машина — та же цель, что и герой: у неё есть `position`, `alive` и
  * `takeDamage`, и больше от цели никто ничего не спрашивает. Поэтому их
@@ -33,8 +43,13 @@ export class Car {
 
     this.driving = false;  // за рулём ли игрок
     this.health = CFG.health;
-    this.drive = 0;        // м/с вдоль корпуса; минус — задний ход
+    // Куда её несёт: вектор в мировых осях, а не скорость вдоль корпуса. В
+    // заносе он с корпусом не совпадает — в этом весь смысл.
+    this.velocity = new THREE.Vector3();
     this.yaw = 0;
+    // Насколько её притормозили сбитые тела: доля хода, ноль — не притормозили.
+    // Копится от каждого удара и сама сходит на нет, пока машина едет.
+    this.slowed = 0;
 
     this.wrecked = false;
     this.onHealth = null;  // кому показывать полоску жизней
@@ -59,12 +74,26 @@ export class Car {
   get position() { return this.root?.position ?? _step.set(0, 0, 0); }
 
   /** Быстро ли идёт: на этом держится и таран, и доворот. */
-  get moving() { return Math.abs(this.drive) > 0.1; }
+  get moving() { return this.velocity.lengthSq() > 0.01; }
+
+  /** Насколько её несёт боком: ноль — едет прямо, единица — полный занос. */
+  get slide() {
+    const speed = this.velocity.length();
+    if (speed < 1) return 0;
+
+    _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    return 1 - Math.max(0, _dir.dot(this.velocity) / speed);
+  }
+
+  // Полоска жизней над машиной — та же, что над зомби.
+  get maxHealth() { return CFG.health; }
+  get barWidth() { return CFG.barWidth; }
+  get barOffset() { return CFG.barOffset; }
 
   // Этим её видят обломки на дороге: разлетаются они от всякого, кто движется,
   // и машина для них — такой же ходок, только шире и быстрее.
   get radius() { return CFG.radius; }
-  get speed() { return Math.abs(this.drive); }
+  get speed() { return this.velocity.length(); }
 
   /**
    * Поставить машину на уровень. Нет в файле — уровень без неё, и это нормально:
@@ -93,7 +122,8 @@ export class Car {
     this.driving = false;
     this.wrecked = false;
     this.health = CFG.health;
-    this.drive = 0;
+    this.velocity.set(0, 0, 0);
+    this.slowed = 0;
   }
 
   /** Снять со сцены: уровень сменился. */
@@ -103,7 +133,8 @@ export class Car {
     this.object = null;
     this.driving = false;
     this.wrecked = false;
-    this.drive = 0;
+    this.velocity.set(0, 0, 0);
+    this.slowed = 0;
     this.health = CFG.health;
   }
 
@@ -153,9 +184,68 @@ export class Car {
   update(dt, move, cameraYaw, location) {
     if (!this.root || !this.driving || this.wrecked) return;
 
+    // Притормаживание от сбитых сходит само: удар гасит ход на мгновение, а
+    // не до конца уровня.
+    this.slowed = Math.max(0, this.slowed - CFG.ramRecover * dt);
+
+    const yawBefore = this.yaw;
     this._drive(dt, move, cameraYaw);
+    this._pivot(yawBefore, location);
     this._roll(dt, location);
     this._ram(location);
+    this._mines(location);
+  }
+
+  /**
+   * Наехал на бочку или канистру — она рвёт под колёсами.
+   *
+   * Взрыв тот же, что от выстрела: огонь, осколки, зомби вокруг гибнут, соседняя
+   * взрывчатка подхватывает цепью. Разница одна — у героя пешком взрыв не
+   * отнимает ничего, а машина под ним получает своё: она не бросала бочку, она
+   * её переехала.
+   *
+   * Проверяется раньше, чем обломки разлетаются от машины: иначе бочку отпихнуло
+   * бы от капота, и машина никогда бы её не коснулась.
+   */
+  _mines(location) {
+    const items = location.debris?.items;
+    if (!items) return;
+
+    for (const item of [...items]) {
+      if (!item.explosive || item.held) continue;
+
+      const dx = item.object.position.x - this.root.position.x;
+      const dz = item.object.position.z - this.root.position.z;
+      if (Math.hypot(dx, dz) > CFG.radius + item.radius + CFG.mineReach) continue;
+
+      location.explode(item, this);
+      this.takeDamage(CFG.mineDamage);
+      if (this.wrecked) return; // догорела — дальше считать нечего
+    }
+  }
+
+  /**
+   * Поворот вокруг капота, а не вокруг середины кузова.
+   *
+   * Центр масс у машины впереди, над мотором: доворачивая, она держит нос на
+   * месте, а корму выносит наружу. Вращай мы её вокруг середины, нос и зад
+   * расходились бы в разные стороны поровну — так вертится стол на колёсиках, а
+   * не машина. Поэтому после доворота кузов сдвигается так, чтобы точка у капота
+   * осталась там же, где была.
+   */
+  _pivot(yawBefore, location) {
+    const turned = this.yaw - yawBefore;
+    if (Math.abs(turned) < 1e-6) return;
+
+    const ahead = CFG.pivotAhead;
+    const p = this.root.position;
+    p.x += (Math.sin(yawBefore) - Math.sin(this.yaw)) * ahead;
+    p.z += (Math.cos(yawBefore) - Math.cos(this.yaw)) * ahead;
+
+    // Вынесенную корму не пускаем в забор: сдвиг тоже проходит расхождение.
+    location.obstacles.resolve(p, CFG.radius);
+    location.clampPosition(p);
+    p.y = CFG.height;
   }
 
   /**
@@ -177,67 +267,109 @@ export class Car {
 
       const want = Math.atan2(wx, wz);
 
-      // Доворот по кратчайшей дуге и не быстрее, чем машина умеет. На малом
-      // ходу она доворачивает хуже: стоящая на месте разворачивается медленно,
-      // разогнанная — охотно.
+      // Доворот носа по кратчайшей дуге. Стоящая машина вертится лениво,
+      // разогнанная — охотно: руль работает от скорости, а не сам по себе.
       let turn = want - this.yaw;
       while (turn > Math.PI) turn -= 2 * Math.PI;
       while (turn < -Math.PI) turn += 2 * Math.PI;
 
-      // Стик заведён назад, а машина уже почти встала — значит она во что-то
-      // упёрлась и разворачиваться ей негде. Тогда она пятится, не доворачивая:
-      // так выезжают из угла и в жизни.
-      const backing = Math.abs(turn) > THREE.MathUtils.degToRad(CFG.reverseAngle)
-        && Math.abs(this.drive) < CFG.reverseBelow;
+      const speed = this.velocity.length();
 
-      if (backing) {
-        const target = -CFG.maxReverse * push;
-        this.drive = Math.max(target, this.drive - CFG.accel * dt);
+      // Стик заведён назад, а машина уже почти встала — значит упёрлась, и
+      // разворачиваться ей негде. Тогда она пятится, не доворачивая: так
+      // выезжают из угла и в жизни.
+      if (Math.abs(turn) > THREE.MathUtils.degToRad(CFG.reverseAngle) && speed < CFG.reverseBelow) {
+        _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+        this.velocity.copy(_dir).multiplyScalar(-CFG.maxReverse);
         this.root.rotation.y = this._facing;
         return;
       }
 
-      const agility = CFG.turnStill
-        + (1 - CFG.turnStill) * Math.min(1, Math.abs(this.drive) / CFG.turnFullAt);
+      const agility = CFG.turnStill + (1 - CFG.turnStill) * Math.min(1, speed / CFG.turnFullAt);
       const step = CFG.turnSpeed * agility * dt;
       this.yaw += THREE.MathUtils.clamp(turn, -step, step);
 
-      // Газ тем сильнее, чем дальше отклонён стик. Нос ещё не туда — едем
-      // медленнее: разворачиваться на полном ходу машина не умеет.
-      const facing = Math.max(0, Math.cos(turn));
-      const target = CFG.maxSpeed * push * (CFG.crawlWhileTurning
-        + (1 - CFG.crawlWhileTurning) * facing);
+      /**
+       * Ход раскладывается на две части: вдоль корпуса и поперёк него.
+       *
+       * Вдоль — это тяга. Она идёт прямо от стика, как шаг героя: отклонили
+       * наполовину — едем вполовину, без разгона и раскачки.
+       *
+       * Поперёк — это занос. Колёса гасят его сами, но не мгновенно, и тем
+       * хуже, чем быстрее машина идёт. Пока он не погас, её несёт боком: нос уже
+       * смотрит в поворот, а inertia тащит прежним курсом. Резко переложить руль
+       * на полном ходу — сорваться в скольжение; сбросить газ — поймать его,
+       * потому что на малом ходу колёса держат почти намертво.
+       */
+      _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));   // вдоль корпуса
+      _side.set(_dir.z, 0, -_dir.x);                          // и поперёк него
 
-      this.drive = target > this.drive
-        ? Math.min(target, this.drive + CFG.accel * dt)
-        : Math.max(target, this.drive - CFG.brake * dt);
+      const forward = this.velocity.dot(_dir);
+      const lateral = this.velocity.dot(_side);
+
+      // Сколько машина идёт вообще — всегда полный ход, как шаг героя: длина
+      // отклонения стика на скорость не влияет, только направление. Это общий
+      // бюджет, и делят его тяга и занос: сколько ушло вбок, столько не
+      // достанется движению вперёд.
+      const pull = CFG.maxSpeed * (1 - this.slowed);
+
+      // Сцепление поперёк: на месте держит, на полном ходу отпускает.
+      const loose = Math.min(1, speed / CFG.maxSpeed);
+      const grip = CFG.grip * (1 - loose * (1 - CFG.gripAtSpeed));
+      const slip = lateral * Math.max(0, 1 - grip * dt);
+
+      // Остаток бюджета — вперёд. Чем сильнее несёт боком, тем меньше остаётся:
+      // на глубоком заносе машина почти не едет туда, куда смотрит.
+      const ahead = Math.sqrt(Math.max(0, pull * pull - slip * slip));
+
+      this.velocity.copy(_dir).multiplyScalar(ahead).addScaledVector(_side, slip);
     } else {
-      // Стик отпущен — катится накатом и встаёт сама, с какой бы стороны ни шла.
-      const drag = CFG.drag * dt;
-      this.drive = Math.abs(this.drive) <= drag ? 0 : this.drive - Math.sign(this.drive) * drag;
+      // Стик отпущен или клавиши отжаты — машина встаёт, но не в тот же кадр:
+      // короткий накат, около трети секунды и пары метров. Мгновенная остановка
+      // читалась как удар о стену, а у машины должен остаться вес.
+      const brake = CFG.stopBrake * dt;
+      const speed = this.velocity.length();
+      if (speed <= brake) this.velocity.set(0, 0, 0);
+      else this.velocity.multiplyScalar((speed - brake) / speed);
     }
 
-    this.drive = THREE.MathUtils.clamp(this.drive, -CFG.maxReverse, CFG.maxSpeed);
     this.root.rotation.y = this._facing;
   }
 
-  /** Проехать шаг и разойтись с тем, во что нельзя въехать. */
+  /**
+   * Проехать шаг и разойтись с тем, во что нельзя въехать.
+   *
+   * Путь за кадр разбивается на короткие подшаги, и препятствия проверяются на
+   * каждом. Иначе на полном ходу машина проходит за кадр целый метр и проскакивает
+   * забор насквозь: расхождение считается по одной конечной точке, а в ней она уже
+   * снаружи — и уезжает в чистое поле.
+   */
   _roll(dt, location) {
     if (!this.moving) return;
 
-    _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
-    _step.copy(this.root.position).addScaledVector(_dir, this.drive * dt);
+    const path = this.velocity.length() * dt;
+    const steps = Math.max(1, Math.ceil(path / CFG.stepMax));
+    const piece = path / steps;
+    _dir.copy(this.velocity).normalize(); // едем туда, куда несёт, а не куда смотрим
 
-    const before = _step.clone();
-    location.obstacles.resolve(_step, CFG.radius);
-    location.clampPosition(_step);
+    _from.copy(this.root.position);
+    _step.copy(_from);
 
-    // Уткнулись во что-то твёрдое — скорость гасится, а не сохраняется: иначе
-    // машина скребёт по забору, держа полный газ, и таран работает вплотную к
-    // стене, куда зомби и прижимаются.
-    if (before.distanceToSquared(_step) > CFG.bumpGap * CFG.bumpGap) {
-      this.drive *= CFG.bumpKeep;
+    for (let i = 0; i < steps; i++) {
+      _wanted.copy(_step).addScaledVector(_dir, piece);
+      location.obstacles.resolve(_wanted, CFG.radius);
+      location.clampPosition(_wanted);
+
+      // Куда бы расхождение ни отодвинуло — принимаем: вдоль стены машина
+      // скользит, а не встаёт. Останавливать её на каждом касании забора нельзя,
+      // иначе задетый на повороте отбойник отнимает весь ход разом.
+      _step.copy(_wanted);
     }
+
+    // А вот если за весь кадр она почти не сдвинулась — значит упёрлась носом, и
+    // держать скорость незачем: газ в стену только прижимает к ней плотнее.
+    const moved = _from.distanceTo(_step);
+    if (moved < path * CFG.bumpGap) this.velocity.multiplyScalar(CFG.bumpKeep);
 
     this.root.position.copy(_step);
     this.root.position.y = CFG.height;
@@ -265,7 +397,12 @@ export class Car {
       // капота, и брызги идут туда же.
       if (zombie.crush(this.root.position, CFG.gore, 'impact')) {
         this.onRam?.(zombie.position.clone(), this.speed);
-        this.drive *= CFG.ramKeep; // тело гасит ход, но не останавливает
+        // Тело гасит ход, но не останавливает. Мгновенный толчок — чтобы удар
+        // почувствовался сразу, — и спад, который держится ещё долю секунды:
+        // без него постоянная скорость возвращалась в тот же кадр, и сбитых
+        // словно не было. Толпа подряд копит спад, но не до полной остановки.
+        this.slowed = Math.min(CFG.ramSlowMax, this.slowed + CFG.ramSlow);
+        this.velocity.multiplyScalar(1 - CFG.ramSlow);
       }
     }
   }
@@ -274,7 +411,7 @@ export class Car {
   _wreck() {
     this.wrecked = true;
     this.driving = false;
-    this.drive = 0;
+    this.velocity.set(0, 0, 0);
     this.onWreck?.(this.root?.position.clone() ?? null);
   }
 }

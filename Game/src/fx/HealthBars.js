@@ -58,8 +58,11 @@ export class HealthBars {
    * @param {THREE.Camera} camera — по её осям полоски и разворачиваются
    * @param {import('../world/Location.js').Location} location
    * @param {{position: THREE.Vector3}} player — дальних зомби пропускаем
+   * @param {Array} [extras] — кто ещё носит полоску, кроме зомби. Сейчас это
+   *   машина: у неё тот же вид, что у зомби, только висит она всегда, пока в
+   *   ней едут, — жизни машины игроку надо видеть и целыми
    */
-  update(camera, location, player) {
+  update(camera, location, player, extras = []) {
     // оси экрана в мировых координатах: первые два столбца матрицы камеры
     _right.setFromMatrixColumn(camera.matrixWorld, 0);
     _up.setFromMatrixColumn(camera.matrixWorld, 1);
@@ -89,6 +92,20 @@ export class HealthBars {
 
       _color.set(CFG.fillColor);
       vertex = this._quad(vertex, _center, -0.5, -0.5 + share, _color, width);
+    }
+
+    for (const target of extras) {
+      if (!target?.alive || vertex / VERTS_PER_BAR >= this.capacity) continue;
+
+      const share = Math.max(0, Math.min(1, target.health / target.maxHealth));
+      const at = target.position;
+      _center.set(at.x, at.y + target.barOffset, at.z);
+
+      _color.set(CFG.backColor);
+      vertex = this._quad(vertex, _center, -0.5, 0.5, _color, target.barWidth);
+
+      _color.set(CFG.fillColor);
+      vertex = this._quad(vertex, _center, -0.5, -0.5 + share, _color, target.barWidth);
     }
 
     this.mesh.geometry.setDrawRange(0, vertex);
