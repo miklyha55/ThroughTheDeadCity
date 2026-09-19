@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
+import { Choice } from './Choice.js';
 
 const CFG = CONFIG.death;
 
@@ -77,10 +78,18 @@ export class DeathScreen {
     this.onAgain = null;     // переиграть этот уровень
     this.onFromStart = null; // и начать игру заново, с первого
 
-    // Кнопки по порядку сверху вниз: по этому порядку их и обходят стрелки.
-    this._buttons = [this.again, this.fromStart];
-    this.picked = 0;    // на какой стоит выбор; при каждом показе — снова на «Ещё раз»
-    this.keyboard = false; // есть ли чем выбирать: без клавиш метка не нужна
+    /**
+     * Стрелки и Enter. Кнопки перечислены сверху вниз — в этом же порядке их
+     * обходит выбор.
+     *
+     * Пока открыт вопрос «начать сначала?», этот экран на клавиши не отвечает:
+     * у окна поверх него свои кнопки и свой такой же выбор. И пока идёт
+     * реклама после «Ещё раз» — тоже: там всё уже решено.
+     */
+    this.choice = new Choice(
+      [this.again, this.fromStart],
+      () => this.shown && !this.dialog.shown && !this.again.disabled,
+    );
 
     this._fade = null;
 
@@ -117,40 +126,6 @@ export class DeathScreen {
         this.busy = false;
         this.again.disabled = false;
       }
-    });
-
-    /**
-     * Клавиатура: стрелки водят выбор по кнопкам, Enter жмёт выбранную.
-     *
-     * Enter жал «Ещё раз» и раньше, но добраться до «С начала» за столом можно
-     * было только мышью — при том, что весь остальной экран клавишу понимает.
-     *
-     * Выбор ведётся своим полем, а не фокусом браузера: кнопка под фокусом
-     * отвечает на Enter сама, помимо нас, и на этом пути мимо `click()`
-     * проходили бы и заслонка, и запрет второго нажатия. Да и обводку фокуса
-     * игра снимает у всех кнопок разом — видно бы её всё равно не было.
-     *
-     * Влево-вправо делают то же, что вверх-вниз: кнопки стоят столбиком, но
-     * рука тянется к стрелкам не глядя, и наказывать за промах по оси незачем.
-     *
-     * Пока открыт вопрос «начать с начала?», клавиши не трогаем — там свои
-     * кнопки и свой разбор.
-     */
-    addEventListener('keydown', (event) => {
-      if (event.repeat || !this.shown || this.dialog.shown || this.again.disabled) return;
-
-      if (event.code === 'Enter' || event.code === 'NumpadEnter') {
-        this._buttons[this.picked].click();
-        return;
-      }
-
-      const step = ARROWS[event.code];
-      if (!step) return;
-
-      // Страница прибита к экрану, но стрелки на ней всё равно листают фокус и
-      // прокрутку — на этом экране они заняты.
-      event.preventDefault();
-      this._pick(this.picked + step);
     });
 
     /**
@@ -192,21 +167,6 @@ export class DeathScreen {
       } finally {
         this.veil(false);
       }
-    });
-  }
-
-  /**
-   * Поставить выбор на кнопку. Список не закольцован: с «Ещё раз» вверх и с
-   * «С начала» вниз выбор просто упирается.
-   *
-   * Закольцевать было заманчиво, но здесь это ловушка: «С начала» стирает всё
-   * пройденное, и лишнее нажатие вниз не должно перекидывать выбор на неё с
-   * другого конца списка.
-   */
-  _pick(index) {
-    this.picked = Math.min(this._buttons.length - 1, Math.max(0, index));
-    this._buttons.forEach((button, i) => {
-      button.classList.toggle('is-picked', this.keyboard && i === this.picked);
     });
   }
 
@@ -259,14 +219,11 @@ export class DeathScreen {
     clearTimeout(this._fade);
     this.root.hidden = false;
 
-    // На телефоне клавиш нет — ни подсказка про них, ни метка выбора там не
-    // нужны: выбирать нечем, а подсвеченная кнопка читалась бы как нажатая.
-    this.keyboard = matchMedia('(hover: hover) and (pointer: fine)').matches;
-    this.hint.hidden = !this.keyboard;
-
-    // Выбор всегда начинается с «Ещё раз»: её нажимают почти всегда, и
-    // доставшийся от прошлой смерти выбор на «С начала» был бы западнёй.
-    this._pick(0);
+    // Выбор — на «Ещё раз», и метка вместе с ним. На телефоне подсказка про
+    // клавиши только мешает, и прячется она по тому же признаку, по которому
+    // выбор решает, показывать ли метку.
+    this.choice.reset();
+    this.hint.hidden = !this.choice.keyboard;
 
     // Кадр на то, чтобы браузер заметил появление: без него переходу
     // прозрачности не с чего начинать, и экран возникнет рывком.
@@ -331,11 +288,3 @@ function label(text) {
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
-
-/** Куда ведёт каждая стрелка по списку кнопок: вверх — назад, вниз — вперёд. */
-const ARROWS = {
-  ArrowUp: -1,
-  ArrowLeft: -1,
-  ArrowDown: 1,
-  ArrowRight: 1,
-};

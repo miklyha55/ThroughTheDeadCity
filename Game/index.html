@@ -244,6 +244,30 @@
         background: rgba(232, 208, 143, 0.06);
       }
 
+      /* Кнопка, на которой стоит выбор с клавиатуры: её и нажмёт Enter.
+
+         Метка сильнее наведения мышью — и должна быть: наведение это «палец
+         рядом», а выбор это «нажму вот сюда». Стоит после правил наведения
+         намеренно: специфичность у них одинаковая, и решает порядок.
+
+         Ставит её `Choice`, и только за столом — на телефоне выбирать нечем, а
+         подсвеченная кнопка читалась бы как нажатая. */
+      .death__again.is-picked, .death__start.is-picked,
+      .confirm__no.is-picked, .confirm__yes.is-picked,
+      .ending__again.is-picked, .ending__rate.is-picked {
+        color: var(--gold);
+        border-color: var(--gold);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 26px var(--glow);
+      }
+      /* Главные — ярче заливкой, тихие получают её впервые: под выбором даже
+         блеклая кнопка обязана читаться как выбранная. */
+      .death__again.is-picked, .confirm__no.is-picked, .ending__again.is-picked {
+        background: linear-gradient(180deg, rgba(232, 208, 143, 0.22), rgba(232, 208, 143, 0.12));
+      }
+      .death__start.is-picked, .ending__rate.is-picked {
+        background: rgba(232, 208, 143, 0.1);
+      }
+
       /* Красная: без заливки и без свечения. Звать к ней нечем. */
       .confirm__yes {
         color: rgba(216, 106, 92, 0.9);
@@ -254,6 +278,16 @@
         color: var(--danger);
         border-color: rgba(216, 106, 92, 0.6);
         background: rgba(216, 106, 92, 0.1);
+      }
+      /* Под выбором она тоже красная, а не золотая: цвет здесь и есть
+         предупреждение, и терять его там, где до нажатия остался один Enter,
+         нельзя. Стоит после общего правила выбора — специфичность равная,
+         решает порядок. */
+      .confirm__yes.is-picked {
+        color: var(--danger);
+        border-color: var(--danger);
+        background: rgba(216, 106, 92, 0.14);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 26px rgba(216, 106, 92, 0.28);
       }
 
       /* Метка-таблетка в списке уровней: «здесь», «пройден», «заперт».
@@ -733,22 +767,6 @@
         padding: 14px 34px;
       }
 
-      /* Кнопка, на которой стоит выбор стрелками: её и нажмёт Enter.
-
-         Метка сильнее наведения мышью — и должна быть: наведение это «палец
-         рядом», а выбор это «нажму вот сюда». Показывается она только за
-         столом, где есть чем выбирать; ставит её сам экран смерти. */
-      .death__again.is-picked, .death__start.is-picked {
-        color: var(--gold);
-        border-color: var(--gold);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 26px var(--glow);
-      }
-      .death__again.is-picked {
-        background: linear-gradient(180deg, rgba(232, 208, 143, 0.22), rgba(232, 208, 143, 0.12));
-      }
-      .death__start.is-picked {
-        background: rgba(232, 208, 143, 0.1);
-      }
 
       /* ================== ПОДТВЕРЖДЕНИЕ ================== */
 

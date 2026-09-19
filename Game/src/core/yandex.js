@@ -105,15 +105,6 @@ class Yandex {
   /**
    * Показать рекламу за награду.
    *
-   * Обещание разрешается закрытием ролика, а не наградой: закрытие приходит
-   * всегда — и когда посмотрели, и когда отказались, и когда ролика не нашлось.
-   * По нему и продолжают игру.
-   *
-   * @returns {Promise<boolean>} досмотрел ли игрок до награды
-   */
-  /**
-   * Показать рекламу за награду.
-   *
    * Отвечает, чем кончилось, — это три разных исхода, и путать их нельзя:
    * - `'rewarded'` — досмотрел: площадка прислала `onRewarded`. Только здесь
    *   награда и выдаётся, так требует документация;
@@ -169,11 +160,25 @@ class Yandex {
       const timer = setTimeout(() => finish('нет ответа'), CFG.advTimeout * 1000);
 
       this.pause();
+
+      // Колбэки обязаны лежать в поле `callbacks` — так устроен вызов у
+      // площадки. Переданные верхним уровнем, как было здесь раньше, они просто
+      // не вызываются никогда: площадка их там не ищет. Ролик при этом
+      // исправно показывался, а игра о нём не знала ничего — ни что он открылся,
+      // ни что игрок отказался от награды. Ответ всегда приходил по времени
+      // ожидания, то есть `none`, и уровень перезапускался в любом случае.
       this.sdk.adv.showRewardedVideo({
-        onOpen: () => { opened = true; },
-        onRewarded: () => { rewarded = true; },
-        onClose: () => finish('закрыт'),
-        onError: () => finish('ошибка'),
+        callbacks: {
+          onOpen: () => { opened = true; },
+          onRewarded: () => { rewarded = true; },
+          // `wasShown` говорит, был ли ролик на экране. Берём и его, и свою
+          // пометку: показ без `onOpen` площадка изредка отдаёт и так.
+          onClose: (wasShown) => {
+            opened = opened || wasShown === true;
+            finish('закрыт');
+          },
+          onError: () => finish('ошибка'),
+        },
       });
     }).finally(() => this.play());
   }
@@ -187,9 +192,14 @@ class Yandex {
       const finish = (shown) => { clearTimeout(timer); done(Boolean(shown)); };
 
       this.pause();
+
+      // И здесь колбэки внутри `callbacks`, по той же причине: снаружи площадка
+      // их не видит. `onClose` приходит с признаком, показали ролик или нет.
       this.sdk.adv.showFullscreenAdv({
-        onClose: finish,
-        onError: () => finish(false),
+        callbacks: {
+          onClose: finish,
+          onError: () => finish(false),
+        },
       });
     }).finally(() => this.play());
   }

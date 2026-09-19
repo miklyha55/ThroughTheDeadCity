@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
 import { tally } from '../core/tally.js';
+import { Choice } from './Choice.js';
 
 const CFG = CONFIG.ending;
 
@@ -122,6 +123,16 @@ export class Ending {
       this.onRate?.();
     });
 
+    /**
+     * Стрелки водят выбор между кнопками, Enter жмёт выбранную.
+     *
+     * Кнопки перечислены слева направо, как и стоят. «Оценить» может и не
+     * появиться — её показывает площадка, — но список этого не замечает:
+     * спрятанную кнопку выбор пропускает, и на финале без неё стрелки просто
+     * никуда не ведут, а Enter жмёт «Ещё раз».
+     */
+    this.choice = new Choice([this.again, this.rate], () => this.shown);
+
     this._paint();
     this.shown = false;
   }
@@ -139,6 +150,7 @@ export class Ending {
     // Таблица придёт следом, от площадки: до неё блок не показываем вовсе.
     this.board.hidden = true;
 
+    this.choice.reset(); // выбор — на «Ещё раз»
     this.root.classList.add('ending--on');
   }
 

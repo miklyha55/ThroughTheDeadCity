@@ -1,3 +1,5 @@
+import { Choice } from './Choice.js';
+
 /**
  * Окно «точно?»: вопрос и два ответа, поверх всего остального.
  *
@@ -60,12 +62,23 @@ export class ConfirmDialog {
       if (event.target === this.root) this._close(event, false);
     });
 
-    // И клавишей — для тех, кто играет за столом.
+    // И клавишей — для тех, кто играет за столом. Escape это тот же отказ:
+    // окно спрашивает, а не требует ответа.
     this._onKey = (event) => {
       if (!this.shown) return;
       if (event.code === 'Escape') this._close(event, false);
     };
     addEventListener('keydown', this._onKey);
+
+    /**
+     * Стрелки водят выбор между ответами, Enter жмёт выбранный.
+     *
+     * Кнопки перечислены слева направо, как и стоят, поэтому выбор начинается
+     * с «Отмены»: к безопасному ответу должна вести не только рука, но и
+     * клавиша. Промахнувшийся по «Начать сначала» пальцем и промахнувшийся
+     * Enter'ом теряют одинаково много.
+     */
+    this.choice = new Choice([this.no, this.yes], () => this.shown);
   }
 
   /**
@@ -88,6 +101,7 @@ export class ConfirmDialog {
     this.shown = true;
     clearTimeout(this._fade);
     this.root.hidden = false;
+    this.choice.reset(); // выбор — на «Отмену», и так при каждом вопросе
 
     // Кадр на то, чтобы браузер заметил появление: без него переходу
     // прозрачности не с чего начинать, и окно возникнет рывком.

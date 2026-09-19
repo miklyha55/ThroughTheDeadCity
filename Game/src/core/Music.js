@@ -67,13 +67,7 @@ export class Music {
 
     document.addEventListener('visibilitychange', () => {
       if (!this.allowed) return;
-      if (document.hidden) {
-        this.audio.pause();
-        this.wind.pause();
-      } else {
-        this._resume();
-        this._blow();
-      }
+      if (document.hidden) this.hush(); else this.unhush();
     });
 
     // Разрешение мог дать ещё экран с кнопкой «Играть» — тогда ветру нечего
@@ -116,6 +110,31 @@ export class Music {
     this.track = null;
     this.audio.pause();
     this.audio.currentTime = 0;
+  }
+
+  /**
+   * Замолчать на время, не теряя места.
+   *
+   * От `silence` отличается тем, что дорожка остаётся заряженной и стоит там,
+   * где её застали: вернувшись, игрок услышит ровно то место, на котором ушёл,
+   * а не начало трека заново.
+   *
+   * Поводов два, и оба чужие: вкладку убрали из виду и площадка показывает
+   * рекламу. Под роликом игра обязана молчать — играющая поверх него музыка
+   * это уже вопрос к модерации, а не к вкусу.
+   *
+   * Ветер уходит вместе с музыкой, в отличие от `silence`: там молчит дорожка,
+   * а город живёт, здесь же не звучит вообще ничего.
+   */
+  hush() {
+    this.audio.pause();
+    this.wind.pause();
+  }
+
+  /** Заговорить снова — с того же места, на котором замолчали. */
+  unhush() {
+    this._resume();
+    this._blow();
   }
 
   /**
