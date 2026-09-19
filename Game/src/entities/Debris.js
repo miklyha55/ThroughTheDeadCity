@@ -128,7 +128,7 @@ export class Debris {
         if (mover === item.lethalTo && this._strike(item, mover)) continue;
         this._crush(item, mover);
         if (this._grabbed(item, mover)) break; // ушёл в руку — пинать уже нечего
-        this._kick(item, mover.position, mover.radius, mover.speed);
+        this._kick(item, mover.position, mover.radius, mover.speed, mover);
       }
       if (item.held || item.asleep) continue;
 
@@ -204,6 +204,11 @@ export class Debris {
 
     const gap = Math.hypot(dx, dz);
     if (gap > item.radius + mover.radius || gap < 1e-4) return;
+
+    // Клинок высоту разбирает сам, ниже и подробнее: ему важно не только
+    // попасть, но и куда именно войти. Всему прочему хватает грубой проверки —
+    // без неё летящий над головами ящик убивал того, над кем пролетел.
+    if (!blade && this._pastHeight(item, mover)) return;
 
     // минус — потому что (dx, dz) смотрит от фигуры к предмету
     const closing = -(item.velocity.x * dx + item.velocity.z * dz) / gap;
@@ -362,6 +367,9 @@ export class Debris {
     const gap = Math.hypot(position.x - mover.position.x, position.z - mover.position.z);
     if (gap > item.radius + mover.radius) return false;
 
+    // Из-под ног, а не из воздуха: пролетающее над головой не подбирают.
+    if (this._pastHeight(item, mover)) return false;
+
     return mover.grab(item, this) === true;
   }
 
@@ -405,13 +413,35 @@ export class Debris {
   }
 
   /** Пинок прилетает в бок предмета, а не в центр — потому он ещё и закручивается. */
-  _kick(item, moverPosition, moverRadius, moverSpeed) {
+  /**
+   * Пролетает ли предмет мимо фигуры по высоте.
+   *
+   * Касание фигуры до сих пор считалось только по земле — по кругу под ногами,
+   * — и хламу, который катится и лежит, этого хватало. Но вожак швыряет высокой
+   * дугой, и на её верхушке предмет идёт метрами выше голов. Пройдя над зомби,
+   * стоящим между вожаком и героем, он засчитывался как коснувшийся: зомби
+   * получал смертельный удар ни за что, а сам предмет — пинок, обрезание
+   * скорости до `maxKickSpeed` и перестановку вплотную к зомби. Со стороны это
+   * выглядело так, будто ящик на полном ходу ныряет вниз, к чужим ногам.
+   *
+   * Мерку берём у самой фигуры: у зомби и у вожака она своя, у персонажа её
+   * нет — ему годится зомбячья. Снизу пускаем на радиус предмета ниже подошв:
+   * лежащий на земле ящик касается ног серединой чуть выше нуля, и строгий ноль
+   * отнял бы у толпы возможность его пинать.
+   */
+  _pastHeight(item, mover) {
+    const high = item.object.position.y - mover.position.y;
+    return high < -item.radius || high > (mover.bodyHeight ?? ZOMBIES.bodyHeight);
+  }
+
+  _kick(item, moverPosition, moverRadius, moverSpeed, mover = null) {
     const position = item.object.position;
     let dx = position.x - moverPosition.x;
     let dz = position.z - moverPosition.z;
     const distance = Math.hypot(dx, dz);
     const touch = item.radius + moverRadius;
     if (distance > touch) return;
+    if (mover && this._pastHeight(item, mover)) return;
 
     if (distance > 1e-4) {
       dx /= distance;
