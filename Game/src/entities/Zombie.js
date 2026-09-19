@@ -142,8 +142,8 @@ export class Zombie extends Figure {
    * Брызги те же, что и от пули: один и тот же залп зелени.
    *
    * @param {THREE.Vector3} [from] — откуда прилетело: туда же летят капли
-   * @param {number} [gore] — во сколько раз гуще кровь: разрыв взрывом не то же
-   *   самое, что удар бочкой
+   * @param {number} [gore] — больше не влияет: кровь всегда как от обычного
+   *   попадания. Оставлен, чтобы не переписывать всех, кто его передаёт
    * @param {'blast'|'blade'|'impact'} [cause] — чем убило. Обычному зомби всё
    *   равно, он гибнет от любого; вожак от разного теряет разное
    */
@@ -152,10 +152,11 @@ export class Zombie extends Figure {
 
     this.hitFlash.trigger(); // мигает сразу — от удара, тарана и взрыва одинаково
 
+    // Кровь — как от обычного попадания: то же число капель того же размера,
+    // чем бы ни убило. Взрыв и таран раньше лили её вдвое гуще и крупнее.
     this.blood?.splash(
       _hit.copy(this.root.position).setY(this.root.position.y + CONFIG.player.hitHeight),
       from ?? this.root.position,
-      gore
     );
 
     this.health = 0;

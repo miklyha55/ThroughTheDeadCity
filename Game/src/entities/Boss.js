@@ -181,10 +181,11 @@ export class Boss extends Zombie {
   crush(from = null, gore = 1, cause = 'impact') {
     if (!this.alive) return false;
 
+    // Кровь — как от обычного попадания: то же число капель того же размера,
+    // чем бы ни убило. Взрыв и таран раньше лили её вдвое гуще и крупнее.
     this.blood?.splash(
       _hit.copy(this.root.position).setY(this.root.position.y + this.bodyHeight * 0.6),
       from ?? this.root.position,
-      gore
     );
 
     const amount = cause === 'blast' ? CFG.blastDamage

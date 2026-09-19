@@ -109,6 +109,14 @@ export class DeathScreen {
       }
     });
 
+    // «Ещё раз» — и по Enter, чтобы за столом не тянуться к мыши. Жмёт ту же
+    // кнопку, поэтому и путь тот же: реклама, заслонка, перезапуск. Пока открыт
+    // вопрос «начать с начала?», Enter не трогаем — там свои кнопки.
+    addEventListener('keydown', (event) => {
+      if (event.repeat || !this.shown || this.dialog.shown || this.again.disabled) return;
+      if (event.code === 'Enter' || event.code === 'NumpadEnter') this.again.click();
+    });
+
     /**
      * Сброс сам по себе ничего не запускает: сперва вопрос, и всегда.
      *

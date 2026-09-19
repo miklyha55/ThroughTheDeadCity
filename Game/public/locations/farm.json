@@ -1256,6 +1256,22 @@
         15.13
       ],
       "rotation": 34
+    },
+    {
+      "prop": "Prop_Barrel",
+      "at": [
+        8.01,
+        6.95
+      ],
+      "rotation": -57.2
+    },
+    {
+      "prop": "Prop_Jerrycan",
+      "at": [
+        -5.79,
+        -8.38
+      ],
+      "rotation": -6.5
     }
   ],
   "zombies": [
@@ -1554,11 +1570,52 @@
         13.09
       ],
       "rotation": 161.8
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        13.58,
+        -19.68
+      ],
+      "rotation": 90.2
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        0.47,
+        -14.88
+      ],
+      "rotation": 90.2
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -4.43,
+        -10.61
+      ],
+      "rotation": 90.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -9.19,
+        -0.85
+      ],
+      "rotation": -92.2
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        16.98,
+        -2.23
+      ],
+      "rotation": 161.8
     }
   ],
   "exitAt": [
     0.09,
     -23.49,
+    4.79,
     4.79
   ]
 }
