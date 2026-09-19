@@ -121,7 +121,7 @@ const LEVEL_NAMES = {
     farm: 'Wilson Farm',
     gas_station: 'Gas Station on Route 40',
     highway: 'Highway to the Crossroads',
-    crossroads: 'The North Crossroads',
+    crossroads: 'The Dead Crossroads',
     north_exit: 'The North Exit',
   },
 };

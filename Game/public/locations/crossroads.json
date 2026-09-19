@@ -1,6 +1,6 @@
 {
   "id": "crossroads",
-  "name": "Северный перекрёсток",
+  "name": "Мёртвый перекрёсток",
   "number": 4,
   "next": "north_exit",
   "size": [
