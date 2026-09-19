@@ -304,9 +304,10 @@ const dayNight = new DayNight({ scene: engine.scene, ...world });
 const visibility = new Visibility(engine.camera);
 
 const sfx = new Sfx(CONFIG.sounds.files);
-// Звуки мира слушает герой — или машина, пока он за рулём: от них и считается
-// расстояние. `car` и `player` объявлены ниже, но спрашивают их только в игре.
-sfx.hearFrom = () => (car?.driving ? car.position : player.position);
+// Звуки мира слушает камера — точка, куда она смотрит: от неё и считается
+// громкость. Слышно то, что видно, — и при пролёте к вожаку, и при облёте
+// погибшего. `camera` объявлена ниже, но спрашивают её только в игре.
+sfx.hearFrom = () => camera.focus;
 const carSound = new CarSound(); // мотор машины: своя дорожка по кругу
 
 const loading = Promise.all([
@@ -429,9 +430,9 @@ car.onBoard = () => {
   player.root.visible = false;
   player.frozen = true; // и стрелять он не может: за рулём его вовсе не обновляют
 
-  // Туман войны за рулём остаётся: машина прорезает его так же, как герой, —
-  // тело героя едет внутри кузова, — только кругом пошире.
-  fog.radius = CONFIG.car.fogRadius;
+  // За рулём туман войны снимается весь: машина идёт втрое быстрее героя, и
+  // дорога впереди должна быть видна раньше, чем до неё доезжаешь.
+  fog.revealAll();
 
   camera.target = car;      // камера ведёт машину
   ammo.root.hidden = true;  // патроны за рулём не считают
@@ -439,6 +440,12 @@ car.onBoard = () => {
   aimPointer();
 };
 
+
+// Удар о твёрдое: звук один раз и до конца — пока он играет, новых нет.
+car.onCrash = () => {
+  if (sfx.busy('carCrash')) return;
+  sfx.play('carCrash', CONFIG.car.crashVolume, 1, 1, { echo: false, spread: false });
+};
 
 car.onRam = (at, speed) => {
   // Сбитый читается ударом: толчок камере, пыль из-под колёс и глухой стук.
@@ -524,7 +531,11 @@ car.onWreck = (at) => {
 
   player.root.visible = true;
   player.frozen = false;
-  fog.radius = null; // пешком — обычный круг вокруг героя
+
+  // Пешком — снова в тумане войны: карта закрывается и прорезается вокруг героя
+  // по мере хода, как на любом другом уровне.
+  const here = locations.current;
+  if (here) closeFog(here.width, here.depth);
 
   camera.target = player;
   ammo.root.hidden = !player.armed;
@@ -1355,7 +1366,22 @@ saveOnLeave();
  * площадка прямо запрещает — случайные нажатия она считает обманом.
  */
 deathScreen.onAgain = async () => {
-  await yandex.showRewarded();
+  const result = await yandex.showRewarded();
+
+  /**
+   * Закрыл ролик, не досмотрев, — награды нет, и уровень не перезапускается:
+   * игрок возвращается к экрану смерти, где снова может нажать «Ещё раз» или
+   * начать с начала. Геймплей при этом так и стоит — для площадки это пауза.
+   *
+   * Если ролика не было вовсе — площадка его не дала, сеть подвела, мы не на
+   * площадке, — перезапуск идёт как обычно: за отказавшую рекламу игрока не
+   * запирают.
+   */
+  if (result === 'declined') {
+    yandex.pause();
+    deathScreen.show();
+    return;
+  }
 
   /**
    * Пауза площадки снимается здесь же, а не ждёт её сигнала.
@@ -1414,6 +1440,11 @@ function watchDeath() {
 
   if (player.alive) return;
   if (performance.now() < player.restartAt) return;
+
+  // Нажато «Ещё раз» и идёт ролик: экран смерти на это время спрятан, но это та
+  // же смерть. Поднимать его заново и засчитывать вторую смерть нельзя — после
+  // ролика он либо сам вернётся (отказался от награды), либо уровень начнётся.
+  if (deathScreen.busy) return;
 
   if (!deathScreen.shown) {
     yandex.pause();   // попытка кончилась — геймплей встал
@@ -1478,7 +1509,6 @@ locations.onChange = (location) => {
   car.place(location);
   player.root.visible = true;
   camera.target = player;
-  fog.radius = null; // уровень начинается пешком — и круг в тумане пеший
 
   // Камера встаёт на героя сразу, без перелёта. Менеджер уровней уже ставил её
   // мгновенно — но на прежнюю цель: если уровень кончился за рулём, это была

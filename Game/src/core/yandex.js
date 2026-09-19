@@ -111,8 +111,22 @@ class Yandex {
    *
    * @returns {Promise<boolean>} досмотрел ли игрок до награды
    */
+  /**
+   * Показать рекламу за награду.
+   *
+   * Отвечает, чем кончилось, — это три разных исхода, и путать их нельзя:
+   * - `'rewarded'` — досмотрел: площадка прислала `onRewarded`. Только здесь
+   *   награда и выдаётся, так требует документация;
+   * - `'declined'` — ролик был на экране, но игрок закрыл его раньше, чем
+   *   просмотр засчитали. Награды нет;
+   * - `'none'` — ролика не было вовсе: площадка его не дала, ошибка, нет ответа
+   *   или мы не на площадке. Игрок ни в чём не виноват, и запирать его за
+   *   отказавшей рекламой нельзя.
+   *
+   * @returns {Promise<'rewarded'|'declined'|'none'>}
+   */
   showRewarded() {
-    if (!this.sdk?.adv?.showRewardedVideo) return Promise.resolve(false);
+    if (!this.sdk?.adv?.showRewardedVideo) return Promise.resolve('none');
 
     return new Promise((done) => {
       let rewarded = false;
@@ -133,7 +147,12 @@ class Yandex {
 
         clearTimeout(opening);
         clearTimeout(timer);
-        done(rewarded || why === 'rewarded');
+
+        if (rewarded) done('rewarded');
+        // Закрыли сам ролик — значит отказались. Ошибка или тишина уже после
+        // открытия — это сбой, а не отказ: игрока за него не наказываем.
+        else if (opened && why === 'закрыт') done('declined');
+        else done('none');
       };
 
       /**

@@ -57,6 +57,8 @@ export class Car {
     this.onRam = null;     // кого сбили: сюда уходят тряска и звук
     this.onWreck = null;   // машина догорела: герою пора вылезать
     this.onBoard = null;   // и кому сказать, что в неё сели
+    this.onCrash = null;   // врезалась во что-то твёрдое: сюда уходит звук удара
+    this.touching = false; // касалась ли препятствия в прошлом кадре
   }
 
   /**
@@ -365,7 +367,12 @@ export class Car {
    * он не погас, её несёт боком. Общий бюджет хода один: сколько ушло вбок,
    * столько не достанется движению вдоль.
    *
-   * @param {number} pull — ход вдоль корпуса; минус — задним ходом
+   * Разгон. Полный ход не появляется в тот же кадр, что и нажатие: машина его
+   * набирает. Отпустил газ — она встала или сбросила скорость, нажал снова —
+   * разгоняется заново, с той скорости, на которой её застало нажатие. Так
+   * каждый новый газ чувствуется тягой, а не телепортом на полную скорость.
+   *
+   * @param {number} pull — ход вдоль корпуса, к которому тянемся; минус — задним ходом
    */
   _push(dt, pull) {
     _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));   // вдоль корпуса
@@ -373,6 +380,10 @@ export class Car {
 
     const speed = this.velocity.length();
     const lateral = this.velocity.dot(_side);
+
+    // Прибавить за кадр можно не больше, чем даёт разгон; сбросить — сразу.
+    const reach = Math.min(Math.abs(pull), speed + CFG.accel * dt);
+    pull = Math.sign(pull) * reach;
 
     const loose = Math.min(1, speed / CFG.maxSpeed);
     const grip = CFG.grip * (1 - loose * (1 - CFG.gripAtSpeed));
@@ -412,11 +423,17 @@ export class Car {
 
     _from.copy(this.root.position);
     _step.copy(_from);
+    const speed = this.velocity.length();
+    let touched = false; // коснулась ли за этот кадр чего-то твёрдого
 
     for (let i = 0; i < steps; i++) {
       _wanted.copy(_step).addScaledVector(_dir, piece);
+      const wx = _wanted.x, wz = _wanted.z;
       location.obstacles.resolve(_wanted, CFG.radius);
       location.clampPosition(_wanted);
+
+      // Препятствие отодвинуло — значит упёрлась: забор, машина, дом.
+      if (Math.hypot(_wanted.x - wx, _wanted.z - wz) > CFG.crashTouch) touched = true;
 
       // Куда бы расхождение ни отодвинуло — принимаем: вдоль стены машина
       // скользит, а не встаёт. Останавливать её на каждом касании забора нельзя,
@@ -428,6 +445,11 @@ export class Car {
     // держать скорость незачем: газ в стену только прижимает к ней плотнее.
     const moved = _from.distanceTo(_step);
     if (moved < path * CFG.bumpGap) this.velocity.multiplyScalar(CFG.bumpKeep);
+
+    // Удар — это миг касания, а не всё время, пока скребёт вдоль стены: иначе
+    // звук шёл бы очередью, пока машина трётся о забор.
+    if (touched && !this.touching && speed > CFG.crashFrom) this.onCrash?.(speed);
+    this.touching = touched;
 
     this.root.position.copy(_step);
     this.root.position.y = CFG.height;

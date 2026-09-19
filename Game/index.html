@@ -880,6 +880,18 @@
         opacity: 0;
         transition: opacity 320ms ease;
       }
+      /* Лого студии — над репликой, тоже вынуто из потока: реплика под ним
+         бывает в одну строку и в две, и лого не должно от этого прыгать. */
+      .boot__logo {
+        position: absolute;
+        left: 50%; transform: translateX(-50%);
+        bottom: calc(50% + 120px);
+        /* Высота — сколько влезает между репликой и верхним краем: на телефоне
+           лёжа экран низкий, и лого в полный рост ушло бы за край. */
+        height: min(105px, calc(50vh - 130px)); width: auto;
+        max-width: 62vw;
+        pointer-events: none; user-select: none;
+      }
       .boot__bar {
         width: min(46vw, 340px); height: 8px;
         border-radius: 99px;

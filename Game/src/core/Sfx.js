@@ -39,7 +39,7 @@ export class Sfx {
     this.pools = new Map();  // имя → голоса наготове
     this.next = new Map();   // имя → кого занимать, когда все заняты
     this.echoes = new Set(); // отложенные отзвуки: их тоже надо уметь отменить
-    this.hearFrom = null;    // откуда слушать: герой или машина — ставится снаружи
+    this.hearFrom = null;    // откуда слушать: точка, куда смотрит камера, — ставится снаружи
   }
 
   /**
@@ -87,12 +87,27 @@ export class Sfx {
    * вторым взрывом.
    */
   /**
+   * Как далеко точка от того, кто слушает, по земле. Слушателя нет — ноль: звук
+   * играет в полную силу, как раньше.
+   */
+  distanceTo(at) {
+    const ear = this.hearFrom?.();
+    if (!ear || !at) return 0;
+    return Math.hypot(at.x - ear.x, at.z - ear.z);
+  }
+
+  /** Играет ли сейчас этот звук хоть одним голосом. */
+  busy(name) {
+    return (this.pools.get(name) ?? []).some((voice) => voice.isPlaying);
+  }
+
+  /**
    * Сыграть звук в точке мира: чем дальше она от героя, тем тише, а за `range`
    * не слышно вовсе.
    *
-   * Слушает всегда герой — или машина, пока он за рулём: откуда слушать, игра
-   * говорит через `hearFrom`. Без этого рёв вожака на том конце карты звучал
-   * так же, как у самого уха.
+   * Слушает камера — точка, куда она смотрит: откуда слушать, игра говорит
+   * через `hearFrom`. Слышно то, что видно: без этого рёв вожака на том конце
+   * карты звучал так же, как у самого уха.
    *
    * @param {string} name
    * @param {THREE.Vector3} at — где звучит
@@ -101,12 +116,9 @@ export class Sfx {
    * @param {number} [layers] @param {number} [pitch] @param {object} [opts] — как у `play`
    */
   playAt(name, at, loudness = 1, range = CFG.range, layers = 1, pitch = 1, opts = {}) {
-    const ear = this.hearFrom?.();
-    if (ear && at) {
-      const away = Math.hypot(at.x - ear.x, at.z - ear.z);
-      if (away >= range) return;
-      loudness *= 1 - away / range;
-    }
+    const away = this.distanceTo(at);
+    if (away >= range) return;
+    loudness *= 1 - away / range;
     this.play(name, loudness, layers, pitch, opts);
   }
 

@@ -22,6 +22,14 @@ export class Boot {
     this.root.className = 'boot';
     this.root.hidden = true;
 
+    // Лого студии над репликой и полосой: пока игра собирается, экран говорит,
+    // чья она. Картинка крошечная и грузится раньше всего остального.
+    this.logo = document.createElement('img');
+    this.logo.className = 'boot__logo';
+    this.logo.src = CFG.logo;
+    this.logo.alt = CFG.logoAlt;
+    this.logo.decoding = 'async';
+
     this.line = document.createElement('div');
     this.line.className = 'boot__line';
 
@@ -32,7 +40,7 @@ export class Boot {
     this.fill.className = 'boot__fill';
 
     bar.appendChild(this.fill);
-    this.root.append(this.line, bar);
+    this.root.append(this.logo, this.line, bar);
     container.appendChild(this.root);
 
     this.shownAt = 0;

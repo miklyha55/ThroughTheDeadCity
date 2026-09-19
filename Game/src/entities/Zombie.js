@@ -486,7 +486,8 @@ export class Zombie extends Figure {
   _voice(sound, loudness, chance = CFG.voiceChance, pitch = 1, range = CFG.voiceRange, falloff = 1) {
     if (!this.sfx || Math.random() > chance) return;
 
-    const away = this.heardAt ?? range;
+    // Громкость — от камеры, как у всех звуков мира: слышно то, что видно.
+    const away = this.sfx.distanceTo(this.root.position);
     if (away >= range) return;
 
     const near = (1 - away / range) ** falloff;
@@ -527,7 +528,7 @@ export class Zombie extends Figure {
 
     // Дальше слышимости даже не считаем фазу: это самый частый случай — почти
     // вся толпа всегда далеко.
-    if ((this.heardAt ?? Infinity) >= CFG.stepRange) {
+    if (!this.sfx || this.sfx.distanceTo(this.root.position) >= CFG.stepRange) {
       this.stepPhase = 1;
       return;
     }
