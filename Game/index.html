@@ -910,7 +910,11 @@
         background-image: inherit;
         transform-origin: 62% 42%; /* к горизонту и герою, а не к середине кадра */
       }
-      .ending--on .ending__frame { animation: ending-drift 26s ease-out forwards; }
+      .ending--on .ending__frame,
+      .ending--leaving .ending__frame { animation: ending-drift 26s ease-out forwards; }
+      /* Уходящий экран растворяется, а наезд на картинке идёт дальше: снимись он
+         вместе с показом — картинка в первый же кадр прыгала бы к исходному
+         масштабу, и экран дёргался бы на уходе. */
 
       /* Медленный наезд с уводом вбок: кадр перестаёт быть стоп-кадром, но и
          не мельтешит. Масштаб только вверх от единицы — иначе полезли бы края. */

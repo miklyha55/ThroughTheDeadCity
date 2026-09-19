@@ -79,6 +79,8 @@ export class LevelResult {
    */
   show(result) {
     this.shown = true;
+    clearTimeout(this._leave);
+    this.root.classList.remove('ending--leaving');
 
     this.frame.style.backgroundImage = `url(${CONFIG.splash.folder}${result.number}.png)`;
     this.caption.textContent = `${result.name} — ${CFG.doneLabel}`;
@@ -99,7 +101,15 @@ export class LevelResult {
     if (!this.shown) return;
 
     this.shown = false;
+
+    // Сперва «уходит», потом «не показан»: наезд на картинке держится на обоих
+    // классах и не обрывается, пока экран тает. Оборвись он — картинка прыгала
+    // бы к исходному масштабу посреди растворения.
+    this.root.classList.add('ending--leaving');
     this.root.classList.remove('ending--on');
+
+    clearTimeout(this._leave);
+    this._leave = setTimeout(() => this.root.classList.remove('ending--leaving'), CFG.fadeFor * 1000);
   }
 
   _continue() {
