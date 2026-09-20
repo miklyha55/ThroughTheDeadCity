@@ -1465,7 +1465,7 @@ export const CONFIG = {
 
     // Лидерборд скорости: имя должно совпадать с «Техническим названием
     // лидерборда» в Консоли разработчика (тип time, сортировка по возрастанию).
-    leaderboard: 'through_dead_city',
+    leaderboard: 'ThroughDeadCity',
     leaderboardTop: 10, // сколько лучших строк показываем на финале
   },
 
