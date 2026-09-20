@@ -17,7 +17,9 @@ const CFG = CONFIG.boot;
  * мелькнувшую строку никто не прочитает, а стало бы только хуже, чем без неё.
  */
 export class Boot {
-  constructor(container = document.body) {
+  /** @param {import('./LoadBar.js').LoadBar} bar — полоса общая с заставкой уровня */
+  constructor(bar, container = document.body) {
+    this.bar = bar;
     this.root = document.createElement('div');
     this.root.className = 'boot';
     this.root.hidden = true;
@@ -25,14 +27,7 @@ export class Boot {
     this.line = document.createElement('div');
     this.line.className = 'boot__line';
 
-    const bar = document.createElement('div');
-    bar.className = 'boot__bar';
-
-    this.fill = document.createElement('div');
-    this.fill.className = 'boot__fill';
-
-    bar.appendChild(this.fill);
-    this.root.append(this.line, bar);
+    this.root.append(this.line);
     container.appendChild(this.root);
 
     this.shownAt = 0;
@@ -45,11 +40,12 @@ export class Boot {
     this.root.hidden = false;
     this.shownAt = performance.now();
 
-    // Полоса продолжает с того места, где загрузка на самом деле идёт, а не с
-    // нуля. Считается она с самого начала, ещё под кнопкой «Играть», и на
-    // горячем кэше к нажатию всё давно готово: обнулившись, полоса стояла пустой
-    // весь экран и прыгала на сотню в последний миг.
-    this.setProgress(this._share);
+    // Полоса общая с заставкой уровня, своим слоем поверх обоих экранов. Она
+    // продолжает с того места, где загрузка и правда идёт, а не с нуля:
+    // считается та с самого начала, ещё под кнопкой «Играть», и на горячем кэше
+    // к нажатию всё давно готово. Обнулившись, полоса стояла бы пустой весь
+    // экран и прыгала на сотню в последний миг.
+    this.bar.show(this._share * CFG.share);
     this._say(true); // первая — сразу, ждать ей нечего
 
     clearInterval(this._timer);
@@ -59,7 +55,11 @@ export class Boot {
   /** @param {number} share — доля от 0 до 1 */
   setProgress(share) {
     this._share = Math.min(1, Math.max(0, share));
-    this.fill.style.width = `${Math.round(this._share * 100)}%`;
+
+    // Своя доля общей полосы: файлы — это ещё не готовая игра, и остаток пути
+    // полоса пройдёт уже на заставке уровня. Дойди она здесь до края, на
+    // заставке ей было бы некуда идти и она стояла бы полной.
+    this.bar.set(this._share * CFG.share);
   }
 
   /**
@@ -73,7 +73,6 @@ export class Boot {
     clearInterval(this._timer);
     this._timer = null;
     clearTimeout(this._fade); // реплика больше не сменится: экран уже уходит
-    this.setProgress(1);
 
     const shown = performance.now() - this.shownAt;
     const wait = Math.max(CFG.hold, CFG.minTime - shown);
@@ -94,7 +93,7 @@ export class Boot {
    * проступает следующая. Но у первой гаснуть нечему: строка пуста, экран
    * только что появился. Уходя в общий путь, она зря выжидала время затухания
    * и показывалась заметно позже самого экрана — на горячем кэше это заметная
-   * доля всей загрузки, и игрок успевал увидеть пустоту под лого.
+   * доля всей загрузки, и игрок успевал увидеть пустой экран.
    *
    * @param {boolean} [now] — показать немедленно, не выжидая затухания
    */

@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { regainFocus } from '../core/yandex.js';
 
 /**
  * Выбор кнопки с клавиатуры: стрелки водят выбор, Enter жмёт выбранную.
@@ -31,10 +32,14 @@ export class Choice {
    * @param {() => boolean} active — отвечает ли этот экран на клавиши прямо
    *   сейчас. Спрашивается на каждое нажатие: экраны наслаиваются — вопрос
    *   «точно?» встаёт поверх экрана смерти, — и отвечать должен верхний.
+   * @param {boolean} [row] — кнопки стоят в ряд, а не столбиком. На саму работу
+   *   не влияет: водят обе оси всегда. Влияет только на подсказку — обещать
+   *   надо те стрелки, к которым игрок и потянется, глядя на эти кнопки.
    */
-  constructor(buttons, active) {
+  constructor(buttons, active, row = false) {
     this.buttons = buttons;
     this.active = active;
+    this.row = row;
     this.picked = null;
     this.keyboard = false;
 
@@ -56,6 +61,17 @@ export class Choice {
    * на «Начать сначала» был бы западнёй.
    */
   reset() {
+    /**
+     * Забрать клавиатуру обратно.
+     *
+     * Экран, который сейчас откроется, обещает игроку клавиши — и обещание надо
+     * сдержать. На площадке игра живёт в чужом окне, и её собственные окна —
+     * ролик, оценка, выбор аккаунта — уводят фокус, после чего ни одно нажатие
+     * до игры не доходит. Тут и выходило хуже всего: подсказка обещает стрелки и
+     * Enter, а они молчат.
+     */
+    regainFocus();
+
     // Пересчитываем здесь, а не в конструкторе: к первому показу экрана
     // клавиатуру могли и подключить.
     this.keyboard = matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -80,7 +96,8 @@ export class Choice {
 
     // Про стрелки говорим, только когда им есть куда вести: обещать выбор там,
     // где кнопка одна, — враньё.
-    this.hint.textContent = alive.length > 1 ? CONFIG.keys.pick : CONFIG.keys.press;
+    const many = this.row ? CONFIG.keys.pickRow : CONFIG.keys.pick;
+    this.hint.textContent = alive.length > 1 ? many : CONFIG.keys.press;
     this.hint.hidden = !this.keyboard || !alive.length;
 
     if (this.picked && !alive.includes(this.picked)) this._put(alive[0] ?? null);

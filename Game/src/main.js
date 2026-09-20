@@ -21,6 +21,7 @@ import { Pointer } from './fx/Pointer.js';
 import { Joystick } from './ui/Joystick.js';
 import { Splash } from './ui/Splash.js';
 import { Boot } from './ui/Boot.js';
+import { LoadBar } from './ui/LoadBar.js';
 import { Gate } from './ui/Gate.js';
 import { readChain } from './world/chain.js';
 import { asset } from './core/paths.js';
@@ -227,7 +228,9 @@ const pressed = gate.press(wakeAudio);
 
 // Экран загрузки с репликами — следом за воротами: модели весят мегабайты, и
 // это время игрок иначе смотрит в пустоту. Заставка уровня придёт уже после.
-const boot = new Boot();
+// Полоса загрузки одна на оба экрана: они сменяют друг друга, а она идёт.
+const loadBar = new LoadBar();
+const boot = new Boot(loadBar);
 
 /**
  * Всё, что игре понадобится: заставки, музыка, звуки, картинки, уровни.
@@ -307,7 +310,7 @@ const extras = await bootAssets();
 trackAssets(1 + 1 + Object.keys(CONFIG.zombies.sources).length + extras.length,
   (share) => boot.setProgress(share));
 
-const splash = new Splash();
+const splash = new Splash(loadBar);
 splash.learn(chain);        // теперь она знает каждый уровень в лицо
 splash.prepare(firstLevel); // и готовится встречать первый, пока идёт чёрный экран
 
@@ -834,7 +837,7 @@ function leaveEnding() {
  * его в покое: сам по себе он висит секунды и под пипетку не даётся. Игра под
  * ним при этом идёт своим чередом, он просто лежит сверху.
  */
-splash.show(); // встаёт под экраном загрузки: он выше и её пока не видно
+splash.show(true); // встаёт ПОД экраном загрузки: он выше, и полоса пока его
 
 if (!params.has('hold')) {
   await boot.hide();  // он уходит — и под ним сразу она, а не голый холст
@@ -1623,8 +1626,40 @@ locations.onLoading = (id) => {
   if (id !== locations.current?.data?.id) startMessage.stop();
 };
 
+/**
+ * Прогрев материалов, которые появляются только по ходу боя.
+ *
+ * Шейдер собирается не тогда, когда материал создан, а когда его впервые
+ * рисуют. У красной подсветки урона это первый выстрел по зомби — и на холодной
+ * машине, где кэш шейдеров пуст, сборка занимает десятки миллисекунд ровно в
+ * тот миг, когда игрок нажал на курок. Подвисание приходится на самое неудачное
+ * место в игре.
+ *
+ * Поэтому надеваем «раненых» двойников на всех разом и просим рендер разобрать
+ * сцену целиком. Дальше их материалы уже готовы, и первый удар ничем не
+ * отличается от сотого.
+ *
+ * Момент выбран под прикрытием: локация собрана, но заставка ещё на экране, и
+ * замешкавшийся кадр никто не увидит. Один раз за сеанс — материалы общие, и на
+ * следующих уровнях греть уже нечего.
+ */
+let warmed = false;
+function warmMaterials(location) {
+  if (warmed) return;
+  warmed = true;
+
+  // Вожак — тот же зомби и уже в списке; машина своя. Персонаж красным не
+  // мигает вовсе: у него на удар свой отклик, кровью и экраном.
+  const figures = [...location.zombies, car].filter((one) => one?.hitFlash);
+
+  for (const one of figures) one.hitFlash.wear(true);
+  engine.renderer.compile(engine.scene, engine.camera);
+  for (const one of figures) one.hitFlash.wear(false);
+}
+
 locations.onChange = (location) => {
   deathScreen.hide(); // уровень начинается заново — экрану смерти тут не место
+  warmMaterials(location);
 
   // Где игрок остановился: по этому месту игра и откроется в следующий раз.
   progress.setLevel(location.data.id);
@@ -1694,6 +1729,20 @@ locations.onChange = (location) => {
  */
 locations.onOpened = (location) => {
   tally.resume(); // уровень открылся — путь пошёл
+
+  /**
+   * Кнопка карты уровней возвращается на место.
+   *
+   * Прячет её ответная передача: под ней игра уже кончилась, и уходить с финала
+   * на уровень некуда. Но показать её обратно было некому — и, пройдя город и
+   * начав заново, игрок оставался без кнопки до конца сеанса. Со стороны это
+   * выглядело случайностью: до финала она есть, после — нет.
+   *
+   * Место выбрано по смыслу: кнопка принадлежит игре, а игра идёт ровно с того
+   * мига, как открылся уровень. В правке расстановки её убирают нарочно — туда
+   * не лезем.
+   */
+  if (!editor?.active) mapButton.show();
 
   // Итог уровня считается от входа в него. Перезапуск после смерти — это тот же
   // уровень, и снимок не сбрасывается: смерти на нём и время всех попыток

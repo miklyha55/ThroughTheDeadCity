@@ -41,12 +41,16 @@ const EN = {
     'Loading survivors… those still counted as such.',
   ],
 
+  // Подсказка по клавишам — одна на все экраны с выбором.
+  'keys.pick': '↑ ↓ — choose · Enter — confirm',
+  'keys.pickRow': '← → — choose · Enter — confirm',
+  'keys.press': 'Enter — confirm',
+  'keys.close': 'Esc — close',
+
   'death.title': 'You died',
   'death.note': 'The city forgives no pauses',
   'death.again': 'Once more',
   'death.fromStart': 'From scratch',
-  'keys.pick': '↑ ↓ — choose · Enter — confirm',
-  'keys.press': 'Enter — confirm',
   'death.confirmTitle': 'Start over?',
   'death.confirmNote': 'Levels you have passed will be lost',
   'death.keep': 'Cancel',

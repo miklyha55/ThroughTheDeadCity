@@ -828,11 +828,11 @@
     {
       "prop": "Prop_Jerrycan",
       "at": [
-        -31.48,
-        8
+        -32.83,
+        3.21
       ],
       "rotation": -45.3,
-      "scale": 1.15
+      "y": -0.03
     },
     {
       "prop": "Car_PickupArmored",
@@ -1039,16 +1039,14 @@
       "at": [
         3.04,
         -15.87
-      ],
-      "scale": 1.15
+      ]
     },
     {
       "prop": "Prop_Jerrycan",
       "at": [
         18.47,
         -10.7
-      ],
-      "scale": 1.15
+      ]
     },
     {
       "prop": "Prop_Barrel",

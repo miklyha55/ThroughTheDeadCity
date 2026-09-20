@@ -16,7 +16,9 @@ const CFG = CONFIG.splash;
  * она мелькала бы вспышкой, что хуже, чем секунда ожидания.
  */
 export class Splash {
-  constructor(container = document.body) {
+  /** @param {import('./LoadBar.js').LoadBar} bar — полоса общая с экраном загрузки */
+  constructor(bar, container = document.body) {
+    this.bar = bar;
     this.root = document.createElement('div');
     this.root.className = 'splash';
     this.root.hidden = true;
@@ -36,17 +38,10 @@ export class Splash {
     this.image = document.createElement('div');
     this.image.className = 'splash__image';
 
-    const bar = document.createElement('div');
-    bar.className = 'splash__bar';
-
-    this.fill = document.createElement('div');
-    this.fill.className = 'splash__fill';
-
     this.caption = document.createElement('div');
     this.caption.className = 'splash__caption';
 
-    bar.appendChild(this.fill);
-    this.root.append(this.image, this.caption, bar);
+    this.root.append(this.image, this.caption);
     container.appendChild(this.root);
 
     this.progress = 0;
@@ -71,7 +66,11 @@ export class Splash {
    * файл, а до тех пор пусть висит старая — пустое место здесь означает чёрный
    * экран, и он тем заметнее, чем дольше грузится.
    */
-  show() {
+  /**
+   * @param {boolean} [covered] — поднимается под другим экраном. Такая заставка
+   *   полосу не ведёт: полоса общая, и пока сверху экран загрузки, она его.
+   */
+  show(covered = false) {
     // Каждый показ свой: по нему уход и узнаёт, его ли ещё очередь.
     this.turn = (this.turn ?? 0) + 1;
 
@@ -80,16 +79,17 @@ export class Splash {
     this.progress = 0;
     this.shownAt = performance.now();
 
+    this.covered = covered;
     this.veil.classList.add('veil--black'); // под заставкой — сразу чёрное, без перехода
     this.root.hidden = false;
-    this._draw();
+    if (!covered) this.bar.show(0);
 
     // Полоса ползёт сама и тормозит у конца: дойти до края раньше, чем работа
     // закончилась, ей нельзя — иначе она застынет полной и будет врать.
     clearInterval(this._timer);
     this._timer = setInterval(() => {
       this.progress += (CFG.ceiling - this.progress) * CFG.ease;
-      this._draw();
+      if (!this.covered) this.bar.set(this.progress);
     }, CFG.tick);
   }
 
@@ -168,6 +168,29 @@ export class Splash {
     if (this.root.hidden) return;
 
     this.shownAt = performance.now();
+
+    /**
+     * И полосу — с начала.
+     *
+     * Под экраном загрузки она ползла всё это время, и к своему выходу успевала
+     * уйти почти к краю. Игрок её там не видел: открываясь, заставка показывала
+     * ему чужой хвост, который тут же добегал до конца, — и весь её путь
+     * сводился к короткому рывку в первый же миг.
+     *
+     * Ровно та же поправка, что и со временем строкой выше: и время, и полоса
+     * начинают счёт тогда, когда их начинают видеть.
+     */
+    this.covered = false;
+
+    /**
+     * Полосу не трогаем и назад не отматываем.
+     *
+     * Её вела загрузка файлов, и она стоит там, где та её оставила, — на своей
+     * доле. Отсюда заставка просто ведёт её дальше, к краю. Ради этого и
+     * подхватываем её значение: своё, накрученное вслепую под чужим экраном,
+     * было бы меньше, и полоса поехала бы назад.
+     */
+    this.progress = Math.max(this.progress, this.bar.share);
   }
 
 
@@ -178,12 +201,23 @@ export class Splash {
     clearInterval(this._timer);
     this._timer = null;
 
-    this.progress = 1;
-    this._draw();
-
     const shown = performance.now() - this.shownAt;
     const left = Math.max(CFG.holdFull, CFG.minTime - shown);
+
+    /**
+     * Полоса доходит до края за то самое время, что заставка ещё простоит, — а
+     * не рывком за десятую долю секунды, после которого стоит полной.
+     *
+     * Дело не в красоте. Заставка почти всегда ждёт не работу, а свой
+     * `minTime`: уровень собран куда раньше. Полоса, добежавшая мгновенно,
+     * оставляла игрока смотреть на полный край добрых полторы секунды — и
+     * читалось это как «всё готово, а игра думает».
+     */
+    this.progress = 1;
+    this.bar.finish(left);
+
     await new Promise((done) => setTimeout(done, left));
+    this.bar.release(); // дальше полоса снова идёт как задано стилями
 
     // Пока мы выжидали, мог начаться следующий уровень — и заставка на экране
     // уже его, а не наша. Гасить её нельзя: под ней собирается сцена, и игрок
@@ -191,6 +225,7 @@ export class Splash {
     if (turn !== this.turn) return;
 
     this.root.hidden = true;
+    this.bar.hide(); // полоса общая, и уходит она вместе с последним экраном
 
     // Вуаль растворяется сама, стилями: уровень проступает из темноты. Кадр на
     // то, чтобы браузер успел заметить её чёрной, — иначе переходу не с чего
@@ -198,7 +233,4 @@ export class Splash {
     requestAnimationFrame(() => this.veil.classList.remove('veil--black'));
   }
 
-  _draw() {
-    this.fill.style.width = `${Math.round(this.progress * 100)}%`;
-  }
 }

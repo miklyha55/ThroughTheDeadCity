@@ -78,7 +78,7 @@ export class ConfirmDialog {
      * клавиша. Промахнувшийся по «Начать сначала» пальцем и промахнувшийся
      * Enter'ом теряют одинаково много.
      */
-    this.choice = new Choice([this.no, this.yes], () => this.shown);
+    this.choice = new Choice([this.no, this.yes], () => this.shown, true);
     this.card.append(this.choice.hint);
   }
 

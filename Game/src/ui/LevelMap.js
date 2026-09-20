@@ -49,7 +49,14 @@ export class LevelMap {
     this.list = document.createElement('div');
     this.list.className = 'levelmap__list';
 
-    sheet.append(head, this.list);
+    // Подсказка про клавишу — тем же языком и тем же видом, что и на прочих
+    // экранах: игрок за столом учит клавиши один раз.
+    this.hint = document.createElement('p');
+    this.hint.className = 'keyhint keyhint--apart';
+    this.hint.textContent = CONFIG.keys.close;
+    this.hint.hidden = true;
+
+    sheet.append(head, this.list, this.hint);
     this.root.appendChild(sheet);
     container.appendChild(this.root);
 
@@ -64,6 +71,18 @@ export class LevelMap {
     // крестик глазами не приходится.
     this.root.addEventListener('pointerdown', (event) => {
       if (event.target === this.root) this.hide();
+    });
+
+    /**
+     * И клавишей — тем же `Escape`, которым закрывается всё остальное.
+     *
+     * С паузой он не спорит: она спрашивает у игры, к месту ли вставать, а под
+     * открытой картой мир и так стоит — её `canOpen` отвечает «нет», и нажатие
+     * доходит сюда нетронутым.
+     */
+    addEventListener('keydown', (event) => {
+      if (event.repeat || !this.shown) return;
+      if (event.code === 'Escape') this.hide();
     });
   }
 
@@ -163,6 +182,10 @@ export class LevelMap {
     // Открывается всегда сверху: список короткий, и возвращаться к началу
     // вручную было бы странно.
     this.list.scrollTop = 0;
+
+    // На телефоне клавиш нет — и подсказка про них там только мешает. Признак
+    // тот же, по которому его определяют все прочие экраны.
+    this.hint.hidden = !matchMedia('(hover: hover) and (pointer: fine)').matches;
 
     // Кадр на то, чтобы браузер заметил появление: без него переходу
     // прозрачности не с чего начинать.

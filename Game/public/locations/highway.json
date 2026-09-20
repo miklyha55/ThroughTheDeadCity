@@ -2328,8 +2328,7 @@
         -125.8,
         60.78
       ],
-      "rotation": -67.7,
-      "scale": 1.15
+      "rotation": -67.7
     },
     {
       "prop": "Prop_Barrel",
@@ -2385,8 +2384,7 @@
         -99.25,
         0.22
       ],
-      "rotation": -127.6,
-      "scale": 1.15
+      "rotation": -127.6
     },
     {
       "prop": "Prop_Jerrycan",
@@ -2394,8 +2392,7 @@
         -67.83,
         -1.2
       ],
-      "rotation": -77.6,
-      "scale": 1.15
+      "rotation": -77.6
     },
     {
       "prop": "Prop_Barrel",
@@ -2419,8 +2416,7 @@
         -27.1,
         -0.57
       ],
-      "rotation": -84.8,
-      "scale": 1.15
+      "rotation": -84.8
     },
     {
       "prop": "Prop_Jerrycan",
@@ -2428,8 +2424,7 @@
         -16.13,
         -2.86
       ],
-      "rotation": 57.6,
-      "scale": 1.15
+      "rotation": 57.6
     },
     {
       "prop": "Weapon_Cleaver",
@@ -4493,10 +4488,10 @@
     {
       "prop": "Car_SedanWreck",
       "at": [
-        86.4,
-        0
+        78.4,
+        -4.54
       ],
-      "rotation": -174
+      "rotation": 115.5
     },
     {
       "prop": "Car_SuvHardtop",
@@ -4792,8 +4787,7 @@
         82.2,
         -11.22
       ],
-      "rotation": -67.7,
-      "scale": 1.15
+      "rotation": -67.7
     },
     {
       "prop": "Prop_Barrel",
@@ -4857,8 +4851,7 @@
         112.04,
         -71.74
       ],
-      "rotation": -127.6,
-      "scale": 1.15
+      "rotation": -127.6
     },
     {
       "prop": "Prop_Jerrycan",
@@ -4866,8 +4859,7 @@
         134.58,
         -66.48
       ],
-      "rotation": -77.6,
-      "scale": 1.15
+      "rotation": -77.6
     },
     {
       "prop": "Prop_Barrel",
@@ -4891,8 +4883,7 @@
         183.46,
         -68.67
       ],
-      "rotation": -84.8,
-      "scale": 1.15
+      "rotation": -84.8
     },
     {
       "prop": "Prop_Jerrycan",
@@ -4900,8 +4891,7 @@
         191.87,
         -74.86
       ],
-      "rotation": 57.6,
-      "scale": 1.15
+      "rotation": 57.6
     },
     {
       "prop": "Weapon_Cleaver",

@@ -131,7 +131,7 @@ export class Ending {
      * спрятанную кнопку выбор пропускает, и на финале без неё стрелки просто
      * никуда не ведут, а Enter жмёт «Ещё раз».
      */
-    this.choice = new Choice([this.again, this.rate], () => this.shown);
+    this.choice = new Choice([this.again, this.rate], () => this.shown, true);
     this.card.append(this.choice.hint);
 
     this._paint();
