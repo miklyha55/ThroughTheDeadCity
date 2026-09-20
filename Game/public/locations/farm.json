@@ -1071,8 +1071,7 @@
         18.59,
         -18.46
       ],
-      "rotation": -69,
-      "scale": 1.15
+      "rotation": -69
     },
     {
       "prop": "Prop_Pallet",
@@ -1096,8 +1095,7 @@
         12.63,
         6.55
       ],
-      "rotation": 28.3,
-      "scale": 1.15
+      "rotation": 28.3
     },
     {
       "prop": "Prop_Pallet",
@@ -1113,8 +1111,7 @@
         -0.58,
         4.25
       ],
-      "rotation": -6.5,
-      "scale": 1.15
+      "rotation": -6.5
     },
     {
       "prop": "Prop_Pallet",
@@ -1178,8 +1175,7 @@
         10.78,
         -19.18
       ],
-      "rotation": 30.9,
-      "scale": 1.15
+      "rotation": 30.9
     },
     {
       "prop": "Prop_Barrel",
@@ -1275,8 +1271,7 @@
         -5.79,
         -8.38
       ],
-      "rotation": -6.5,
-      "scale": 1.15
+      "rotation": -6.5
     }
   ],
   "zombies": [
