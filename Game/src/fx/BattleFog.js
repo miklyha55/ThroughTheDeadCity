@@ -20,6 +20,8 @@ const FRAGMENT = /* glsl */`
   uniform float scale;
   uniform float speed;
   uniform float ragged;
+  uniform vec2 hero;        // где герой прямо сейчас, в мире
+  uniform vec2 heroReach;   // x — открыто начисто, y — конец мягкого края, м
 
   varying vec2 vUv;
 
@@ -38,6 +40,28 @@ ${NOISE_GLSL}
     // черта поперёк кадра читается не как темнота, а как край маски. Что
     // делается за забором, и без того решает мгла самой локации.
     float open = texture2D(mask, uv).r;
+
+    /**
+     * Круг вокруг героя считается здесь, а не берётся из маски.
+     *
+     * Маска уезжает в видеопамять несколько раз в секунду — снимать весь холст
+     * каждый кадр слишком дорого. Для уже пройденного это незаметно: оно и так
+     * открыто. А вот передний край, тот самый, за которым игрок и следит,
+     * дёргался ступенями: герой идёт плавно, а граница перед ним стоит и раз в
+     * несколько кадров прыгает вперёд.
+     *
+     * Поэтому край, идущий за героем, рисуется прямо тут, по его нынешнему
+     * месту, и движется он ровно так же плавно, как сам герой. Маске остаётся
+     * только память о пройденном, и её запоздание не видно ничем: она всегда
+     * позади этого круга.
+     *
+     * Спад — прямой, а не сглаженный: ровно такой же, каким кисть печатает
+     * отпечаток в маску. Разойдись они профилем — на стыке проступало бы кольцо.
+     */
+    float near = distance(ground, hero);
+    float live = 1.0 - clamp((near - heroReach.x) / max(0.0001, heroReach.y - heroReach.x), 0.0, 1.0);
+    open = max(open, live);
+
     float alpha = 1.0 - open;
 
     // Открытое бросаем сразу: это большая часть кадра, и считать для неё нечего.
@@ -82,7 +106,8 @@ const _ndc = new THREE.Vector2();
 export class BattleFog extends ScreenShader {
   constructor(container = document.body) {
     super(container, 'fog', FRAGMENT,
-      ['mask', 'origin', 'alongX', 'alongY', 'field', 'color', 'opacity', 'scale', 'speed', 'ragged'],
+      ['mask', 'origin', 'alongX', 'alongY', 'field', 'color', 'opacity', 'scale', 'speed', 'ragged',
+        'hero', 'heroReach'],
       CFG.pixelRatio);
 
     this.canvas2d = document.createElement('canvas');
@@ -100,6 +125,11 @@ export class BattleFog extends ScreenShader {
     this.set('scale', CFG.scale);
     this.set('speed', CFG.speed);
     this.set('ragged', CFG.ragged);
+
+    // Те же две черты, по которым кисть печатает отпечаток в маску: внутренняя
+    // открыта начисто, внешняя — конец мягкого края и предел выстрела.
+    const reach = CONFIG.player.fireRange;
+    this.set('heroReach', reach * CFG.clearShare, reach * CFG.sightShare);
   }
 
   /**
@@ -209,6 +239,10 @@ export class BattleFog extends ScreenShader {
     if (!this.ready || !this.field.width) return;
 
     this._carve(player.position);
+
+    // Где герой сейчас: по этому месту шейдер и ведёт передний край, каждый
+    // кадр, не дожидаясь очередной заливки маски.
+    this.set('hero', player.position.x, player.position.z);
 
     // Заливка маски в видеопамять — самое дорогое здесь, особенно на телефоне:
     // браузеру приходится снимать весь холст целиком. Делаем это не на каждом
