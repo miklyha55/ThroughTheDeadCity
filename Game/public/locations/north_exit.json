@@ -962,8 +962,7 @@
         3.4,
         -0.27
       ],
-      "rotation": -40.9,
-      "scale": 1.15
+      "rotation": -40.9
     },
     {
       "prop": "Prop_Barrel",
@@ -1043,8 +1042,7 @@
         4.22,
         -21.39
       ],
-      "rotation": -104.1,
-      "scale": 1.15
+      "rotation": -104.1
     },
     {
       "prop": "Prop_Barrel",
@@ -1060,8 +1058,7 @@
         2.59,
         -15.79
       ],
-      "rotation": -103.2,
-      "scale": 1.15
+      "rotation": -103.2
     },
     {
       "prop": "Weapon_Cleaver",
@@ -1141,8 +1138,7 @@
         -0.15,
         -33.77
       ],
-      "rotation": -87.5,
-      "scale": 1.15
+      "rotation": -87.5
     },
     {
       "prop": "Prop_Barrel",
@@ -1158,8 +1154,7 @@
         -3.95,
         -32.9
       ],
-      "rotation": -155.2,
-      "scale": 1.15
+      "rotation": -155.2
     },
     {
       "prop": "Weapon_Cleaver",
@@ -1485,8 +1480,7 @@
         -20.3,
         19.55
       ],
-      "rotation": -103.2,
-      "scale": 1.15
+      "rotation": -103.2
     },
     {
       "prop": "Weapon_Cleaver",
@@ -1510,8 +1504,7 @@
         -5.53,
         14.25
       ],
-      "rotation": 173.6,
-      "scale": 1.15
+      "rotation": 173.6
     },
     {
       "prop": "Prop_Pallet",
@@ -1535,8 +1528,7 @@
         -2.44,
         7.84
       ],
-      "rotation": 173.6,
-      "scale": 1.15
+      "rotation": 173.6
     },
     {
       "prop": "Heavy_SemiTruck",
@@ -1576,8 +1568,7 @@
         -4.18,
         27.38
       ],
-      "rotation": 173.6,
-      "scale": 1.15
+      "rotation": 173.6
     },
     {
       "prop": "Prop_Jerrycan",
@@ -1585,8 +1576,7 @@
         -4.98,
         -9.89
       ],
-      "rotation": -103.2,
-      "scale": 1.15
+      "rotation": -103.2
     }
   ],
   "zombies": [
@@ -1649,24 +1639,24 @@
     {
       "kind": "zombie1",
       "at": [
-        -0.3,
-        -38.87
+        -2.15,
+        -36.22
       ],
       "rotation": -1
     },
     {
       "kind": "zombie2",
       "at": [
-        3.92,
-        -33.48
+        3.81,
+        -32.6
       ],
       "rotation": 142.7
     },
     {
       "kind": "zombie1",
       "at": [
-        1.94,
-        -38.14
+        2.3,
+        -36.2
       ],
       "rotation": 6.6
     },
@@ -2181,6 +2171,70 @@
         -56.54
       ],
       "rotation": -144.1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -1.94,
+        -32.33
+      ],
+      "rotation": 142.7
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        0.76,
+        -30.38
+      ],
+      "rotation": -1
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        3.16,
+        -47.09
+      ],
+      "rotation": -156.3
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        1.39,
+        -53.35
+      ],
+      "rotation": -159.6
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -0.28,
+        -60.52
+      ],
+      "rotation": 150.9
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        1.88,
+        -55.79
+      ],
+      "rotation": -178.8
+    },
+    {
+      "kind": "zombie2",
+      "at": [
+        -7.78,
+        -47.43
+      ],
+      "rotation": -149.9
+    },
+    {
+      "kind": "zombie1",
+      "at": [
+        -8.38,
+        -52.13
+      ],
+      "rotation": 146.2
     }
   ],
   "guide": [
