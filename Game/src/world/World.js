@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { CONFIG } from '../config.js';
+import { installHeightFog } from './heightFog.js';
 
 const CFG = CONFIG.world;
 
@@ -18,6 +19,10 @@ function buildEnvironment(scene, renderer) {
 
 /** Общее для всех локаций: свет, небо, туман и земля до горизонта. */
 export function buildWorld(scene, renderer) {
+  // Раньше всего: подмена кусков шейдера должна случиться до того, как
+  // соберётся первый материал, иначе слоистость достанется не всем.
+  installHeightFog();
+
   const sky = new THREE.Color(CFG.skyColor);
   scene.background = sky;
   scene.fog = new THREE.Fog(sky, CFG.fogNear, CFG.fogFar);
