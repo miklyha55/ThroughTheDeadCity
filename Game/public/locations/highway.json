@@ -2037,10 +2037,10 @@
     {
       "prop": "Car_SedanWreck",
       "at": [
-        -121.6,
-        72
+        -120.97,
+        72.37
       ],
-      "rotation": -174
+      "rotation": -156.6
     },
     {
       "prop": "Car_SuvHardtop",
@@ -2048,7 +2048,7 @@
         -120.97,
         47.48
       ],
-      "rotation": 123.5
+      "rotation": 115.7
     },
     {
       "prop": "Car_SedanWreck",
@@ -2061,10 +2061,10 @@
     {
       "prop": "Car_SuvHardtop",
       "at": [
-        -103.68,
-        3.28
+        -104.95,
+        3.91
       ],
-      "rotation": 94.6
+      "rotation": 44.4
     },
     {
       "prop": "Car_SedanWreck",
@@ -2117,10 +2117,10 @@
     {
       "prop": "Prop_JerseyBarrier",
       "at": [
-        -178.26,
-        78.03
+        -178.87,
+        80.7
       ],
-      "rotation": -109.2
+      "rotation": -81
     },
     {
       "prop": "Prop_Cone",
