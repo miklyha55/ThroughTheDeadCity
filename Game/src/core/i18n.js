@@ -62,6 +62,10 @@ const EN = {
   'controlsHint.tailKeys': 'press any key',
   'controlsHint.tailTouch': 'touch the screen',
 
+  'carHint.title': 'Drive the car',
+  'carHint.ram': 'Run the zombies down',
+  'carHint.avoid': 'Steer clear of barrels and jerrycans — they blow',
+
   'skipHint.keys': 'Esc — skip',
   'skipHint.touch': 'tap to skip',
 

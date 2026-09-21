@@ -198,7 +198,7 @@
       }
 
       /* Пояснение под заголовком. */
-      .death__note, .confirm__note, .hint__note, .pause__note {
+      .death__note, .confirm__note, .hint__note, .pause__note, .hint__line {
         margin: 0;
         color: var(--text-note);
         font: 400 13px/1.45 var(--mono);
@@ -965,6 +965,26 @@
       }
 
       .hint__title { margin-top: 2px; font-size: 13px; line-height: 1.2; }
+
+      /* Строка правила в подсказке по машине: точка на левом поле и текст.
+         Точка несёт смысл раньше текста — до чтения видно, что строки про
+         разное. Размер и цвет текста те же, что у пояснения под клавишами:
+         карточка одна и та же, и двух разных «мелких шрифтов» в ней быть не
+         должно. */
+      .hint__line {
+        display: flex; align-items: center; gap: 7px;
+        /* Чуть крупнее пояснения под клавишами: тут не подпись к картинке, а
+           сами правила, и читают их один раз на ходу. */
+        font-size: 12.5px;
+      }
+      .hint__mark {
+        flex: none;
+        width: 6px; height: 6px;
+        border-radius: 50%;
+      }
+      .hint__mark--good { background: #7fb069; box-shadow: 0 0 5px rgba(127, 176, 105, 0.55); }
+      .hint__mark--bad  { background: #c2543d; box-shadow: 0 0 5px rgba(194, 84, 61, 0.55); }
+
       /* Пояснение и хвост тоже на 15% мельче общего: карточка уменьшена целиком. */
       .hint__note { font-size: 11px; }
       .hint__tail { margin-top: 2px; font-size: 10px; }
@@ -1476,6 +1496,7 @@
         }
         .hint__title { font-size: 12px; }
         .hint__note { font-size: 10px; }
+        .hint__line { font-size: 11.5px; }
         .hint__tail { font-size: 9px; }
       }
 
@@ -1506,6 +1527,7 @@
         }
         .hint__title { font-size: 11px; }
         .hint__note { font-size: 10px; }
+        .hint__line { font-size: 11.5px; }
         .hint__tail { font-size: 9px; }
       }
     </style>

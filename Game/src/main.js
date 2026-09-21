@@ -29,6 +29,7 @@ import { Music } from './core/Music.js';
 import { attachListener, unlockAudio, wakeAudio } from './core/audio.js';
 import { StartMessage } from './core/StartMessage.js';
 import { ControlsHint } from './ui/ControlsHint.js';
+import { CarHint } from './ui/CarHint.js';
 import { yandex } from './core/yandex.js';
 import { applyLanguage, levelName } from './core/i18n.js';
 import { progress, saveOnLeave } from './core/progress.js';
@@ -478,6 +479,11 @@ car.onBoard = () => {
   ammo.root.hidden = true;  // патроны за рулём не считают
   pointer.attach(car.root, CONFIG.car.pointerOffset); // стрелка переезжает на машину — за край кузова
   aimPointer();
+
+  // Правила за рулём другие, и по виду их не узнать: толпу теперь давят
+  // колёсами, а бочка или канистра рвёт саму машину от одного касания. Второй
+  // раз подсказка не придёт — она сама помнит, что уже показывалась.
+  carHint.show();
 };
 
 
@@ -628,6 +634,9 @@ const startMessage = new StartMessage(transmission); // пока говорит 
  * от него требуется. Один раз за сеанс и только на том уровне, где звучала речь.
  */
 const controlsHint = new ControlsHint();
+// Подсказка по машине: та же карточка, но всплывает не на старте, а когда
+// герой впервые садится за руль.
+const carHint = new CarHint();
 
 /** Сноска о том, что речь можно пропустить: живёт ровно столько, сколько речь. */
 const skipHint = new SkipHint(transmission.root);
@@ -1893,6 +1902,7 @@ if (import.meta.env.DEV) {
       input.enabled = !on;
       if (on) {
         controlsHint.hide();  // и подсказка по управлению там ни к чему
+        carHint.hide();       // и по машине: в правке за руль не садятся
         skipHint.hide();
         deathScreen.hide();   // и экран смерти: в правке уровень не перезапускают
         levelMap.hide();      // и карта: уровни там переключают стрелками панели
@@ -2034,7 +2044,7 @@ player.onMagazine = (size) => ammo.resize(size); // коробка патрон�
 
   window.__game = {
     engine, player, camera, input, joystick, prefabs, zombies, locations, music, startMessage, ending, splash, fog,
-    gunPickup, ammoPickup, car, pointer, controlsHint, skipHint, deathScreen, levelMap,
+    gunPickup, ammoPickup, car, pointer, controlsHint, carHint, skipHint, deathScreen, levelMap,
     endMessage, // ответная передача: её удобно щупать из консоли
     yandex, progress, // площадка и сохранения: их удобно щупать из консоли
     sfx, carSound, // звуки: какие играют и насколько громко — для отладки громкостей

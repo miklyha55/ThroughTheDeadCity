@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { HintCard } from './HintCard.js';
 
 const CFG = CONFIG.controlsHint;
 
@@ -14,22 +15,17 @@ const CFG = CONFIG.controlsHint;
  * Определяется это не по ширине окна и не по названию браузера, а по тому, чем
  * в это окно тычут: ноутбук с сенсорным экраном ломает любую догадку по размеру.
  *
- * Уходит она по первому же действию игрока, растворяясь, а не пропадая: резкое
- * исчезновение читается как сбой отрисовки. И уходит сама по времени, если
- * игрок просто смотрит на неё и ничего не делает.
- *
- * Мимо неё можно играть, не закрывая: она не ловит нажатия, а слушает их со
- * стороны. Первое касание стика и есть то действие, после которого подсказка
- * больше не нужна.
+ * Уходит она по первому же действию игрока: первое касание стика и есть тот
+ * знак, после которого подсказка больше не нужна. Всё прочее — всплытие,
+ * растворение, уход по времени — общее у всех подсказок и живёт в `HintCard`.
  */
-export class ControlsHint {
+export class ControlsHint extends HintCard {
   constructor(container = document.body) {
-    this.root = document.createElement('div');
-    this.root.className = 'hint';
-    this.root.hidden = true;
-
-    this.card = document.createElement('div');
-    this.card.className = 'hint__card';
+    super(container, {
+      armAfter: CFG.armAfter,
+      holdFor: CFG.holdFor,
+      fadeFor: CFG.fadeFor,
+    });
 
     this.keys = buildKeys();
     this.stick = buildStick();
@@ -45,82 +41,20 @@ export class ControlsHint {
     this.tail.className = 'hint__tail';
 
     this.card.append(this.keys, this.stick, this.title, this.note, this.tail);
-    this.root.appendChild(this.card);
-    container.appendChild(this.root);
-
-    this.shown = false;
-    this.done = false;
-    this._timer = null;
-    this._fade = null;
   }
 
   /** Есть ли у машины мышь с клавиатурой — или это сенсорный экран. */
   get keyboard() { return byKeyboard(); }
 
-  /**
-   * Показать — один раз за сеанс.
-   *
-   * Второй показ был бы навязчивостью: игрок уже знает, как ходить, а на
-   * перезапуске уровня подсказка лезла бы снова и снова.
-   */
-  show() {
-    if (this.done || this.shown) return;
-
+  /** Чем играют, спрашивается перед самым показом: окно могло и смениться. */
+  _prepare() {
     const byKeys = this.keyboard;
     this.keys.hidden = !byKeys;
     this.stick.hidden = byKeys;
     this.title.textContent = byKeys ? CFG.titleKeys : CFG.titleTouch;
     this.tail.textContent = byKeys ? CFG.tailKeys : CFG.tailTouch;
-
-    this.shown = true;
-    this.root.hidden = false;
-
-    // Кадр на то, чтобы браузер заметил появление: без него переход
-    // прозрачности не с чего начинать, и карточка возникнет рывком.
-    requestAnimationFrame(() => this.root.classList.add('hint--on'));
-
-    /**
-     * Слушать нажатия начинаем не сразу.
-     *
-     * Вступление пропускают тем же касанием, а палец с экрана снимается не
-     * мгновенно: подсказка успевала появиться и погаснуть в один и тот же тап,
-     * так что игрок видел только вспышку.
-     */
-    this._timer = setTimeout(() => {
-      for (const event of EVENTS) addEventListener(event, this._close, { once: true });
-
-      // И сама уходит, если её просто разглядывают: прочитать тут нечего, а
-      // висеть поверх боя она не должна.
-      this._timer = setTimeout(this._close, CFG.holdFor * 1000);
-    }, CFG.armAfter * 1000);
-  }
-
-  _close = () => {
-    if (!this.shown || this.done) return;
-
-    this.done = true;
-    clearTimeout(this._timer);
-    for (const event of EVENTS) removeEventListener(event, this._close);
-
-    // Сперва растворяется, и только потом уходит из разметки: снятая сразу,
-    // она моргнула бы.
-    this.root.classList.remove('hint--on');
-    this._fade = setTimeout(() => { this.root.hidden = true; }, CFG.fadeFor * 1000);
-  };
-
-  /** Убрать немедленно и навсегда: например, открылась правка расстановки. */
-  hide() {
-    clearTimeout(this._timer);
-    clearTimeout(this._fade);
-    for (const event of EVENTS) removeEventListener(event, this._close);
-
-    this.done = true;
-    this.root.classList.remove('hint--on');
-    this.root.hidden = true;
   }
 }
-
-const EVENTS = ['pointerdown', 'touchstart', 'keydown'];
 
 /**
  * Чем в это окно тычут: мышь с клавиатурой или палец.
