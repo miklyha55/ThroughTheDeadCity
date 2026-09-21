@@ -1123,9 +1123,6 @@ export class Player extends Figure {
     this.onAmmo?.(this.rounds);
   }
 
-  /** Есть ли что набивать: магазин неполон. */
-  get refilling() { return this.rounds < this.magazine; }
-
   /** Потратить патрон. */
   _spend() {
     this.rounds = Math.max(0, this.rounds - 1);

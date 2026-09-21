@@ -79,15 +79,6 @@ export class Car {
   /** Быстро ли идёт: на этом держится и таран, и доворот. */
   get moving() { return this.velocity.lengthSq() > 0.01; }
 
-  /** Насколько её несёт боком: ноль — едет прямо, единица — полный занос. */
-  get slide() {
-    const speed = this.velocity.length();
-    if (speed < 1) return 0;
-
-    _dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
-    return 1 - Math.max(0, _dir.dot(this.velocity) / speed);
-  }
-
   // Полоска жизней над машиной — та же, что над зомби.
   get maxHealth() { return CFG.health; }
   get barWidth() { return CFG.barWidth; }

@@ -140,6 +140,12 @@ class Yandex {
   showRewarded() {
     if (!this.sdk?.adv?.showRewardedVideo) return Promise.resolve('none');
 
+    // Каким геймплей был до ролика, таким и будет после. Слепой `play()` в
+    // конце объявлял игру идущей и там, где она не шла: ролик за награду
+    // показывают с экрана смерти, где всё уже остановлено, и площадка получала
+    // отрезок геймплея нулевой длины — от конца ролика до загрузки уровня.
+    const wasPlaying = this._playing;
+
     return new Promise((done) => {
       let rewarded = false;
       let opened = false;
@@ -201,12 +207,18 @@ class Yandex {
           onError: () => finish('ошибка'),
         },
       });
-    }).finally(() => { this.play(); regainFocus(); });
+    }).finally(() => {
+      if (wasPlaying) this.play();
+      regainFocus();
+    });
   }
 
   /** Показать полноэкранную рекламу. Частоту площадка сторожит сама. */
   showFullscreen() {
     if (!this.sdk?.adv?.showFullscreenAdv) return Promise.resolve(false);
+
+    // Как и у ролика за награду: возвращаем то состояние, что было до показа.
+    const wasPlaying = this._playing;
 
     return new Promise((done) => {
       const timer = setTimeout(() => done(false), CFG.advTimeout * 1000);
@@ -222,7 +234,10 @@ class Yandex {
           onError: () => finish(false),
         },
       });
-    }).finally(() => { this.play(); regainFocus(); });
+    }).finally(() => {
+      if (wasPlaying) this.play();
+      regainFocus();
+    });
   }
 
   /**

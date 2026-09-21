@@ -129,9 +129,6 @@ export class FollowCamera {
    */
   get focus() { return this._focus; }
 
-  /** Идёт ли сейчас пролёт. */
-  get showing() { return this._show !== null; }
-
   /** Идёт ли пролёт, на время которого игра стоит. */
   get pausing() { return this._show?.pause === true; }
 
