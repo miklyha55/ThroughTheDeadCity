@@ -35,13 +35,28 @@ export class Splash {
     this.veil.className = 'veil veil--black';
     container.appendChild(this.veil);
 
-    this.image = document.createElement('div');
-    this.image.className = 'splash__image';
+    /**
+     * Слой картинки — свой у каждого уровня, и все они стоят в разметке сразу.
+     *
+     * Раньше слой был один, и на каждом переходе ему меняли картинку. Сколько
+     * это ни ускоряй — заранее скачай, заранее распакуй, — остаётся работа,
+     * которая приходится ровно на миг перехода: браузер впервые рисует новый
+     * фон, растягивает его под экран и подменяет прежний. Оттуда и дёрганье, и
+     * мелькание пройденного уровня.
+     *
+     * Теперь на переходе не происходит ничего, кроме смены класса. Слои заведены
+     * на старте, картинки в них проставлены тогда же, и все они отрисовываются
+     * за первый же показ заставки — тот, что идёт под общим экраном загрузки.
+     * Невидимые держатся нулевой прозрачностью, а не снятием с показа: снятого
+     * браузер не рисует, и вся подготовка пропала бы впустую.
+     */
+    this.layers = new Map(); // номер уровня → его слой
+    this.image = null;       // какой показан сейчас
 
     this.caption = document.createElement('div');
     this.caption.className = 'splash__caption';
 
-    this.root.append(this.image, this.caption);
+    this.root.append(this.caption);
     container.appendChild(this.root);
 
     this.progress = 0;
@@ -53,8 +68,28 @@ export class Splash {
     // уже во время показа. Ровно так заставка и выходила пустой.
     this.stamp = 0;
     this.levels = new Map(); // id уровня → чем его встречать; заполняется на старте
-    this._ready = new Set(); // картинки, уже разобранные браузером
+  }
 
+  /**
+   * Завести слой под картинку уровня. Один раз на номер.
+   *
+   * Номер, а не id: картинка лежит под номером, и у двух уровней он может
+   * совпасть — например у запасного, которым встречают неизвестный.
+   */
+  _layer(number) {
+    let layer = this.layers.get(number);
+    if (layer) return layer;
+
+    layer = document.createElement('div');
+    layer.className = 'splash__image';
+
+    const bust = this.stamp ? `?v=${this.stamp}` : '';
+    layer.style.backgroundImage = `url(${CFG.folder}${number}.png${bust})`;
+
+    // Перед подписью: она должна лежать поверх картинки, а не под ней.
+    this.root.insertBefore(layer, this.caption);
+    this.layers.set(number, layer);
+    return layer;
   }
 
   /**
@@ -101,113 +136,25 @@ export class Splash {
    * @param {string} title — название уровня
    * @param {number} number — его номер: под ним лежит и картинка, и музыка
    */
+  /**
+   * Чей уровень грузится: подпись и картинка.
+   *
+   * Обе смены мгновенные и без единой строчки работы с картинками: слой под
+   * этот уровень заведён ещё на старте, и всё, что здесь происходит, — снятие
+   * класса с прежнего и постановка на нужный.
+   *
+   * @param {string} title — название уровня
+   * @param {number} number — его номер: под ним лежит и картинка, и музыка
+   */
   setLevel(title, number) {
     this.caption.textContent = title ?? '';
 
-    const bust = this.stamp ? `?v=${this.stamp}` : '';
-    return this._paint(`${CFG.folder}${number}.png${bust}`);
-  }
+    const layer = this._layer(number);
+    if (layer === this.image) return;
 
-  /**
-   * Поставить картинку, дождавшись, пока браузер её разберёт.
-   *
-   * Присвоить адрес мало: браузер берётся раскодировать PNG только тогда, когда
-   * тот впервые понадобится нарисовать, — то есть уже на открытой заставке. В
-   * эту щель игрок видел чёрный экран с бегущей полосой, а картинка проступала
-   * следом. Со стороны это читалось как две разные загрузки подряд: сперва
-   * какая-то на пустом месте, потом настоящая.
-   *
-   * Файлы к этому мигу давно скачаны — заставки всех уровней греются на старте
-   * вместе с моделями, — так что ждать приходится только распаковку, доли
-   * секунды. Но ждать обязательно: пока ждём, на экране висит картинка прежнего
-   * уровня, и это лучше черноты.
-   *
-   * @param {string} url
-   */
-  async _paint(url) {
-    this._wanted = url;
-
-    /**
-     * Разобранную ставим сразу, тем же тактом.
-     *
-     * Это главный случай: картинку следующего уровня греют заранее, ещё пока
-     * играют предыдущий. Ждать нечего, и заставка открывается уже с нужной —
-     * без черноты и без чужой картинки перед ней.
-     */
-    if (this._ready.has(url)) {
-      this.image.style.backgroundImage = `url(${url})`;
-      return;
-    }
-
-    try {
-      const image = new Image();
-      image.src = url;
-      await image.decode();
-      this._ready.add(url);
-    } catch {
-      // не разобралась — поставим как есть, дальше пусть браузер сам
-    }
-
-    // Пока ждали, мог начаться другой уровень: его картинка главнее.
-    if (this._wanted !== url) return;
-    this.image.style.backgroundImage = `url(${url})`;
-  }
-
-  /**
-   * Разобрать картинку уровня заранее, ничего не показывая.
-   *
-   * Зовётся, как только стало известно, куда игрок пойдёт дальше, — то есть в
-   * начале нынешнего уровня. К переходу браузер успевает всё, и заставка
-   * открывается сразу с нужной картинкой.
-   *
-   * Без этого выходило так: заставка поднималась мгновенно, но с картинкой
-   * прежнего уровня — той, что висела на ней с прошлого раза, — и лишь через
-   * мгновение сменялась новой. Игрок видел заставку пройденного уровня и
-   * только потом следующего.
-   *
-   * @param {string} id — какой уровень греем
-   */
-  async warm(id) {
-    const known = this.levels.get(id);
-    if (!known) return;
-
-    const bust = this.stamp ? `?v=${this.stamp}` : '';
-    const url = `${CFG.folder}${known.number}.png${bust}`;
-    if (this._ready.has(url)) return;
-
-    try {
-      const image = new Image();
-      image.src = url;
-      await image.decode();
-      this._ready.add(url);
-    } catch {
-      // не разобралась — не беда: перед показом попробуем ещё раз
-    }
-  }
-
-  /**
-   * Разобрать заставки всех уровней разом — на старте игры.
-   *
-   * Сами файлы к этому мигу уже скачаны вместе с моделями и звуком, так что
-   * это не загрузка, а распаковка: несколько десятков миллисекунд на картинку.
-   * Делается один раз, под общим экраном загрузки, где лишнего времени никто не
-   * заметит, — и дальше ни один переход между уровнями не ждёт ничего.
-   *
-   * Греть по одной, перед самым переходом, было бы дешевле, но ненадёжно:
-   * игрок может пройти уровень быстрее, чем браузер управится, и тогда
-   * заставка снова откроется с чужой картинкой.
-   */
-  warmAll() {
-    return Promise.all([...this.levels.keys()].map((id) => this.warm(id)));
-  }
-
-  /**
-   * Перечитать картинки с диска: их копирует кнопка «Обновить» вместе с
-   * моделями, а браузер без нового адреса отдаст старые из кэша.
-   */
-  refresh() {
-    this.stamp = Date.now();
-    this._ready.clear(); // адреса сменились: прежние разобранные больше не в счёт
+    this.image?.classList.remove('splash__image--on');
+    layer.classList.add('splash__image--on');
+    this.image = layer;
   }
 
   /**
@@ -220,7 +167,11 @@ export class Splash {
    * @param {Array<{id: string, number: number, name: string}>} levels
    */
   learn(levels) {
-    for (const level of levels) this.levels.set(level.id, level);
+    for (const level of levels) {
+      this.levels.set(level.id, level);
+      this._layer(level.number); // слой заводится сразу, вместе со знанием об уровне
+    }
+    this._layer(CFG.bootLevel); // и запасной, которым встречают незнакомый
   }
 
   /**
@@ -253,18 +204,18 @@ export class Splash {
   async prepare(id) {
     const known = this.levels.get(id);
     if (known) {
-      await this.setLevel(known.name, known.number);
+      this.setLevel(known.name, known.number);
       return;
     }
 
-    await this.setLevel('', CFG.bootLevel);
+    this.setLevel('', CFG.bootLevel);
 
     try {
       const res = await fetch(asset(`locations/${id}.json`));
       if (!res.ok) return;
 
       const data = await res.json();
-      await this.setLevel(levelName(id, data.name), data.number ?? CFG.bootLevel);
+      this.setLevel(levelName(id, data.name), data.number ?? CFG.bootLevel);
     } catch {
       // не прочиталось — заставка просто останется с запасной картинкой
     }
