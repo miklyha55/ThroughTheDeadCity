@@ -948,12 +948,19 @@
         background: rgba(232, 208, 143, 0.22);
         box-shadow: 0 0 12px var(--glow);
         animation: hint-knob 3600ms ease-in-out infinite;
+
+        /* Ход ручки задан переменными: круг на телефоне мельче, и размах должен
+           ужиматься вместе с ним — иначе она выезжает за кромку. Так обходимся
+           одним набором кадров на все размеры. */
+        --throw-up: -13px;
+        --throw-side: 12px;
+        --throw-down: 5px;
       }
       @keyframes hint-knob {
         0%   { transform: translate(0, 0); }
-        20%  { transform: translate(0, -13px); }
-        45%  { transform: translate(12px, 5px); }
-        70%  { transform: translate(-12px, 5px); }
+        20%  { transform: translate(0, var(--throw-up)); }
+        45%  { transform: translate(var(--throw-side), var(--throw-down)); }
+        70%  { transform: translate(calc(var(--throw-side) * -1), var(--throw-down)); }
         100% { transform: translate(0, 0); }
       }
 
@@ -1455,21 +1462,13 @@
         .hint__base { width: 48px; height: 48px; }
         .hint__knob {
           width: 19px; height: 19px; margin: -10px 0 0 -10px;
-          animation-name: hint-knob-small;
+          --throw-up: -11px; --throw-side: 10px; --throw-down: 4px;
         }
         .hint__title { font-size: 12px; }
         .hint__note { font-size: 10px; }
         .hint__tail { font-size: 9px; }
       }
 
-      /* Ход ручки ужат под меньший круг: прежний вынес бы её за кромку. */
-      @keyframes hint-knob-small {
-        0%   { transform: translate(0, 0); }
-        20%  { transform: translate(0, -11px); }
-        45%  { transform: translate(10px, 4px); }
-        70%  { transform: translate(-10px, 4px); }
-        100% { transform: translate(0, 0); }
-      }
 
       /* Низкий экран: телефон в ландшафте. Места по высоте мало, поэтому текст
          прижимается к самому низу, а вширь не пускается дальше рации. */
@@ -1484,6 +1483,20 @@
           width: min(70vw, 520px);
         }
         .radiotext__line { font-size: 13px; padding: 7px 12px; }
+
+        /* Лёжа экран низкий: подсказке остаётся совсем мало места по высоте,
+           поэтому она ещё мельче портретной и прижата ближе к краю. */
+        .hint { padding: 0 16px calc(10px + env(safe-area-inset-bottom)); }
+        .hint__card { gap: 5px; padding: 10px 16px 8px; }
+        .hint__key { width: 24px; height: 24px; font-size: 11px; }
+        .hint__base { width: 42px; height: 42px; }
+        .hint__knob {
+          width: 17px; height: 17px; margin: -9px 0 0 -9px;
+          --throw-up: -9px; --throw-side: 9px; --throw-down: 3px;
+        }
+        .hint__title { font-size: 11px; }
+        .hint__note { font-size: 10px; }
+        .hint__tail { font-size: 9px; }
       }
     </style>
   </head>
