@@ -85,20 +85,12 @@ export class LevelResult {
    */
   show(result) {
     this.shown = true;
-    clearTimeout(this._leave);
-    this.root.classList.remove('ending--leaving');
 
     this.frame.style.backgroundImage = `url(${CONFIG.splash.folder}${result.number}.png)`;
     this.caption.textContent = `${result.name} — ${CFG.doneLabel}`;
     this.rows.kills.textContent = String(result.kills);
     this.rows.deaths.textContent = String(result.deaths);
     this.rows.time.textContent = clock(result.seconds);
-
-    // Карточка всплывает заново при каждом показе. Её анимация отыграла ещё при
-    // загрузке страницы, и без перезапуска на втором уровне она стояла бы сразу.
-    this.card.style.animation = 'none';
-    void this.card.offsetWidth;
-    this.card.style.animation = '';
 
     this.root.classList.add('ending--on');
   }
@@ -108,14 +100,7 @@ export class LevelResult {
 
     this.shown = false;
 
-    // Сперва «уходит», потом «не показан»: наезд на картинке держится на обоих
-    // классах и не обрывается, пока экран тает. Оборвись он — картинка прыгала
-    // бы к исходному масштабу посреди растворения.
-    this.root.classList.add('ending--leaving');
     this.root.classList.remove('ending--on');
-
-    clearTimeout(this._leave);
-    this._leave = setTimeout(() => this.root.classList.remove('ending--leaving'), CFG.fadeFor * 1000);
   }
 
   _continue() {

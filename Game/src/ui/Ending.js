@@ -152,6 +152,7 @@ export class Ending {
     this.board.hidden = true;
 
     this.choice.reset(); // выбор — на «Ещё раз»
+
     this.root.classList.add('ending--on');
   }
 
@@ -274,17 +275,7 @@ export class Ending {
     this.shown = false;
     this.board.hidden = true; // со старой таблицей повторный показ не начинают
 
-    // Сперва «уходит», потом «не показан»: наезд на картинке держится на обоих
-    // классах и не обрывается, пока экран тает. Оборвись он — кадр прыгал бы к
-    // исходному масштабу посреди растворения, и уход выглядел бы как дёрганье.
-    this.root.classList.add('ending--leaving');
     this.root.classList.remove('ending--on');
-
-    clearTimeout(this._leave);
-    this._leave = setTimeout(
-      () => this.root.classList.remove('ending--leaving'),
-      900, // столько же, сколько длится само растворение финала
-    );
   }
 }
 
