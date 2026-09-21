@@ -5,6 +5,40 @@ const CFG = CONFIG.camera;
 const DEG = Math.PI / 180;
 
 /**
+ * Плавный шум для тряски: одно число от −1 до 1, непрерывное по времени.
+ *
+ * Тряска раньше бралась случайным числом на каждый кадр, и соседние кадры не
+ * были связаны ничем. Получалась не тряска, а дрожь: кадр мельтешил на месте, и
+ * чем выше частота экрана, тем мельче и противнее. Отсюда же и невозможность
+ * сделать толчок длиннее — полсекунды такого мельтешения уже раздражают.
+ *
+ * Здесь случайные значения расставлены по целым отметкам времени, а между ними
+ * идёт сглаженная дорожка. Кадр из-за этого не прыгает, а качается, и толчок
+ * можно тянуть сколько угодно: он читается как отдача, а не как сбой картинки.
+ * Частота качания задаётся в конфиге и от кадров не зависит вовсе.
+ *
+ * @param {number} t — время в узлах шума, а не в секундах
+ * @returns {number} от −1 до 1
+ */
+function wobble(t) {
+  const step = Math.floor(t);
+  const part = t - step;
+
+  // одно и то же целое всегда даёт одно и то же значение: дорожка не
+  // переписывается на ходу и потому не рвётся
+  const at = (n) => {
+    const s = Math.sin(n * 127.1) * 43758.5453;
+    return (s - Math.floor(s)) * 2 - 1;
+  };
+
+  const from = at(step);
+  const to = at(step + 1);
+  const k = part * part * (3 - 2 * part); // сглаживание: в узлах дорожка ложится ровно
+
+  return from + (to - from) * k;
+}
+
+/**
  * Изометрическая камера: жёсткий угол обзора, движется только следом за целью.
  * Ракурс задан парой yaw/pitch из конфига — классические 45° / 30°.
  */
@@ -34,6 +68,10 @@ export class FollowCamera {
     this._shake = 0;      // сколько тряски осталось, с
     this._shakeFor = 1;   // за сколько она затухает
     this._shakePower = 0; // и с какой амплитуды начиналась
+    // Время дорожки шума. Идёт своим ходом и на новом толчке не сбрасывается:
+    // сброс означал бы разрыв в дорожке, то есть ровно тот скачок, ради ухода
+    // от которого всё и затевалось.
+    this._shakeTime = Math.random() * 100;
     this._show = null;    // пролёт к чему-то другому и обратно: { at, time }
     this._from = new THREE.Vector3();
     this._there = new THREE.Vector3();
@@ -49,7 +87,10 @@ export class FollowCamera {
    * два взрыва подряд не должны раскачивать кадр вдвое.
    */
   shake(power, seconds) {
-    if (power <= this._shakePower && this._shake > 0) return;
+    // Слабее того, что уже идёт, — не перебивает. А вот равный по силе толчок
+    // тряску продлевает: на трассе машина сбивает одного за другим, и каждый
+    // удар должен поддерживать качание, а не гаснуть в тени предыдущего.
+    if (power < this._shakePower && this._shake > 0) return;
     this._shake = seconds;
     this._shakeFor = seconds;
     this._shakePower = power;
@@ -196,13 +237,16 @@ export class FollowCamera {
     if (this._shake <= 0) return;
 
     this._shake = Math.max(0, this._shake - dt);
+    this._shakeTime += dt * CFG.shakeRate;
 
     const left = this._shake / this._shakeFor;
     const amount = this._shakePower * left * left; // к концу затихает мягко
 
-    this.camera.position.x += (Math.random() - 0.5) * 2 * amount;
-    this.camera.position.y += (Math.random() - 0.5) * 2 * amount;
-    this.camera.position.z += (Math.random() - 0.5) * 2 * amount;
+    // По дорожке на ось, разнесённые далеко друг от друга: рядом взятые куски
+    // одного шума ходили бы в лад, и кадр возило бы по прямой, а не качало.
+    this.camera.position.x += wobble(this._shakeTime) * amount;
+    this.camera.position.y += wobble(this._shakeTime + 31.7) * amount * CFG.shakeLift;
+    this.camera.position.z += wobble(this._shakeTime + 74.3) * amount;
 
     if (this._shake === 0) this._shakePower = 0;
   }

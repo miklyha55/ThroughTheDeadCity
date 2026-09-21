@@ -124,6 +124,50 @@ export class Obstacles {
   }
 
   /**
+   * Лежит ли точка ВНУТРИ какого-нибудь контура.
+   *
+   * Отличается от `hits` тем, что спрашивает про саму точку, а не про круг
+   * вокруг неё. Круг задевает границу и у всего, что просто стоит вплотную к
+   * стене, — это нормальное положение вещей. А вот центр внутри контура
+   * нормальным не бывает: туда предмет можно только продавить.
+   *
+   * Различие это существенное. Выталкивание ищет ближайшую грань, и пока центр
+   * снаружи, ближайшей всегда оказывается та, через которую предмет пришёл. Из
+   * глубины же ближайшей становится противоположная — и тонкую преграду вроде
+   * забора предмет проходит насквозь, вместо того чтобы вернуться.
+   *
+   * @param {number} x @param {number} z
+   * @param {number} [bottom] — низ тела, м. Контуры ниже него не в счёт.
+   * @returns {boolean}
+   */
+  inside(x, z, bottom = null) {
+    for (const item of this.items) {
+      if (Math.abs(x - item.cx) > item.reach || Math.abs(z - item.cz) > item.reach) continue;
+      if (bottom !== null && bottom >= item.top) continue;
+
+      const { points } = item;
+      const count = points.length / 2;
+      let outside = false;
+
+      for (let i = 0; i < count; i++) {
+        const ax = points[i * 2];
+        const az = points[i * 2 + 1];
+        const j = (i + 1) % count;
+        const ex = points[j * 2] - ax;
+        const ez = points[j * 2 + 1] - az;
+        if (ex === 0 && ez === 0) continue;
+
+        // та же внешняя нормаль, что и в `resolve`: контуры выпуклые и обходятся
+        // против часовой, поэтому одной опорной прямой снаружи уже достаточно
+        if ((x - ax) * ez - (z - az) * ex > 0) { outside = true; break; }
+      }
+
+      if (!outside) return true;
+    }
+    return false;
+  }
+
+  /**
    * Выталкивает точку из всех контуров, в которые она попала.
    * @param {THREE.Vector3} position — правится на месте
    * @param {number} radius — радиус персонажа
