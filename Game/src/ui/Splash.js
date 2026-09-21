@@ -102,8 +102,41 @@ export class Splash {
    */
   setLevel(title, number) {
     this.caption.textContent = title ?? '';
+
     const bust = this.stamp ? `?v=${this.stamp}` : '';
-    this.image.style.backgroundImage = `url(${CFG.folder}${number}.png${bust})`;
+    return this._paint(`${CFG.folder}${number}.png${bust}`);
+  }
+
+  /**
+   * Поставить картинку, дождавшись, пока браузер её разберёт.
+   *
+   * Присвоить адрес мало: браузер берётся раскодировать PNG только тогда, когда
+   * тот впервые понадобится нарисовать, — то есть уже на открытой заставке. В
+   * эту щель игрок видел чёрный экран с бегущей полосой, а картинка проступала
+   * следом. Со стороны это читалось как две разные загрузки подряд: сперва
+   * какая-то на пустом месте, потом настоящая.
+   *
+   * Файлы к этому мигу давно скачаны — заставки всех уровней греются на старте
+   * вместе с моделями, — так что ждать приходится только распаковку, доли
+   * секунды. Но ждать обязательно: пока ждём, на экране висит картинка прежнего
+   * уровня, и это лучше черноты.
+   *
+   * @param {string} url
+   */
+  async _paint(url) {
+    this._wanted = url;
+
+    try {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+    } catch {
+      // не разобралась — поставим как есть, дальше пусть браузер сам
+    }
+
+    // Пока ждали, мог начаться другой уровень: его картинка главнее.
+    if (this._wanted !== url) return;
+    this.image.style.backgroundImage = `url(${url})`;
   }
 
   /**
@@ -139,18 +172,18 @@ export class Splash {
   async prepare(id) {
     const known = this.levels.get(id);
     if (known) {
-      this.setLevel(known.name, known.number);
+      await this.setLevel(known.name, known.number);
       return;
     }
 
-    this.setLevel('', CFG.bootLevel);
+    await this.setLevel('', CFG.bootLevel);
 
     try {
       const res = await fetch(asset(`locations/${id}.json`));
       if (!res.ok) return;
 
       const data = await res.json();
-      this.setLevel(levelName(id, data.name), data.number ?? CFG.bootLevel);
+      await this.setLevel(levelName(id, data.name), data.number ?? CFG.bootLevel);
     } catch {
       // не прочиталось — заставка просто останется с запасной картинкой
     }
